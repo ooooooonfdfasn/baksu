@@ -11,19 +11,18 @@
     <style>
       :root {
         color-scheme: light;
-        --bg: #f4f6f5;
-        --ink: #111315;
-        --muted: #5c6670;
-        --line: #d8dde1;
-        --panel: #ffffff;
-        --panel-soft: #eef7f1;
+        --blue: #0b4da3;
+        --blue-deep: #06346f;
+        --ink: #111112;
+        --body: #555c64;
+        --muted: #888f96;
+        --line: #dddddd;
+        --soft: #f5f5f5;
+        --white: #ffffff;
         --green: #0f9d59;
-        --green-dark: #0a7040;
-        --red: #df503f;
+        --red: #d64a3a;
         --yellow: #ffd45a;
-        --blue: #246bfe;
-        --navy: #1d2d44;
-        --shadow: 0 18px 60px rgba(17, 19, 21, 0.16);
+        --shadow: 0 20px 54px rgba(0, 0, 0, 0.18);
       }
 
       * {
@@ -42,25 +41,22 @@
       }
 
       body {
-        background:
-          linear-gradient(90deg, rgba(17, 19, 21, 0.045) 1px, transparent 1px),
-          linear-gradient(0deg, rgba(17, 19, 21, 0.045) 1px, transparent 1px),
-          var(--bg);
-        background-size: 42px 42px;
+        background: var(--white);
         color: var(--ink);
         font-family:
+          Pretendard,
           Arial,
           "Apple SD Gothic Neo",
           "Noto Sans KR",
           sans-serif;
         letter-spacing: 0;
+        word-break: keep-all;
       }
 
       a,
       button,
       input,
-      select,
-      textarea {
+      select {
         font: inherit;
       }
 
@@ -73,942 +69,1152 @@
         cursor: pointer;
       }
 
-      .topbar {
-        position: sticky;
-        top: 0;
-        z-index: 20;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        min-height: 58px;
-        padding: 0 24px;
-        border-bottom: 1px solid rgba(216, 221, 225, 0.9);
-        background: rgba(255, 255, 255, 0.92);
-        backdrop-filter: blur(14px);
+      .w-1600 {
+        position: relative;
+        width: min(1600px, calc(100% - 64px));
+        margin: 0 auto;
       }
 
-      .brand-mark,
-      .topnav {
+      .site-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 100;
+        width: 100%;
+        height: 85px;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 1px 10px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(12px);
+      }
+
+      .header-inner {
+        height: 85px;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 34px;
+      }
+
+      .logo {
         display: inline-flex;
         align-items: center;
+        gap: 12px;
+        min-width: 142px;
+        font-size: 26px;
+        font-weight: 900;
       }
 
-      .brand-mark {
-        gap: 10px;
-        font-size: 15px;
-        font-weight: 950;
+      .logo-mark {
+        position: relative;
+        width: 35px;
+        height: 26px;
+        border: 3px solid var(--ink);
       }
 
-      .brand-dot {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
+      .logo-mark::before,
+      .logo-mark::after {
+        position: absolute;
+        content: "";
+        border-radius: 999px;
+      }
+
+      .logo-mark::before {
+        width: 9px;
+        height: 9px;
+        left: 6px;
+        top: 6px;
         background: var(--green);
         box-shadow:
-          18px 0 0 var(--yellow),
-          36px 0 0 var(--red);
+          10px 0 0 var(--yellow),
+          20px 0 0 var(--red);
       }
 
-      .topnav {
-        gap: 7px;
+      .logo-mark::after {
+        width: 22px;
+        height: 2px;
+        left: 5px;
+        bottom: 5px;
+        background: var(--ink);
       }
 
-      .nav-link {
-        display: inline-flex;
+      .gnb {
+        display: flex;
+        justify-content: center;
+        gap: clamp(24px, 4vw, 64px);
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .gnb a {
+        display: block;
+        height: 85px;
+        color: #000000;
+        font-size: 18px;
+        font-weight: 800;
+        line-height: 85px;
+        transition: color 0.2s ease;
+      }
+
+      .gnb a:hover {
+        color: var(--blue);
+      }
+
+      .top-language {
+        display: flex;
+        gap: 4px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .top-language a {
+        display: block;
+        width: 44px;
+        height: 22px;
+        border-radius: 4px;
+        color: #000000;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 22px;
+        text-align: center;
+      }
+
+      .top-language a.on {
+        background: var(--blue);
+        color: var(--white);
+      }
+
+      .mobile-menu-button {
+        display: none;
+        width: 34px;
+        height: 34px;
+        border: 0;
+        background: transparent;
+        padding: 0;
+      }
+
+      .mobile-menu-button span {
+        display: block;
+        width: 25px;
+        height: 2px;
+        margin: 6px auto;
+        background: #000000;
+      }
+
+      #container {
+        overflow: hidden;
+      }
+
+      .sub-visual {
+        position: relative;
+        display: flex;
         align-items: center;
         justify-content: center;
-        min-height: 34px;
-        padding: 0 11px;
-        border: 1px solid var(--line);
-        background: var(--panel);
-        color: var(--ink);
-        font-size: 13px;
-        font-weight: 850;
-        white-space: nowrap;
-      }
-
-      .hero {
-        position: relative;
-        min-height: clamp(570px, 82svh, 760px);
-        overflow: hidden;
-        border-bottom: 1px solid var(--line);
-        background: #202326;
-      }
-
-      .hero::before {
-        position: absolute;
-        inset: 0;
-        content: "";
+        height: 365px;
+        margin-top: 85px;
+        overflow: visible;
+        text-align: center;
         background:
-          linear-gradient(90deg, rgba(0, 0, 0, 0.76) 0%, rgba(0, 0, 0, 0.42) 45%, rgba(0, 0, 0, 0.08) 100%),
-          linear-gradient(0deg, rgba(0, 0, 0, 0.34) 0%, rgba(0, 0, 0, 0) 42%),
-          url("assets/baksu-office-hero.png") center / cover;
+          linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.42)),
+          url("assets/baksu-office-hero.png") center 44% / 110% auto no-repeat;
+        animation: bgSizeDown 2s ease-in-out forwards;
       }
 
-      .hero-inner {
-        position: relative;
-        z-index: 1;
-        display: grid;
-        align-content: center;
-        min-height: inherit;
-        width: min(1180px, calc(100% - 48px));
-        margin: 0 auto;
-        padding: 46px 0 92px;
-        color: #ffffff;
+      @keyframes bgSizeDown {
+        0% {
+          background-size: 110% auto;
+        }
+        100% {
+          background-size: 100% auto;
+        }
       }
 
-      .hero-kicker {
-        display: inline-flex;
-        width: fit-content;
-        min-height: 32px;
+      .sub-route {
+        display: flex;
+        flex-direction: column;
         align-items: center;
-        padding: 0 10px;
-        border: 1px solid rgba(255, 255, 255, 0.6);
-        background: rgba(255, 255, 255, 0.12);
-        font-size: 12px;
-        font-weight: 900;
+        color: var(--white);
       }
 
-      h1 {
-        max-width: 760px;
-        margin: 18px 0 0;
-        font-size: clamp(58px, 10vw, 132px);
-        font-weight: 950;
-        line-height: 0.9;
+      .sub-route ul {
+        display: flex;
+        gap: 16px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
       }
 
-      .hero-copy {
-        display: grid;
-        gap: 8px;
-        max-width: 700px;
-        margin: 24px 0 0;
-        font-size: clamp(21px, 2.6vw, 34px);
-        font-weight: 850;
-        line-height: 1.25;
-      }
-
-      .hero-subcopy {
-        max-width: 650px;
-        margin: 18px 0 0;
-        color: rgba(255, 255, 255, 0.84);
+      .sub-route li {
+        position: relative;
         font-size: 16px;
         font-weight: 700;
-        line-height: 1.65;
+        text-shadow: 0 1px 10px rgba(0, 0, 2, 0.4);
       }
 
-      .hero-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 28px;
+      .sub-route li + li::before {
+        content: ">";
+        margin-right: 16px;
+        color: rgba(255, 255, 255, 0.72);
       }
 
-      .primary-action,
-      .secondary-action {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 48px;
-        padding: 0 18px;
-        border: 1px solid transparent;
-        font-size: 15px;
+      .sub-route h1 {
+        margin: 16px 0 0;
+        color: var(--white);
+        font-size: 52px;
         font-weight: 900;
+        line-height: 1.1;
+        text-shadow: 0 1px 10px rgba(0, 0, 2, 0.4);
       }
 
-      .primary-action {
-        background: var(--green);
-        color: #ffffff;
-      }
-
-      .secondary-action {
-        border-color: rgba(255, 255, 255, 0.72);
-        background: rgba(255, 255, 255, 0.12);
-        color: #ffffff;
-      }
-
-      .section {
-        border-bottom: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.72);
-      }
-
-      .section:nth-of-type(odd) {
-        background: rgba(244, 246, 245, 0.72);
-      }
-
-      .section-inner {
-        width: min(1180px, calc(100% - 48px));
-        margin: 0 auto;
-        padding: 54px 0;
-      }
-
-      .section-head {
-        display: grid;
-        grid-template-columns: minmax(0, 0.75fr) minmax(260px, 0.55fr);
-        gap: 28px;
-        align-items: end;
-        margin-bottom: 24px;
-      }
-
-      .eyebrow {
-        display: block;
-        color: var(--green-dark);
-        font-size: 12px;
-        font-weight: 950;
-      }
-
-      h2 {
-        margin: 8px 0 0;
-        font-size: clamp(30px, 4vw, 56px);
-        font-weight: 950;
-        line-height: 1;
-      }
-
-      .section-summary {
-        margin: 0;
-        color: var(--muted);
-        font-size: 15px;
-        font-weight: 750;
-        line-height: 1.6;
-      }
-
-      .company-grid,
-      .service-grid,
-      .policy-grid {
-        display: grid;
-        gap: 12px;
-      }
-
-      .company-grid {
-        grid-template-columns: minmax(260px, 0.75fr) minmax(360px, 1.25fr);
-      }
-
-      .facts-table,
-      .timeline,
-      .apply-panel,
-      .policy-item {
-        border: 1px solid var(--line);
-        background: var(--panel);
-      }
-
-      .facts-table {
-        display: grid;
-      }
-
-      .fact-row {
-        display: grid;
-        grid-template-columns: 120px minmax(0, 1fr);
-        min-height: 48px;
-        border-bottom: 1px solid var(--line);
-      }
-
-      .fact-row:last-child {
-        border-bottom: 0;
-      }
-
-      .fact-label,
-      .fact-value {
+      .sub-tab {
+        position: absolute;
+        left: 50%;
+        bottom: -35px;
         display: flex;
-        align-items: center;
-        min-width: 0;
-        padding: 0 14px;
-        font-size: 13px;
+        width: auto;
+        height: 70px;
+        margin: 0;
+        padding: 0;
+        border-radius: 70px;
+        background: var(--blue);
+        color: var(--white);
+        line-height: 70px;
+        list-style: none;
+        transform: translateX(-50%);
       }
 
-      .fact-label {
-        border-right: 1px solid var(--line);
-        background: var(--panel-soft);
-        color: var(--green-dark);
-        font-weight: 950;
-      }
-
-      .fact-value {
-        color: var(--ink);
+      .sub-tab > li {
+        position: relative;
+        width: 300px;
+        color: var(--white);
+        font-size: 20px;
         font-weight: 800;
+        text-align: center;
       }
 
-      .timeline {
-        display: grid;
+      .sub-tab > li + li {
+        border-left: 1px solid rgba(255, 255, 255, 0.26);
       }
 
-      .timeline-row {
-        display: grid;
-        grid-template-columns: 126px minmax(0, 1fr);
-        min-height: 66px;
-        border-bottom: 1px solid var(--line);
-      }
-
-      .timeline-row:last-child {
-        border-bottom: 0;
-      }
-
-      .timeline-year,
-      .timeline-copy {
-        display: flex;
-        align-items: center;
-        padding: 14px;
-      }
-
-      .timeline-year {
-        border-right: 1px solid var(--line);
-        color: var(--red);
-        font-size: 13px;
-        font-weight: 950;
-      }
-
-      .timeline-copy {
-        color: var(--muted);
-        font-size: 14px;
-        font-weight: 750;
-        line-height: 1.5;
-      }
-
-      .service-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
-
-      .service-card {
-        display: grid;
-        gap: 16px;
-        min-height: 236px;
-        padding: 18px;
-        border: 1px solid var(--line);
-        background: var(--panel);
-      }
-
-      .service-card.featured {
-        border-color: var(--green);
-        box-shadow: 0 14px 42px rgba(15, 157, 89, 0.16);
-      }
-
-      .service-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-      }
-
-      .tag {
-        display: inline-flex;
-        align-items: center;
-        min-height: 28px;
-        padding: 0 9px;
-        border: 1px solid var(--line);
-        background: var(--panel-soft);
-        color: var(--green-dark);
-        font-size: 11px;
-        font-weight: 900;
-      }
-
-      .service-card h3,
-      .apply-panel h3,
-      .policy-item h3 {
-        margin: 0;
-        font-size: 22px;
-        font-weight: 950;
-      }
-
-      .service-card p,
-      .policy-item p {
-        margin: 0;
-        color: var(--muted);
-        font-size: 14px;
-        font-weight: 750;
-        line-height: 1.55;
-      }
-
-      .service-link {
-        align-self: end;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 40px;
-        border: 1px solid var(--ink);
-        background: var(--ink);
-        color: #ffffff;
-        font-size: 13px;
-        font-weight: 900;
-      }
-
-      .service-link.is-muted {
-        border-color: var(--line);
-        background: var(--panel-soft);
-        color: var(--green-dark);
-      }
-
-      .feature-strip {
-        display: grid;
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-        border: 1px solid var(--line);
-        background: var(--panel);
-      }
-
-      .feature-item {
-        min-height: 98px;
-        padding: 14px;
-        border-right: 1px solid var(--line);
-      }
-
-      .feature-item:last-child {
-        border-right: 0;
-      }
-
-      .feature-name {
+      .sub-tab a {
         display: block;
-        font-size: 15px;
-        font-weight: 950;
+        color: var(--white);
       }
 
-      .feature-copy {
+      .sub-cont {
+        padding-bottom: 120px;
+      }
+
+      .sub-title {
+        padding: 120px 0 70px;
+        font-size: 48px;
+        font-weight: 900;
+        text-align: center;
+      }
+
+      .company-intro {
+        display: flex;
+        gap: 80px;
+        align-items: flex-start;
+      }
+
+      .company-photo {
+        width: 36%;
+        min-height: 660px;
+        overflow: hidden;
+        background: var(--soft);
+      }
+
+      .company-photo img {
         display: block;
-        margin-top: 8px;
-        color: var(--muted);
-        font-size: 12px;
-        font-weight: 750;
+        width: 100%;
+        height: 660px;
+        object-fit: cover;
+        object-position: 62% center;
+        transition: transform 0.5s ease;
+      }
+
+      .company-photo:hover img {
+        transform: scale(1.04);
+      }
+
+      .company-message {
+        display: flex;
+        width: calc(64% - 80px);
+        gap: 34px;
+      }
+
+      .message-text {
+        flex: 1;
+      }
+
+      .message-text h2 {
+        margin: 0;
+        padding-bottom: 30px;
+        color: #000000;
+        font-size: 38px;
+        font-weight: 900;
         line-height: 1.45;
       }
 
-      .apply-panel {
-        display: grid;
-        grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
-        gap: 0;
+      .message-text p {
+        margin: 0 0 22px;
+        color: var(--body);
+        font-size: 18px;
+        font-weight: 500;
+        line-height: 1.85;
       }
 
-      .apply-copy,
-      .apply-form {
-        padding: 22px;
+      .message-sign {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        margin-top: 36px;
+        color: #000000;
+        font-size: 18px;
+        font-weight: 800;
       }
 
-      .apply-copy {
-        border-right: 1px solid var(--line);
-        background: var(--panel-soft);
+      .signature {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 132px;
+        height: 54px;
+        border: 2px solid var(--red);
+        border-radius: 50%;
+        color: var(--red);
+        font-size: 19px;
+        font-weight: 900;
+        transform: rotate(-8deg);
       }
 
-      .apply-copy p {
-        margin: 12px 0 0;
-        color: var(--muted);
-        font-size: 14px;
-        font-weight: 750;
-        line-height: 1.6;
+      .message-side {
+        width: 270px;
       }
 
-      .apply-form {
-        display: grid;
-        gap: 12px;
+      .message-side img {
+        display: block;
+        width: 100%;
+        height: 320px;
+        object-fit: cover;
+        object-position: center;
+        box-shadow: var(--shadow);
       }
 
-      .field-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
+      .certificate {
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px solid var(--line);
+        background: var(--soft);
       }
 
-      label {
-        display: grid;
-        gap: 6px;
-        color: var(--muted);
-        font-size: 12px;
+      .certificate span {
+        display: block;
+        color: var(--blue);
+        font-size: 13px;
         font-weight: 900;
       }
 
-      input,
-      select,
-      textarea {
-        width: 100%;
-        min-height: 42px;
-        border: 1px solid var(--line);
-        background: #ffffff;
-        color: var(--ink);
-        padding: 0 11px;
-        outline: 0;
+      .certificate strong {
+        display: block;
+        margin-top: 10px;
+        font-size: 24px;
+        font-weight: 900;
+        line-height: 1.3;
       }
 
-      textarea {
-        min-height: 76px;
-        resize: vertical;
-        padding-top: 10px;
+      .business {
+        position: relative;
+        padding: 120px 0;
+        background: var(--soft);
       }
 
-      input:focus,
-      select:focus,
-      textarea:focus {
-        border-color: var(--green);
-        box-shadow: 0 0 0 3px rgba(15, 157, 89, 0.14);
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 40px;
+        margin-bottom: 46px;
       }
 
-      .submit-button {
-        min-height: 44px;
-        border: 1px solid var(--green-dark);
-        background: var(--green);
-        color: #ffffff;
-        font-size: 14px;
-        font-weight: 950;
+      .section-head p {
+        width: 40%;
+        margin: 0;
+        color: var(--body);
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 1.7;
       }
 
-      .apply-result {
-        min-height: 72px;
-        padding: 12px;
-        border: 1px dashed var(--line);
-        background: #fbfcfb;
-        color: var(--muted);
+      .section-kicker {
+        display: block;
+        margin-bottom: 16px;
+        color: var(--blue);
+        font-size: 16px;
+        font-weight: 900;
+      }
+
+      .section-head h2 {
+        margin: 0;
+        font-size: 48px;
+        font-weight: 900;
+        line-height: 1.2;
+      }
+
+      .business-list {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 26px;
+      }
+
+      .business-card {
+        position: relative;
+        min-height: 360px;
+        overflow: hidden;
+        background: #0f0e0f;
+      }
+
+      .business-card::before {
+        position: absolute;
+        inset: 0;
+        content: "";
+        opacity: 0.5;
+        background:
+          linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.82)),
+          url("assets/baksu-office-hero.png") center / cover;
+        transition: transform 0.5s ease;
+      }
+
+      .business-card:nth-child(2)::before {
+        background:
+          linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.82)),
+          url("assets/baksu-office-hero.png") 32% center / cover;
+      }
+
+      .business-card:nth-child(3)::before {
+        background:
+          linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.82)),
+          url("assets/baksu-office-hero.png") 78% center / cover;
+      }
+
+      .business-card:hover::before {
+        transform: scale(1.06);
+      }
+
+      .business-card-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        height: 360px;
+        padding: 30px 26px;
+        color: var(--white);
+      }
+
+      .business-card span {
+        display: block;
+        padding-bottom: 12px;
+        color: #8fb8ff;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .business-card h3 {
+        margin: 0;
+        padding-bottom: 16px;
+        font-size: 28px;
+        font-weight: 900;
+      }
+
+      .business-card p {
+        margin: 0 0 24px;
+        color: rgba(255, 255, 255, 0.76);
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 1.6;
+      }
+
+      .business-card a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 118px;
+        height: 36px;
+        border: 1px solid rgba(255, 255, 255, 0.46);
+        border-radius: 36px;
+        color: var(--white);
         font-size: 13px;
         font-weight: 800;
-        line-height: 1.5;
+        transition: background 0.2s ease;
       }
 
-      .policy-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+      .business-card a:hover {
+        background: var(--white);
+        color: var(--ink);
       }
 
-      .policy-item {
-        min-height: 180px;
-        padding: 18px;
+      .history {
+        padding: 120px 0;
+      }
+
+      .history-grid {
+        display: grid;
+        grid-template-columns: minmax(260px, 0.35fr) minmax(0, 0.65fr);
+        border-top: 2px solid var(--ink);
+      }
+
+      .history-title {
+        padding-top: 34px;
+      }
+
+      .history-title span {
+        color: var(--blue);
+        font-size: 16px;
+        font-weight: 900;
+      }
+
+      .history-title h2 {
+        margin: 14px 0 0;
+        font-size: 48px;
+        font-weight: 900;
+      }
+
+      .history-list {
+        border-left: 1px solid var(--line);
+      }
+
+      .history-row {
+        display: grid;
+        grid-template-columns: 160px minmax(0, 1fr);
+        min-height: 98px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .history-row strong,
+      .history-row p {
+        display: flex;
+        align-items: center;
+        margin: 0;
+        padding: 0 28px;
+      }
+
+      .history-row strong {
+        color: var(--blue);
+        font-size: 24px;
+        font-weight: 900;
+      }
+
+      .history-row p {
+        color: var(--body);
+        font-size: 16px;
+        font-weight: 600;
+        line-height: 1.6;
+      }
+
+      .recruit {
+        padding: 120px 0;
+        background:
+          linear-gradient(rgba(11, 77, 163, 0.88), rgba(6, 52, 111, 0.9)),
+          url("assets/baksu-office-hero.png") center / cover fixed;
+        color: var(--white);
+      }
+
+      .recruit .section-kicker,
+      .recruit .section-head p {
+        color: rgba(255, 255, 255, 0.78);
+      }
+
+      .recruit-panel {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(6px);
+      }
+
+      .recruit-step {
+        min-height: 170px;
+        padding: 26px;
+        border-right: 1px solid rgba(255, 255, 255, 0.24);
+      }
+
+      .recruit-step:last-child {
+        border-right: 0;
+      }
+
+      .recruit-step span {
+        display: block;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 36px;
+        font-weight: 200;
+      }
+
+      .recruit-step strong {
+        display: block;
+        margin-top: 18px;
+        font-size: 20px;
+        font-weight: 900;
+      }
+
+      .recruit-step p {
+        margin: 12px 0 0;
+        color: rgba(255, 255, 255, 0.75);
+        font-size: 14px;
+        line-height: 1.6;
       }
 
       .footer {
         background: var(--ink);
-        color: #ffffff;
       }
 
-      .footer-inner {
-        width: min(1180px, calc(100% - 48px));
-        margin: 0 auto;
-        padding: 28px 0;
+      .footer-address {
         display: flex;
         justify-content: space-between;
-        gap: 18px;
-        color: rgba(255, 255, 255, 0.72);
-        font-size: 12px;
-        font-weight: 750;
-        line-height: 1.5;
+        gap: 40px;
+        padding: 78px 0 40px;
       }
 
-      @media (max-width: 980px) {
-        .topbar {
-          align-items: stretch;
-          flex-direction: column;
-          gap: 10px;
-          padding: 12px 16px;
+      .footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 30px;
+        margin: 0 0 30px;
+        padding: 0;
+        list-style: none;
+      }
+
+      .footer-links a {
+        color: var(--white);
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .footer-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 0;
+        margin: 0;
+      }
+
+      .footer-info dd {
+        position: relative;
+        margin: 0 12px 0 0;
+        padding-right: 12px;
+        color: #999999;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .footer-info dd::after {
+        position: absolute;
+        right: 0;
+        top: 4px;
+        width: 1px;
+        height: 12px;
+        background: #555555;
+        content: "";
+      }
+
+      .footer-info dd.no-line::after {
+        display: none;
+      }
+
+      .footer-contact {
+        min-width: 280px;
+        text-align: right;
+      }
+
+      .footer-contact h3 {
+        margin: 0 0 8px;
+        color: var(--white);
+        font-size: 36px;
+        font-weight: 200;
+      }
+
+      .footer-contact p {
+        margin: 0;
+        color: #999999;
+        font-size: 13px;
+        line-height: 1.8;
+      }
+
+      .footer-copy {
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+        min-height: 78px;
+        border-top: 1px solid #29292a;
+        color: #999999;
+        font-size: 13px;
+        line-height: 78px;
+      }
+
+      @media (max-width: 1200px) {
+        .w-1600 {
+          width: min(100% - 48px, 1080px);
         }
 
-        .topnav {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          width: 100%;
+        .gnb {
+          gap: 24px;
         }
 
+        .gnb a {
+          font-size: 16px;
+        }
+
+        .company-intro,
+        .company-message {
+          gap: 40px;
+        }
+
+        .company-photo {
+          width: 34%;
+        }
+
+        .company-message {
+          width: calc(66% - 40px);
+        }
+
+        .message-side {
+          display: none;
+        }
+
+        .section-head p {
+          width: 48%;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .site-header,
+        .header-inner {
+          height: 64px;
+        }
+
+        .header-inner {
+          display: flex;
+          justify-content: space-between;
+        }
+
+        .logo {
+          font-size: 21px;
+        }
+
+        .logo-mark {
+          transform: scale(0.82);
+          transform-origin: left center;
+        }
+
+        .gnb,
+        .top-language {
+          display: none;
+        }
+
+        .mobile-menu-button {
+          display: block;
+        }
+
+        .sub-visual {
+          height: 220px;
+          margin-top: 64px;
+          background-size: cover;
+          animation: none;
+        }
+
+        .sub-route h1 {
+          font-size: 34px;
+        }
+
+        .sub-tab {
+          width: calc(100% - 32px);
+          height: 52px;
+          line-height: 52px;
+          bottom: -26px;
+        }
+
+        .sub-tab > li {
+          width: 50%;
+          font-size: 15px;
+        }
+
+        .sub-title {
+          padding: 88px 0 42px;
+          font-size: 34px;
+        }
+
+        .company-intro,
+        .company-message,
         .section-head,
-        .company-grid,
-        .apply-panel {
-          grid-template-columns: 1fr;
+        .footer-address,
+        .footer-copy {
+          flex-direction: column;
         }
 
-        .apply-copy {
-          border-right: 0;
-          border-bottom: 1px solid var(--line);
+        .company-photo {
+          display: none;
         }
 
-        .service-grid,
-        .policy-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .feature-strip {
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-
-        .feature-item:nth-child(3) {
-          border-right: 0;
-        }
-
-        .feature-item:nth-child(-n + 3) {
-          border-bottom: 1px solid var(--line);
-        }
-      }
-
-      @media (max-width: 620px) {
-        .hero-inner,
-        .section-inner,
-        .footer-inner {
-          width: calc(100% - 24px);
-        }
-
-        .hero {
-          min-height: 650px;
-        }
-
-        .hero::before {
-          background:
-            linear-gradient(90deg, rgba(0, 0, 0, 0.78) 0%, rgba(0, 0, 0, 0.42) 100%),
-            linear-gradient(0deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0) 44%),
-            url("assets/baksu-office-hero.png") 62% center / cover;
-        }
-
-        .topnav {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .primary-action,
-        .secondary-action {
+        .company-message {
           width: 100%;
         }
 
-        .feature-strip,
-        .field-grid {
+        .message-text h2 {
+          font-size: 24px;
+          line-height: 1.45;
+        }
+
+        .message-text p {
+          font-size: 15px;
+          line-height: 1.75;
+        }
+
+        .business,
+        .history,
+        .recruit {
+          padding: 78px 0;
+        }
+
+        .section-head {
+          gap: 18px;
+        }
+
+        .section-head h2,
+        .history-title h2 {
+          font-size: 34px;
+        }
+
+        .section-head p {
+          width: 100%;
+        }
+
+        .business-list,
+        .recruit-panel {
           grid-template-columns: 1fr;
         }
 
-        .feature-item,
-        .feature-item:nth-child(3) {
-          border-right: 0;
-          border-bottom: 1px solid var(--line);
+        .business-card,
+        .business-card-content {
+          min-height: 300px;
+          height: 300px;
         }
 
-        .feature-item:last-child {
+        .history-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .history-title {
+          padding: 0 0 24px;
+        }
+
+        .history-list {
+          border-left: 0;
+        }
+
+        .history-row {
+          grid-template-columns: 1fr;
+          gap: 8px;
+          padding: 18px 0;
+        }
+
+        .history-row strong,
+        .history-row p {
+          padding: 0;
+        }
+
+        .recruit-step {
+          min-height: 130px;
+          border-right: 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.24);
+        }
+
+        .recruit-step:last-child {
           border-bottom: 0;
         }
 
-        .fact-row,
-        .timeline-row {
-          grid-template-columns: 1fr;
+        .footer-contact {
+          min-width: 0;
+          text-align: left;
         }
 
-        .fact-label,
-        .timeline-year {
-          min-height: 34px;
-          border-right: 0;
-          border-bottom: 1px solid var(--line);
+        .footer-copy {
+          min-height: 0;
+          padding: 22px 0;
+          line-height: 1.6;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .w-1600 {
+          width: calc(100% - 24px);
         }
 
-        .footer-inner {
-          display: grid;
+        .sub-route ul {
+          gap: 8px;
+        }
+
+        .sub-route li {
+          font-size: 13px;
+        }
+
+        .sub-route li + li::before {
+          margin-right: 8px;
+        }
+
+        .sub-tab > li {
+          font-size: 13px;
+        }
+
+        .sub-cont {
+          padding-bottom: 76px;
+        }
+
+        .message-sign {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .footer-links {
+          gap: 14px 18px;
         }
       }
     </style>
   </head>
   <body>
-    <header class="topbar">
-      <a class="brand-mark" href="index.html" aria-label="(주) 백수 홈">
-        <span class="brand-dot" aria-hidden="true"></span>
-        <span>(주) 백수</span>
-      </a>
-      <nav class="topnav" aria-label="주요 이동">
-        <a class="nav-link" href="#company">회사소개</a>
-        <a class="nav-link" href="#services">서비스</a>
-        <a class="nav-link" href="pantry/">탕비실</a>
-        <a class="nav-link" href="#apply">입사지원</a>
-        <a class="nav-link" href="#policy">이용안내</a>
-      </nav>
+    <header class="site-header">
+      <div class="header-inner w-1600">
+        <a class="logo" href="index.html" aria-label="(주) 백수 홈">
+          <span class="logo-mark" aria-hidden="true"></span>
+          <span>(주) 백수</span>
+        </a>
+
+        <nav aria-label="주요 메뉴">
+          <ul class="gnb">
+            <li><a href="#company">회사소개</a></li>
+            <li><a href="pantry/">탕비실</a></li>
+            <li><a href="lunchtime/">점심시간</a></li>
+            <li><a href="hasik/">회식</a></li>
+            <li><a href="#recruit">입사지원</a></li>
+            <li><a href="#footer">고객센터</a></li>
+          </ul>
+        </nav>
+
+        <ul class="top-language" aria-label="언어 선택">
+          <li><a class="on" href="index.html">KOR</a></li>
+          <li><a href="#company">ENG</a></li>
+          <li><a href="#company">JPN</a></li>
+        </ul>
+
+        <button class="mobile-menu-button" type="button" aria-label="메뉴">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
     </header>
 
-    <main>
-      <section class="hero" aria-label="(주) 백수 대표 화면">
-        <div class="hero-inner">
-          <span class="hero-kicker">소통을 위한 페이퍼 컴퍼니</span>
-          <h1>(주) 백수</h1>
-          <div class="hero-copy" aria-label="대표 문구">
-            <span>우리는 집에 있지만 함께 근무중이다.</span>
-            <span>백수라고 다 같은 백수가 아니다. 서열이 있다.</span>
-          </div>
-          <p class="hero-subcopy">
-            집에서 쉬는 시간, 일자리 찾는 시간, 아무것도 안 하는 시간을 회사의 업무시간처럼 다루는
-            장난스러운 사내 포털입니다.
-          </p>
-          <div class="hero-actions" aria-label="주요 행동">
-            <a class="primary-action" href="pantry/">탕비실 입장</a>
-            <a class="secondary-action" href="#apply">입사 지원하기</a>
-          </div>
+    <div id="container">
+      <section class="sub-visual" aria-label="회사소개">
+        <div class="sub-route">
+          <ul>
+            <li>HOME</li>
+            <li>회사소개</li>
+          </ul>
+          <h1>회사소개</h1>
         </div>
+        <ul class="sub-tab" aria-label="회사소개 탭">
+          <li>회사소개</li>
+          <li><a href="#company">인사말</a></li>
+        </ul>
       </section>
 
-      <section class="section" id="company" aria-labelledby="company-title">
-        <div class="section-inner">
-          <div class="section-head">
-            <div>
-              <span class="eyebrow">COMPANY</span>
-              <h2 id="company-title">백수를 하나의 직장처럼</h2>
-            </div>
-            <p class="section-summary">
-              대표, 연혁, 복지, 사내 공간을 갖춘 회사 홈페이지 형식으로 백수의 하루를 브랜드화합니다.
-            </p>
+      <section class="sub-cont w-1600" id="company">
+        <div class="sub-title">인사말</div>
+
+        <div class="company-intro">
+          <div class="company-photo">
+            <img src="assets/baksu-office-hero.png" alt="오전 11시의 백수 사무실" />
           </div>
 
-          <div class="company-grid">
-            <div class="facts-table" aria-label="회사 기본 정보">
-              <div class="fact-row">
-                <span class="fact-label">회사명</span>
-                <span class="fact-value">(주) 백수</span>
-              </div>
-              <div class="fact-row">
-                <span class="fact-label">대표</span>
-                <span class="fact-value">현재 검토중</span>
-              </div>
-              <div class="fact-row">
-                <span class="fact-label">소재지</span>
-                <span class="fact-value">각자의 방, 거실, 카페 끝자리</span>
-              </div>
-              <div class="fact-row">
-                <span class="fact-label">주요사업</span>
-                <span class="fact-value">채팅, 소통, 타임킬링, 정보공유</span>
-              </div>
-              <div class="fact-row">
-                <span class="fact-label">퇴사</span>
-                <span class="fact-value">현생 회사 입사</span>
-              </div>
-            </div>
-
-            <div class="timeline" aria-label="회사 이력">
-              <div class="timeline-row">
-                <span class="timeline-year">오전 11:00</span>
-                <span class="timeline-copy">눈은 떴지만 아직 출근 처리가 되지 않은 상태를 정식 근무로 인정.</span>
-              </div>
-              <div class="timeline-row">
-                <span class="timeline-year">점심 전</span>
-                <span class="timeline-copy">탕비실을 상시 개방하고 소확횡 복지를 핵심 사내 문화로 지정.</span>
-              </div>
-              <div class="timeline-row">
-                <span class="timeline-year">17:00 이후</span>
-                <span class="timeline-copy">회식방을 예비 사내 행사로 등록. 익명 롤플레잉과 투표 문화 연구중.</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="section" id="services" aria-labelledby="services-title">
-        <div class="section-inner">
-          <div class="section-head">
-            <div>
-              <span class="eyebrow">SERVICES</span>
-              <h2 id="services-title">업무시간에 맞춰 열리는 사내 공간</h2>
-            </div>
-            <p class="section-summary">
-              지금은 메인 홈페이지와 탕비실 소통 경험을 우선 만들고, 점심시간과 회식은 기존 흐름을 하위 서비스로 유지합니다.
-            </p>
-          </div>
-
-          <div class="service-grid">
-            <article class="service-card featured">
-              <div class="service-meta">
-                <span class="tag">업무중 상시</span>
-                <span class="tag">소확횡</span>
-              </div>
-              <h3>탕비실</h3>
-              <p>커피, 간식, 짧은 잡담, 월급루팡을 한데 모은 사내 휴게 공간입니다.</p>
-              <a class="service-link" href="pantry/">탕비실 입장</a>
-            </article>
-
-            <article class="service-card">
-              <div class="service-meta">
-                <span class="tag">11:00 - 13:00</span>
-                <span class="tag">메뉴공유</span>
-              </div>
-              <h3>점심시간</h3>
-              <p>오늘 메뉴와 익명 대화를 한 화면에서 넘겨보는 점심 전용 공간입니다.</p>
-              <a class="service-link is-muted" href="lunchtime/">점심시간 보기</a>
-            </article>
-
-            <article class="service-card">
-              <div class="service-meta">
-                <span class="tag">17:00 이후</span>
-                <span class="tag">익명회식방</span>
-              </div>
-              <h3>회식</h3>
-              <p>퇴근 후 롤플레잉, 투표, 미니게임을 붙일 수 있는 예비 사내 행사입니다.</p>
-              <a class="service-link is-muted" href="hasik/">회식방 보기</a>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section class="section" aria-labelledby="features-title">
-        <div class="section-inner">
-          <div class="section-head">
-            <div>
-              <span class="eyebrow">BENEFITS</span>
-              <h2 id="features-title">공통 제공 기능</h2>
-            </div>
-            <p class="section-summary">
-              애드센스와 서비스 운영에 필요한 기본 카테고리는 회사 홈페이지 말투로 정리했습니다.
-            </p>
-          </div>
-
-          <div class="feature-strip" aria-label="공통 기능 목록">
-            <div class="feature-item">
-              <span class="feature-name">채팅</span>
-              <span class="feature-copy">짧고 가벼운 익명 대화</span>
-            </div>
-            <div class="feature-item">
-              <span class="feature-name">소통</span>
-              <span class="feature-copy">혼자 있는 시간을 사내 분위기로 전환</span>
-            </div>
-            <div class="feature-item">
-              <span class="feature-name">타임킬링</span>
-              <span class="feature-copy">업무 아닌 업무를 위한 작은 장치</span>
-            </div>
-            <div class="feature-item">
-              <span class="feature-name">월급루팡</span>
-              <span class="feature-copy">양심의 가책을 UI로 완화</span>
-            </div>
-            <div class="feature-item">
-              <span class="feature-name">정보공유</span>
-              <span class="feature-copy">점심, 생활, 구직 정보를 가볍게 유통</span>
-            </div>
-            <div class="feature-item">
-              <span class="feature-name">일자리소개</span>
-              <span class="feature-copy">퇴사 처리 가능한 현생 링크 후보</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="section" id="apply" aria-labelledby="apply-title">
-        <div class="section-inner">
-          <div class="section-head">
-            <div>
-              <span class="eyebrow">RECRUIT</span>
-              <h2 id="apply-title">입사 지원하기</h2>
-            </div>
-            <p class="section-summary">
-              회원가입 흐름은 면접 놀이로 시작합니다. 응답은 브라우저에만 저장되는 프로토타입입니다.
-            </p>
-          </div>
-
-          <section class="apply-panel" aria-label="입사 지원서">
-            <div class="apply-copy">
-              <h3>인턴 채용 절차</h3>
+          <div class="company-message">
+            <div class="message-text">
+              <h2>
+                집에 있지만 함께 근무중인 사람들을 위해,<br />
+                (주) 백수는 오늘도 출근하지 않고 출근합니다.
+              </h2>
               <p>
-                간단한 앙케이트를 제출하면 면접관이 이력서를 검토하고, 최종 결제중이라는
-                이해할 수 없는 단계를 거쳐 인턴으로 채용됩니다.
+                (주) 백수는 백수를 하나의 직장, 하나의 생활 방식, 하나의 사내 문화로
+                재해석하는 소통형 페이퍼 컴퍼니입니다. 우리는 침대와 책상 사이의 짧은
+                이동을 출근으로 보고, 오전 11시에 켜진 모니터 앞의 침묵도 근무 태도로
+                인정합니다.
               </p>
+              <p>
+                탕비실에서는 커피와 간식처럼 가벼운 대화가 오가고, 점심시간에는 메뉴와
+                익명 잡담이 흐르며, 회식방에서는 퇴근 이후의 역할놀이와 투표 문화가
+                실험됩니다. 작지만 회사다운 메뉴와 안내를 갖춰 백수의 하루를 조금 더
+                그럴듯하게 만드는 것이 우리의 첫 번째 사업입니다.
+              </p>
+              <p>
+                앞으로도 (주) 백수는 “우리는 집에 있지만 함께 근무중이다”라는 신념 아래,
+                무직과 재택과 구직 사이에 있는 사람들에게 잠깐 웃고 머무를 수 있는 사내
+                공간을 제공하겠습니다.
+              </p>
+              <div class="message-sign">
+                <span>대표이사</span>
+                <span class="signature">백수일동</span>
+              </div>
             </div>
-            <form class="apply-form" id="applyForm">
-              <div class="field-grid">
-                <label>
-                  1주일 중 집에 있는 시간
-                  <select id="homeHours" required>
-                    <option value="상시대기">상시대기</option>
-                    <option value="주 3일">주 3일</option>
-                    <option value="주말 집중">주말 집중</option>
-                  </select>
-                </label>
-                <label>
-                  특기
-                  <input id="skillInput" maxlength="18" placeholder="예: 누워서 폰 보기" required />
-                </label>
+
+            <aside class="message-side" aria-label="회사 인증">
+              <img src="assets/baksu-office-hero.png" alt="백수 사무실 책상" />
+              <div class="certificate">
+                <span>PAPER COMPANY</span>
+                <strong>퇴사 = 현생 회사 입사</strong>
               </div>
-              <label>
-                지원 동기 20자 이내
-                <input id="motiveInput" maxlength="20" placeholder="함께 근무하고 싶습니다" required />
-              </label>
-              <button class="submit-button" type="submit">면접 제출</button>
-              <div class="apply-result" id="applyResult" aria-live="polite">
-                지원서를 제출하면 인사팀이 업무 태도를 상상합니다.
-              </div>
-            </form>
-          </section>
+            </aside>
+          </div>
         </div>
       </section>
 
-      <section class="section" id="policy" aria-labelledby="policy-title">
-        <div class="section-inner">
+      <section class="business" id="business">
+        <div class="w-1600">
           <div class="section-head">
             <div>
-              <span class="eyebrow">GUIDE</span>
-              <h2 id="policy-title">이용 안내</h2>
+              <span class="section-kicker">BUSINESS AREA</span>
+              <h2>사내 공간 안내</h2>
             </div>
-            <p class="section-summary">
-              회사 홈페이지에 있어야 하는 필수 안내를 서비스 톤에 맞춰 배치했습니다.
+            <p>
+              실제 회사 홈페이지처럼 카테고리를 정리하되, 지금은 메인 화면 구성과 소통,
+              탕비실 컨셉에 집중합니다. 점심시간 디자인은 기존 화면을 그대로 유지합니다.
             </p>
           </div>
 
-          <div class="policy-grid">
-            <article class="policy-item">
-              <h3>서비스 소개</h3>
-              <p>백수의 하루를 사내 공간처럼 나누고, 각 공간에 소통과 작은 기능을 붙입니다.</p>
+          <div class="business-list">
+            <article class="business-card">
+              <div class="business-card-content">
+                <span>ALWAYS OPEN</span>
+                <h3>탕비실</h3>
+                <p>업무중 상시 열리는 소확횡 공간. 메모, 간식 뽑기, 짧은 소통을 제공합니다.</p>
+                <a href="pantry/">VIEW</a>
+              </div>
             </article>
-            <article class="policy-item">
-              <h3>이용가이드</h3>
-              <p>탕비실은 상시 이용, 점심시간은 11시부터 13시, 회식은 17시 이후 분위기로 운영합니다.</p>
+
+            <article class="business-card">
+              <div class="business-card-content">
+                <span>11:00 - 13:00</span>
+                <h3>점심시간</h3>
+                <p>메뉴공유와 익명 대화를 위한 기존 스프레드시트형 점심 화면입니다.</p>
+                <a href="lunchtime/">VIEW</a>
+              </div>
             </article>
-            <article class="policy-item">
-              <h3>개인정보처리방침</h3>
-              <p>현재 프로토타입의 입력값은 브라우저 저장소 중심으로 다루며, 서버 저장은 별도 고지 후 연결합니다.</p>
-            </article>
-            <article class="policy-item">
-              <h3>이용약관</h3>
-              <p>익명이어도 사람을 괴롭히는 행위는 사내 징계 대상입니다. 신고와 차단 흐름을 우선 기능으로 둡니다.</p>
-            </article>
-            <article class="policy-item">
-              <h3>문의</h3>
-              <p>서비스 제안, 버그, 간식 입고 요청은 향후 문의 폼 또는 운영 메일로 받을 예정입니다.</p>
-            </article>
-            <article class="policy-item">
-              <h3>광고/제휴</h3>
-              <p>구직, 학습, 생활 정보처럼 이용자에게 맥락이 있는 카테고리만 우선 검토합니다.</p>
+
+            <article class="business-card">
+              <div class="business-card-content">
+                <span>AFTER 17:00</span>
+                <h3>회식</h3>
+                <p>익명회식방, 롤플레잉, 투표와 미니게임으로 확장할 수 있는 퇴근 후 공간입니다.</p>
+                <a href="hasik/">VIEW</a>
+              </div>
             </article>
           </div>
         </div>
       </section>
-    </main>
 
-    <footer class="footer">
-      <div class="footer-inner">
-        <span>(주) 백수 | 소통을 위한 페이퍼 컴퍼니</span>
-        <span>집에 있지만 함께 근무중입니다.</span>
+      <section class="history" id="history">
+        <div class="w-1600 history-grid">
+          <div class="history-title">
+            <span>HISTORY</span>
+            <h2>회사 이력</h2>
+          </div>
+          <div class="history-list">
+            <div class="history-row">
+              <strong>오전 11:00</strong>
+              <p>정돈되지 않은 침대와 켜진 모니터 사이에서 백수 사무실의 업무 개시.</p>
+            </div>
+            <div class="history-row">
+              <strong>상시</strong>
+              <p>탕비실을 사내 핵심 복지로 지정하고 커피, 간식, 짧은 대화를 정식 기능화.</p>
+            </div>
+            <div class="history-row">
+              <strong>점심</strong>
+              <p>메뉴공유와 익명 대화를 위한 점심시간 서비스를 하위 공간으로 편입.</p>
+            </div>
+            <div class="history-row">
+              <strong>17:00</strong>
+              <p>퇴근 후 익명회식방과 역할놀이, 투표형 미니게임을 차기 사내 행사로 검토.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="recruit" id="recruit">
+        <div class="w-1600">
+          <div class="section-head">
+            <div>
+              <span class="section-kicker">RECRUIT</span>
+              <h2>입사 지원 절차</h2>
+            </div>
+            <p>
+              회원가입은 면접처럼, 프로필은 이력서처럼, 랜덤 닉네임은 사원증처럼 다룹니다.
+            </p>
+          </div>
+
+          <div class="recruit-panel">
+            <div class="recruit-step">
+              <span>01</span>
+              <strong>입사 지원하기</strong>
+              <p>1주일 중 집에 있는 시간과 특기를 적습니다.</p>
+            </div>
+            <div class="recruit-step">
+              <span>02</span>
+              <strong>면접 앙케이트</strong>
+              <p>지원 동기 20자 이내로 인사팀의 상상력을 자극합니다.</p>
+            </div>
+            <div class="recruit-step">
+              <span>03</span>
+              <strong>검토중</strong>
+              <p>면접관이 이력서를 검토중입니다. 실제로는 로딩 문구입니다.</p>
+            </div>
+            <div class="recruit-step">
+              <span>04</span>
+              <strong>인턴 채용</strong>
+              <p>(주) 백수의 소중한 한 가족으로서 최선을 다해 부탁드립니다.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="footer" id="footer">
+      <div class="w-1600">
+        <div class="footer-address">
+          <div>
+            <ul class="footer-links">
+              <li><a href="#company">회사소개</a></li>
+              <li><a href="pantry/">탕비실</a></li>
+              <li><a href="lunchtime/">점심시간</a></li>
+              <li><a href="hasik/">회식</a></li>
+              <li><a href="#recruit">입사지원</a></li>
+              <li><a href="#footer">고객센터</a></li>
+            </ul>
+            <dl class="footer-info">
+              <dd>(주)백수</dd>
+              <dd>대표 : 백수일동</dd>
+              <dd class="no-line">사업자등록번호 : 검토중</dd>
+              <dd>본사 : 각자의 집</dd>
+              <dd class="no-line">지사 : 침대와 책상 사이</dd>
+            </dl>
+          </div>
+          <div class="footer-contact">
+            <h3>11:00 - 17:00</h3>
+            <p>상담시간 : 업무중인 척 가능한 시간<br />점심시간 : 11시 - 13시 / 주말, 공휴일 재택</p>
+          </div>
+        </div>
+        <div class="footer-copy">
+          <span>COPYRIGHT (C) BAKSU. ALL RIGHT RESERVED.</span>
+          <span>소통을 위한 페이퍼 컴퍼니</span>
+        </div>
       </div>
     </footer>
-
-    <script>
-      const applyForm = document.querySelector("#applyForm");
-      const applyResult = document.querySelector("#applyResult");
-      const skillInput = document.querySelector("#skillInput");
-      const motiveInput = document.querySelector("#motiveInput");
-      const homeHours = document.querySelector("#homeHours");
-
-      const nicknameSeeds = ["탕비실", "재택", "인턴", "대기", "루팡", "면접"];
-
-      function getRandomNickname(skill) {
-        const seed = nicknameSeeds[Math.floor(Math.random() * nicknameSeeds.length)];
-        const suffix = Math.floor(100 + Math.random() * 900);
-        const cleanSkill = skill.trim().slice(0, 2) || "백수";
-        return `${seed}${cleanSkill}${suffix}`;
-      }
-
-      function setApplyMessage(message) {
-        applyResult.textContent = message;
-      }
-
-      applyForm.addEventListener("submit", (event) => {
-        event.preventDefault();
-        const skill = skillInput.value.trim();
-        const motive = motiveInput.value.trim();
-
-        if (!skill || !motive) {
-          setApplyMessage("인사팀이 빈칸을 발견했습니다.");
-          return;
-        }
-
-        setApplyMessage("면접관이 이력서를 검토중입니다...");
-
-        window.setTimeout(() => {
-          setApplyMessage("최종 결제중입니다...");
-        }, 650);
-
-        window.setTimeout(() => {
-          const nickname = getRandomNickname(skill);
-          const profile = {
-            nickname,
-            homeHours: homeHours.value,
-            skill,
-            motive,
-            hiredAt: new Date().toISOString()
-          };
-
-          localStorage.setItem("baksu:profile", JSON.stringify(profile));
-          setApplyMessage(
-            `축하합니다! ${nickname}님은 (주) 백수의 인턴으로 채용되셨습니다. 앞으로 소중한 한 가족으로서 최선을 다해 부탁드립니다.`
-          );
-        }, 1350);
-      });
-    </script>
   </body>
 </html>
