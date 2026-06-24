@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>점심시간 | (주) 백수</title>
+    <meta
+      name="description"
+      content="(주) 백수 안의 점심시간 익명 소통 공간"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f8;
+        --ink: #101214;
+        --muted: #606974;
+        --line: #d9dde2;
+        --panel: #ffffff;
+        --panel-soft: #eef7f1;
+        --green: #0f9d59;
+        --green-dark: #0b7f46;
+        --red: #e04d39;
+        --yellow: #ffd45a;
+        --shadow: 0 18px 60px rgba(16, 18, 20, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-width: 320px;
+        min-height: 100%;
+        margin: 0;
+      }
+
+      body {
+        background:
+          linear-gradient(90deg, rgba(16, 18, 20, 0.04) 1px, transparent 1px),
+          linear-gradient(0deg, rgba(16, 18, 20, 0.04) 1px, transparent 1px),
+          var(--bg);
+        background-size: 44px 44px;
+        color: var(--ink);
+        font-family:
+          Arial,
+          "Apple SD Gothic Neo",
+          "Noto Sans KR",
+          sans-serif;
+        letter-spacing: 0;
+      }
+
+      a,
+      button {
+        font: inherit;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .site-shell {
+        min-height: 100dvh;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 56px;
+        padding: 0 24px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.88);
+        backdrop-filter: blur(12px);
+      }
+
+      .brand-mark {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 15px;
+        font-weight: 800;
+      }
+
+      .brand-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow:
+          18px 0 0 var(--yellow),
+          36px 0 0 var(--red);
+      }
+
+      .nav-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .home {
+        display: grid;
+        grid-template-columns: minmax(320px, 0.88fr) minmax(420px, 1.12fr);
+        gap: 32px;
+        align-items: center;
+        width: min(1180px, calc(100% - 48px));
+        margin: 0 auto;
+        padding: 34px 0;
+      }
+
+      .intro {
+        display: grid;
+        gap: 26px;
+      }
+
+      .status-strip {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        border: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .status-item {
+        min-width: 0;
+        padding: 12px;
+        border-right: 1px solid var(--line);
+      }
+
+      .status-item:last-child {
+        border-right: 0;
+      }
+
+      .status-label {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .status-value {
+        display: block;
+        margin-top: 5px;
+        overflow: hidden;
+        font-size: 15px;
+        font-weight: 800;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(52px, 8vw, 104px);
+        font-weight: 900;
+        line-height: 0.94;
+      }
+
+      .slogan {
+        max-width: 620px;
+        margin: 0;
+        color: #2b3036;
+        font-size: clamp(20px, 2.5vw, 31px);
+        font-weight: 800;
+        line-height: 1.34;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .primary-action,
+      .secondary-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 0 18px;
+        border: 1px solid var(--green-dark);
+        font-size: 15px;
+        font-weight: 800;
+      }
+
+      .primary-action {
+        background: var(--green);
+        color: #ffffff;
+      }
+
+      .secondary-action {
+        background: var(--panel);
+        color: var(--green-dark);
+      }
+
+      .feature-board {
+        border: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .feature-row {
+        display: grid;
+        grid-template-columns: 108px minmax(0, 1fr);
+        min-height: 52px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .feature-row:last-child {
+        border-bottom: 0;
+      }
+
+      .feature-name,
+      .feature-copy {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        padding: 0 14px;
+        font-size: 14px;
+      }
+
+      .feature-name {
+        border-right: 1px solid var(--line);
+        background: var(--panel-soft);
+        color: var(--green-dark);
+        font-weight: 900;
+      }
+
+      .feature-copy {
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .preview-zone {
+        align-self: stretch;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        min-height: 560px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .preview-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 48px;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .preview-title {
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .preview-state {
+        color: var(--green-dark);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .preview-frame-wrap {
+        position: relative;
+        min-height: 0;
+        overflow: hidden;
+        background: #ffffff;
+      }
+
+      .preview-frame {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        pointer-events: none;
+      }
+
+      .preview-overlay {
+        position: absolute;
+        right: 14px;
+        bottom: 14px;
+        display: inline-flex;
+        align-items: center;
+        min-height: 34px;
+        padding: 0 12px;
+        background: rgba(16, 18, 20, 0.88);
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      @media (max-width: 900px) {
+        .site-shell {
+          display: block;
+        }
+
+        .home {
+          grid-template-columns: 1fr;
+          width: min(640px, calc(100% - 28px));
+          padding: 28px 0;
+        }
+
+        .preview-zone {
+          min-height: 420px;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .topbar {
+          padding: 0 14px;
+        }
+
+        .brand-dot {
+          box-shadow:
+            14px 0 0 var(--yellow),
+            28px 0 0 var(--red);
+        }
+
+        .home {
+          width: calc(100% - 24px);
+          gap: 24px;
+        }
+
+        .status-strip,
+        .feature-row {
+          grid-template-columns: 1fr;
+        }
+
+        .status-item,
+        .feature-name {
+          border-right: 0;
+        }
+
+        .status-item {
+          border-bottom: 1px solid var(--line);
+        }
+
+        .status-item:last-child {
+          border-bottom: 0;
+        }
+
+        .feature-name {
+          min-height: 34px;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .feature-copy {
+          min-height: 44px;
+        }
+
+        .actions {
+          display: grid;
+        }
+
+        .primary-action,
+        .secondary-action {
+          width: 100%;
+        }
+
+        .preview-zone {
+          min-height: 360px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="topbar">
+        <a class="brand-mark" href="../index.html" aria-label="(주) 백수 홈">
+          <span class="brand-dot" aria-hidden="true"></span>
+          <span>(주) 백수</span>
+        </a>
+        <a class="nav-link" href="lunchtime.html">점심시간</a>
+      </header>
+
+      <main class="home">
+        <section class="intro" aria-label="(주) 백수 소개">
+          <div class="status-strip" aria-label="서비스 상태">
+            <div class="status-item">
+              <span class="status-label">근무 위치</span>
+              <span class="status-value">백수 사무실</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">접속 상태</span>
+              <span class="status-value">점심 대기중</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">현재 공간</span>
+              <span class="status-value">점심시간</span>
+            </div>
+          </div>
+
+          <div>
+            <h1>점심시간</h1>
+            <p class="slogan">
+              큰 백수 사무실 안에서 메뉴와 잡담을 나누는 익명 점심방.
+            </p>
+          </div>
+
+          <div class="actions" aria-label="주요 이동">
+            <a class="primary-action" href="lunchtime.html">점심시간 입장</a>
+            <a class="secondary-action" href="../index.html">백수 홈</a>
+          </div>
+
+          <section class="feature-board" id="features" aria-label="점심시간 기능">
+            <div class="feature-row">
+              <strong class="feature-name">익명 채팅</strong>
+              <span class="feature-copy">부담 없이 메뉴와 잡담을 던지고 사라집니다.</span>
+            </div>
+            <div class="feature-row">
+              <strong class="feature-name">정보 티커</strong>
+              <span class="feature-copy">날씨, 뉴스, 생활 정보를 점심 흐름에 맞춰 보여줍니다.</span>
+            </div>
+            <div class="feature-row">
+              <strong class="feature-name">신고/차단</strong>
+              <span class="feature-copy">익명 공간을 유지하기 위한 안전 장치를 붙일 예정입니다.</span>
+            </div>
+          </section>
+        </section>
+
+        <aside class="preview-zone" aria-label="점심시간 미리보기">
+          <div class="preview-header">
+            <span class="preview-title">점심시간 화면</span>
+            <span class="preview-state">입장 가능</span>
+          </div>
+          <div class="preview-frame-wrap">
+            <iframe class="preview-frame" src="lunchtime.html" title="점심시간 미리보기"></iframe>
+            <span class="preview-overlay">점심시간 입장 버튼으로 접속</span>
+          </div>
+        </aside>
+      </main>
+    </div>
+  </body>
+</html>

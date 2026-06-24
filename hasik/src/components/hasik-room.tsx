@@ -1,0 +1,2089 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent, RefObject } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import {
+  CreditCard,
+  Dices,
+  Eye,
+  EyeOff,
+  Flag,
+  Gift,
+  Menu,
+  Megaphone,
+  Pointer,
+  Scissors,
+  Send,
+  Settings2,
+  Users,
+  UserRound,
+  Utensils
+} from "lucide-react";
+import { getHasikRoomName, getSupabaseBrowserClient } from "@/lib/supabase";
+
+type Role = "인턴" | "사원" | "대리" | "과장" | "부장";
+type Mood = "quiet" | "talk" | "afterwork";
+type RealtimeMode = "demo" | "setup" | "live";
+type PaymentMethod = "split" | "single" | "roulette" | "rps";
+type MenuItemKind = "food" | "drink";
+export type RoomAccessMode = "anonymous" | "nickname";
+export type TableShape = "round" | "rectangle";
+
+interface HasikRoomProps {
+  accessMode?: RoomAccessMode;
+  initialNickname?: string;
+  initialRoomTitle?: string;
+  initialTableShape?: TableShape;
+  roomNameOverride?: string;
+  onLeave?: () => void;
+  onRoomTitleChange?: (title: string) => void;
+  onTableShapeChange?: (shape: TableShape) => void;
+}
+
+interface ChatMessage {
+  id: string;
+  nickname: string;
+  role: Role;
+  body: string;
+  at: number;
+  kind?: "normal" | "system" | "bell";
+}
+
+interface PresenceUser {
+  id: string;
+  nickname: string;
+  role: Role;
+  joinedAt: number;
+  mood: Mood;
+}
+
+interface HasikMessageRow {
+  id: string;
+  room: string;
+  nickname: string;
+  role: Role;
+  body: string;
+  kind: ChatMessage["kind"];
+  created_at: string;
+}
+
+interface MenuSelection {
+  id: string;
+  userId: string;
+  nickname: string;
+  role: Role;
+  itemId: string;
+  x: number;
+  y: number;
+  at: number;
+}
+
+interface SecretCheckout {
+  userId: string;
+  nickname: string;
+  role: Role;
+  at: number;
+}
+
+interface CompletedOrder {
+  id: string;
+  payerNickname: string;
+  payerRole: Role;
+  amount: number;
+  at: number;
+}
+
+interface PaymentVote {
+  userId: string;
+  nickname: string;
+  role: Role;
+  method: PaymentMethod;
+  at: number;
+}
+
+interface TableFood {
+  id: string;
+  itemId: string;
+  name: string;
+  icon: string;
+  kind: MenuItemKind;
+  ownerId: string;
+  ownerNickname: string;
+  ownerRole: Role;
+  x: number;
+  y: number;
+  pourTargetId?: string;
+  pourUntil?: number;
+  at: number;
+}
+
+const chatCooldownMs = 500;
+const roles: Role[] = ["인턴", "사원", "대리", "과장", "부장"];
+const roleRank: Record<Role, number> = {
+  "인턴": 1,
+  "사원": 2,
+  "대리": 3,
+  "과장": 4,
+  "부장": 5
+};
+const moods: Array<{ id: Mood; label: string }> = [
+  { id: "afterwork", label: "퇴근 직후" },
+  { id: "talk", label: "수다 가능" },
+  { id: "quiet", label: "조용히 착석" }
+];
+
+const menuItems = [
+  { id: "kimchi-jeon", name: "김치전", price: 16000, kind: "food", icon: "전" },
+  { id: "fishcake-soup", name: "어묵탕", price: 18000, kind: "food", icon: "탕" },
+  { id: "chicken-skewer", name: "닭꼬치", price: 14000, kind: "food", icon: "꼬치" },
+  { id: "dried-pollack", name: "먹태", price: 19000, kind: "food", icon: "먹태" },
+  { id: "highball", name: "하이볼", price: 9000, kind: "drink", icon: "잔" },
+  { id: "zero-cola", name: "제로콜라", price: 3000, kind: "drink", icon: "콜라" },
+  { id: "corn-tea", name: "옥수수차", price: 4000, kind: "drink", icon: "차" }
+] as const;
+
+const paymentOptions: Array<{
+  id: PaymentMethod;
+  label: string;
+  description: string;
+  icon: typeof Users;
+}> = [
+  { id: "split", label: "더치페이", description: "각자 주문한 만큼 나누기", icon: Users },
+  { id: "single", label: "한 명이 계산", description: "오늘의 결제 담당 한 명 지정", icon: CreditCard },
+  { id: "roulette", label: "룰렛", description: "운에 맡겨 결제 담당 뽑기", icon: Dices },
+  { id: "rps", label: "가위바위보", description: "짧게 승부 보고 정하기", icon: Scissors }
+];
+
+const bubbleLifetimeMs = 10000;
+const clockMarks = Array.from({ length: 12 }, (_, index) => index * 30);
+const maxSeatCount = 8;
+const initialRenderTime = Date.UTC(2026, 0, 1, 12, 0);
+const seatPositions = [
+  { x: 50, y: 88 },
+  { x: 24, y: 76 },
+  { x: 12, y: 50 },
+  { x: 24, y: 24 },
+  { x: 50, y: 14 },
+  { x: 76, y: 24 },
+  { x: 88, y: 50 },
+  { x: 76, y: 76 }
+] as const;
+
+function createSeedMessages(baseTime: number): ChatMessage[] {
+  return [
+    {
+      id: "seed-1",
+      nickname: "최대리",
+      role: "대리",
+      body: "다들 오늘 회의 몇 시에 끝났나요",
+      at: baseTime - 1000 * 60 * 5
+    },
+    {
+      id: "seed-2",
+      nickname: "박인턴",
+      role: "인턴",
+      body: "저는 방금 퇴근했습니다. 메뉴판부터 봅니다",
+      at: baseTime - 1000 * 60 * 3
+    },
+    {
+      id: "seed-3",
+      nickname: "윤과장",
+      role: "과장",
+      body: "오늘은 제로콜라 골든벨입니다",
+      at: baseTime - 1000 * 60,
+      kind: "bell"
+    }
+  ];
+}
+
+const seedMessages = createSeedMessages(initialRenderTime);
+
+function createId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function formatClock(value: number) {
+  return new Intl.DateTimeFormat("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(value);
+}
+
+function formatPeriod(value: number) {
+  return new Date(value).getHours() < 12 ? "오전" : "오후";
+}
+
+function formatPrice(value: number) {
+  return `${new Intl.NumberFormat("ko-KR").format(value)}원`;
+}
+
+function clampPercent(value: number) {
+  return Math.min(100, Math.max(0, value));
+}
+
+function syncKeyboardInset() {
+  if (typeof window === "undefined") {
+    return 0;
+  }
+
+  const visualViewport = window.visualViewport;
+
+  if (!visualViewport) {
+    return 0;
+  }
+
+  const layoutHeight = Math.max(window.innerHeight, document.documentElement.clientHeight);
+  const rawKeyboardInset = Math.max(
+    0,
+    layoutHeight - visualViewport.height - visualViewport.offsetTop
+  );
+  const keyboardInset = rawKeyboardInset > 80 ? Math.round(rawKeyboardInset) : 0;
+  document.documentElement.style.setProperty("--keyboard-inset", `${keyboardInset}px`);
+  return keyboardInset;
+}
+
+function getLevel(minutes: number) {
+  if (minutes >= 40) {
+    return { title: "팀장석", progress: 100, next: "오늘의 골든벨" };
+  }
+
+  if (minutes >= 20) {
+    return { title: "과장석", progress: 72, next: "팀장석까지 20분" };
+  }
+
+  if (minutes >= 8) {
+    return { title: "대리석", progress: 42, next: "과장석까지 12분" };
+  }
+
+  return { title: "인턴석", progress: 18, next: "대리석까지 8분" };
+}
+
+function getMemberKey(nickname: string, role: Role) {
+  return `${nickname}:${role}`;
+}
+
+function stripRoleSuffix(nickname: string, role: Role) {
+  return nickname.endsWith(role) ? nickname.slice(0, -role.length) || nickname : nickname;
+}
+
+function getRoleTone(role: Role) {
+  switch (role) {
+    case "인턴":
+      return "intern";
+    case "사원":
+      return "staff";
+    case "대리":
+      return "assistant-manager";
+    case "과장":
+      return "manager";
+    case "부장":
+      return "director";
+  }
+}
+
+function NameWithRole({ nickname, role }: { nickname: string; role: Role }) {
+  return (
+    <span className="display-name">
+      <span>{stripRoleSuffix(nickname, role)}</span>
+      <span className={`role-label ${getRoleTone(role)}`}>{role}</span>
+    </span>
+  );
+}
+
+function mapMessageRow(row: HasikMessageRow): ChatMessage {
+  return {
+    id: row.id,
+    nickname: row.nickname,
+    role: row.role,
+    body: row.body,
+    kind: row.kind,
+    at: new Date(row.created_at).getTime()
+  };
+}
+
+function mergeMessage(current: ChatMessage[], nextMessage: ChatMessage) {
+  if (current.some((message) => message.id === nextMessage.id)) {
+    return current;
+  }
+
+  return [...current, nextMessage]
+    .sort((left, right) => left.at - right.at)
+    .slice(-80);
+}
+
+export function HasikRoom({
+  accessMode = "anonymous",
+  initialNickname,
+  initialRoomTitle = "퇴근 후 익명 회식방",
+  initialTableShape = "round",
+  roomNameOverride,
+  onLeave,
+  onRoomTitleChange,
+  onTableShapeChange
+}: HasikRoomProps = {}) {
+  const [selectedRole, setSelectedRole] = useState<Role>("대리");
+  const [mood, setMood] = useState<Mood>("afterwork");
+  const [nickname, setNickname] = useState(initialNickname ?? (accessMode === "anonymous" ? "익명대리" : "김대리"));
+  const [roomTitle, setRoomTitle] = useState(initialRoomTitle);
+  const [tableShape, setTableShape] = useState<TableShape>(initialTableShape);
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>(seedMessages);
+  const [presence, setPresence] = useState<PresenceUser[]>([]);
+  const [connected, setConnected] = useState(false);
+  const [realtimeMode, setRealtimeMode] = useState<RealtimeMode>("demo");
+  const [activeProfile, setActiveProfile] = useState<ChatMessage | null>(null);
+  const [isSettingsOpen, setSettingsOpen] = useState(false);
+  const [isMenuOpen, setMenuOpen] = useState(false);
+  const [isPaymentOpen, setPaymentOpen] = useState(false);
+  const [menuSelections, setMenuSelections] = useState<Record<string, MenuSelection>>({});
+  const [paymentVotes, setPaymentVotes] = useState<Record<string, PaymentVote>>({});
+  const [secretCheckout, setSecretCheckout] = useState<SecretCheckout | null>(null);
+  const [secretAmount, setSecretAmount] = useState("");
+  const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null);
+  const [tableFoods, setTableFoods] = useState<Record<string, TableFood>>({});
+  const [activePourFoodId, setActivePourFoodId] = useState<string | null>(null);
+  const [isChatHistoryVisible, setChatHistoryVisible] = useState(true);
+  const [reportStatus, setReportStatus] = useState("");
+  const [isReporting, setIsReporting] = useState(false);
+  const [cooldownUntil, setCooldownUntil] = useState(0);
+  const [cooldownTick, setCooldownTick] = useState(0);
+  const [isComposerVisible, setComposerVisible] = useState(true);
+  const [hasMounted, setHasMounted] = useState(false);
+  const [startedAt, setStartedAt] = useState(initialRenderTime);
+  const [now, setNow] = useState(initialRenderTime);
+  const sessionIdRef = useRef(createId());
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const chatFeedRef = useRef<HTMLDivElement | null>(null);
+  const menuListRef = useRef<HTMLDivElement | null>(null);
+  const dockedComposerRef = useRef<HTMLDivElement | null>(null);
+  const tableCenterRef = useRef<HTMLDivElement | null>(null);
+  const activeComposerInputRef = useRef<HTMLInputElement | null>(null);
+  const lastScrollYRef = useRef(0);
+  const composerFocusedRef = useRef(false);
+  const updateFloatingComposerRef = useRef<() => void>(() => undefined);
+  const foodDragRef = useRef<{
+    id: string;
+    startX: number;
+    startY: number;
+    moved: boolean;
+    lastX: number;
+    lastY: number;
+  } | null>(null);
+
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const roomName = useMemo(() => roomNameOverride ?? getHasikRoomName(), [roomNameOverride]);
+  const stayMinutes = Math.floor((now - startedAt) / 60000);
+  const level = getLevel(stayMinutes);
+  const cooldownRemainingMs = Math.max(0, cooldownUntil - Date.now());
+  const isCoolingDown = cooldownRemainingMs > 0;
+  const onlineCount = supabase
+    ? Math.max(presence.length, 1)
+    : hasMounted
+      ? 17 + (Math.floor(now / 1000) % 5)
+      : 17;
+  const currentDate = new Date(now);
+  const hourAngle = ((currentDate.getHours() % 12) + currentDate.getMinutes() / 60) * 30;
+  const minuteAngle = (currentDate.getMinutes() + currentDate.getSeconds() / 60) * 6;
+  const clockStyle = {
+    "--hour-angle": `${hourAngle}deg`,
+    "--minute-angle": `${minuteAngle}deg`
+  } as CSSProperties;
+
+  const menuSelectionList = useMemo(() => Object.values(menuSelections), [menuSelections]);
+  const orderedMenuItems = useMemo(() => {
+    return menuItems
+      .map((item) => ({
+        ...item,
+        count: menuSelectionList.filter((selection) => selection.itemId === item.id).length
+      }))
+      .filter((item) => item.count > 0);
+  }, [menuSelectionList]);
+  const orderTotal = orderedMenuItems.reduce((total, item) => total + item.price * item.count, 0);
+  const paymentVoteList = useMemo(() => Object.values(paymentVotes), [paymentVotes]);
+  const paymentVoteCounts = useMemo(() => {
+    return paymentOptions.map((option) => ({
+      ...option,
+      count: paymentVoteList.filter((vote) => vote.method === option.id).length
+    }));
+  }, [paymentVoteList]);
+  const winningPaymentMethod = paymentVoteCounts.reduce(
+    (winner, option) => (option.count > winner.count ? option : winner),
+    paymentVoteCounts[0]
+  );
+  const isSecretCheckoutMine = secretCheckout?.userId === sessionIdRef.current;
+  const secretCheckoutAmount = Number(secretAmount.replace(/[^\d]/g, ""));
+  const tableFoodList = useMemo(() => Object.values(tableFoods), [tableFoods]);
+
+  const user = useMemo<PresenceUser>(
+    () => ({
+      id: sessionIdRef.current,
+      nickname,
+      role: selectedRole,
+      joinedAt: startedAt,
+      mood
+    }),
+    [mood, nickname, selectedRole, startedAt]
+  );
+
+  const roomMembers = useMemo(() => {
+    const membersById = new Map<string, PresenceUser>();
+
+    [user, ...presence].forEach((member) => {
+      membersById.set(member.id, member);
+    });
+
+    return Array.from(membersById.values());
+  }, [presence, user]);
+
+  const settingsController = useMemo(() => {
+    return [...roomMembers].sort((left, right) => {
+      const roleGap = roleRank[right.role] - roleRank[left.role];
+
+      if (roleGap !== 0) {
+        return roleGap;
+      }
+
+      return left.joinedAt - right.joinedAt;
+    })[0] ?? user;
+  }, [roomMembers, user]);
+
+  const canManageChatSettings = settingsController.id === sessionIdRef.current;
+
+  const seatMembers = useMemo(() => {
+    const nextMembers: PresenceUser[] = [user];
+    const seenMemberIds = new Set([user.id]);
+
+    presence.forEach((member) => {
+      if (seenMemberIds.has(member.id) || nextMembers.length >= maxSeatCount) {
+        return;
+      }
+
+      nextMembers.push(member);
+      seenMemberIds.add(member.id);
+    });
+
+    return Array.from({ length: maxSeatCount }, (_, index) => nextMembers[index] ?? null);
+  }, [presence, user]);
+
+  const latestMessageByMember = useMemo(() => {
+    const nextMessages = new Map<string, ChatMessage>();
+
+    messages.forEach((message) => {
+      nextMessages.set(getMemberKey(message.nickname, message.role), message);
+    });
+
+    return nextMessages;
+  }, [messages]);
+
+  const centerTableInVisualViewport = useCallback(() => {
+    const tableElement = tableCenterRef.current;
+
+    if (!tableElement) {
+      return;
+    }
+
+    const keyboardInset = syncKeyboardInset();
+
+    const visualViewport = window.visualViewport;
+    const viewportHeight = visualViewport?.height ?? window.innerHeight;
+    const mobileComposer = document.querySelector<HTMLElement>(".mobile-composer");
+    const composerHeight =
+      mobileComposer && window.matchMedia("(max-width: 760px)").matches
+        ? mobileComposer.getBoundingClientRect().height + 12
+        : 0;
+    const usableViewportHeight = Math.max(180, viewportHeight - composerHeight - 12);
+    const tableRect = tableElement.getBoundingClientRect();
+    const visibleTop = window.scrollY + (visualViewport?.offsetTop ?? 0);
+    const visibleBottom = visibleTop + usableViewportHeight;
+    const tableCenter = window.scrollY + tableRect.top + tableRect.height / 2;
+    const centeredTop = tableCenter - usableViewportHeight / 2;
+    const tableBottom = window.scrollY + tableRect.bottom;
+    const coveredTableTop = tableBottom - usableViewportHeight + 24;
+    const nextScrollTop = Math.max(0, keyboardInset > 0 ? Math.max(centeredTop, coveredTableTop) : centeredTop);
+
+    if (Math.abs(nextScrollTop - window.scrollY) > 6 || tableBottom > visibleBottom) {
+      window.scrollTo({ top: nextScrollTop, behavior: "auto" });
+    }
+
+    lastScrollYRef.current = nextScrollTop;
+  }, []);
+
+  const scheduleTableCentering = useCallback((showFloatingComposer = true) => {
+    setComposerVisible(showFloatingComposer);
+    syncKeyboardInset();
+    window.setTimeout(centerTableInVisualViewport, 180);
+    window.setTimeout(centerTableInVisualViewport, 360);
+  }, [centerTableInVisualViewport]);
+
+  const keepComposerFocus = useCallback(() => {
+    const inputElement = activeComposerInputRef.current;
+
+    if (!inputElement) {
+      return;
+    }
+
+    inputElement.focus({ preventScroll: true });
+  }, []);
+
+  useEffect(() => {
+    const mountedAt = Date.now();
+    setHasMounted(true);
+    setStartedAt(mountedAt);
+    setNow(mountedAt);
+
+    if (!supabase) {
+      setMessages(createSeedMessages(mountedAt));
+    }
+
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [supabase]);
+
+  useEffect(() => {
+    if (!isCoolingDown) {
+      return;
+    }
+
+    const timer = window.setInterval(() => setCooldownTick((value) => value + 1), 100);
+    return () => window.clearInterval(timer);
+  }, [isCoolingDown]);
+
+  useEffect(() => {
+    const feed = chatFeedRef.current;
+
+    if (feed) {
+      feed.scrollTop = feed.scrollHeight;
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    setReportStatus("");
+  }, [activeProfile]);
+
+  useEffect(() => {
+    if (!isPaymentOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    const previousOverscrollBehavior = document.body.style.overscrollBehavior;
+    document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "contain";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.overscrollBehavior = previousOverscrollBehavior;
+    };
+  }, [isPaymentOpen]);
+
+  useEffect(() => {
+    let keyboardTimer = 0;
+
+    const updateFloatingComposer = () => {
+      syncKeyboardInset();
+      const dockedComposer = dockedComposerRef.current;
+      const isMobile = window.matchMedia("(max-width: 760px)").matches;
+
+      if (!isMobile || !dockedComposer) {
+        setComposerVisible(false);
+        return;
+      }
+
+      const visualViewport = window.visualViewport;
+      const viewportHeight = visualViewport?.height ?? window.innerHeight;
+      const composerRect = dockedComposer.getBoundingClientRect();
+      const composerHeight = Math.max(56, composerRect.height || 72);
+      const floatingTop = viewportHeight - composerHeight - 8;
+      const isDockedComposerAtFloatingSlot =
+        composerRect.top <= floatingTop && composerRect.bottom > 0;
+
+      setComposerVisible(!isDockedComposerAtFloatingSlot);
+      lastScrollYRef.current = window.scrollY;
+    };
+
+    const scheduleKeyboardInsetSync = () => {
+      if (syncKeyboardInset() === 0 && document.activeElement !== activeComposerInputRef.current) {
+        composerFocusedRef.current = false;
+      }
+
+      window.clearTimeout(keyboardTimer);
+      keyboardTimer = window.setTimeout(updateFloatingComposer, 180);
+    };
+
+    updateFloatingComposerRef.current = updateFloatingComposer;
+    window.addEventListener("scroll", updateFloatingComposer, { passive: true });
+    window.addEventListener("resize", updateFloatingComposer);
+    window.visualViewport?.addEventListener("resize", scheduleKeyboardInsetSync);
+    updateFloatingComposer();
+
+    return () => {
+      window.removeEventListener("scroll", updateFloatingComposer);
+      window.removeEventListener("resize", updateFloatingComposer);
+      window.visualViewport?.removeEventListener("resize", scheduleKeyboardInsetSync);
+      window.clearTimeout(keyboardTimer);
+      document.documentElement.style.removeProperty("--keyboard-inset");
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!supabase) {
+      setConnected(false);
+      setRealtimeMode("demo");
+      setPresence([
+        user,
+        { id: "demo-1", nickname: "정사원", role: "사원", joinedAt: Date.now() - 200000, mood: "talk" },
+        { id: "demo-2", nickname: "오부장", role: "부장", joinedAt: Date.now() - 500000, mood: "quiet" }
+      ]);
+      return;
+    }
+
+    const client = supabase;
+    let isActive = true;
+    const channel = client.channel(`hasik:${roomName}`, {
+      config: {
+        broadcast: { self: true },
+        presence: { key: sessionIdRef.current }
+      }
+    });
+
+    async function loadRecentMessages() {
+      const { data, error } = await client
+        .from("hasik_messages")
+        .select("id, room, nickname, role, body, kind, created_at")
+        .eq("room", roomName)
+        .order("created_at", { ascending: false })
+        .limit(80);
+
+      if (!isActive) {
+        return;
+      }
+
+      if (error) {
+        setRealtimeMode("setup");
+        return;
+      }
+
+      const nextMessages = ((data ?? []) as HasikMessageRow[]).reverse().map(mapMessageRow);
+      setMessages(nextMessages.length > 0 ? nextMessages : seedMessages);
+      setRealtimeMode("live");
+    }
+
+    void loadRecentMessages();
+
+    channel
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "hasik_messages",
+        filter: `room=eq.${roomName}`
+      }, ({ new: payload }) => {
+        const nextMessage = mapMessageRow(payload as HasikMessageRow);
+        setMessages((current) => mergeMessage(current, nextMessage));
+      })
+      .on("broadcast", { event: "room_settings" }, ({ payload }) => {
+        if (typeof payload?.chatHistoryVisible === "boolean") {
+          setChatHistoryVisible(payload.chatHistoryVisible);
+        }
+
+        if (typeof payload?.roomTitle === "string") {
+          const nextTitle = payload.roomTitle.slice(0, 28);
+          setRoomTitle(nextTitle);
+          onRoomTitleChange?.(nextTitle);
+        }
+
+        if (payload?.tableShape === "round" || payload?.tableShape === "rectangle") {
+          const nextShape = payload.tableShape;
+          setTableShape(nextShape);
+          onTableShapeChange?.(nextShape);
+        }
+      })
+      .on("broadcast", { event: "menu_selection" }, ({ payload }) => {
+        if (
+          typeof payload?.userId !== "string" ||
+          typeof payload?.id !== "string" ||
+          typeof payload?.nickname !== "string" ||
+          typeof payload?.role !== "string" ||
+          typeof payload?.itemId !== "string" ||
+          typeof payload?.x !== "number" ||
+          typeof payload?.y !== "number" ||
+          typeof payload?.at !== "number" ||
+          !roles.includes(payload.role as Role) ||
+          !menuItems.some((item) => item.id === payload.itemId)
+        ) {
+          return;
+        }
+
+        const nextSelection: MenuSelection = {
+          id: payload.id,
+          userId: payload.userId,
+          nickname: payload.nickname,
+          role: payload.role as Role,
+          itemId: payload.itemId,
+          x: clampPercent(payload.x),
+          y: clampPercent(payload.y),
+          at: payload.at
+        };
+
+        setMenuSelections((current) => ({
+          ...current,
+          [nextSelection.id]: nextSelection
+        }));
+      })
+      .on("broadcast", { event: "menu_selection_remove" }, ({ payload }) => {
+        if (typeof payload?.id !== "string") {
+          return;
+        }
+
+        setMenuSelections((current) => {
+          const { [payload.id]: _removed, ...nextSelections } = current;
+          return nextSelections;
+        });
+      })
+      .on("broadcast", { event: "payment_vote" }, ({ payload }) => {
+        if (
+          typeof payload?.userId !== "string" ||
+          typeof payload?.nickname !== "string" ||
+          typeof payload?.role !== "string" ||
+          typeof payload?.method !== "string" ||
+          typeof payload?.at !== "number" ||
+          !roles.includes(payload.role as Role) ||
+          !paymentOptions.some((option) => option.id === payload.method)
+        ) {
+          return;
+        }
+
+        const nextVote: PaymentVote = {
+          userId: payload.userId,
+          nickname: payload.nickname,
+          role: payload.role as Role,
+          method: payload.method as PaymentMethod,
+          at: payload.at
+        };
+
+        setPaymentVotes((current) => ({
+          ...current,
+          [nextVote.userId]: nextVote
+        }));
+      })
+      .on("broadcast", { event: "secret_checkout" }, ({ payload }) => {
+        if (
+          typeof payload?.userId !== "string" ||
+          typeof payload?.nickname !== "string" ||
+          typeof payload?.role !== "string" ||
+          typeof payload?.at !== "number" ||
+          !roles.includes(payload.role as Role)
+        ) {
+          return;
+        }
+
+        setSecretCheckout({
+          userId: payload.userId,
+          nickname: payload.nickname,
+          role: payload.role as Role,
+          at: payload.at
+        });
+      })
+      .on("broadcast", { event: "order_completed" }, ({ payload }) => {
+        if (
+          typeof payload?.id !== "string" ||
+          typeof payload?.payerNickname !== "string" ||
+          typeof payload?.payerRole !== "string" ||
+          typeof payload?.amount !== "number" ||
+          typeof payload?.at !== "number" ||
+          !roles.includes(payload.payerRole as Role)
+        ) {
+          return;
+        }
+
+        setCompletedOrder({
+          id: payload.id,
+          payerNickname: payload.payerNickname,
+          payerRole: payload.payerRole as Role,
+          amount: payload.amount,
+          at: payload.at
+        });
+        setSecretCheckout(null);
+        setPaymentVotes({});
+      })
+      .on("broadcast", { event: "table_food_batch" }, ({ payload }) => {
+        if (!Array.isArray(payload?.foods)) {
+          return;
+        }
+
+        const nextFoods = (payload.foods as unknown[]).filter((food): food is TableFood => {
+          const nextFood = food as Partial<TableFood> | null | undefined;
+
+          return (
+            typeof nextFood?.id === "string" &&
+            typeof nextFood?.itemId === "string" &&
+            typeof nextFood?.name === "string" &&
+            typeof nextFood?.icon === "string" &&
+            (nextFood?.kind === "food" || nextFood?.kind === "drink") &&
+            typeof nextFood?.ownerId === "string" &&
+            typeof nextFood?.ownerNickname === "string" &&
+            typeof nextFood?.ownerRole === "string" &&
+            roles.includes(nextFood.ownerRole as Role) &&
+            typeof nextFood?.x === "number" &&
+            typeof nextFood?.y === "number" &&
+            typeof nextFood?.at === "number"
+          );
+        });
+
+        if (nextFoods.length === 0) {
+          return;
+        }
+
+        setTableFoods((current) => {
+          const mergedFoods = { ...current };
+          nextFoods.forEach((food) => {
+            mergedFoods[food.id] = {
+              ...food,
+              ownerRole: food.ownerRole as Role,
+              x: clampPercent(food.x),
+              y: clampPercent(food.y)
+            };
+          });
+          return mergedFoods;
+        });
+      })
+      .on("broadcast", { event: "table_food_move" }, ({ payload }) => {
+        if (
+          typeof payload?.id !== "string" ||
+          typeof payload?.x !== "number" ||
+          typeof payload?.y !== "number"
+        ) {
+          return;
+        }
+
+        setTableFoods((current) => {
+          const food = current[payload.id];
+
+          if (!food) {
+            return current;
+          }
+
+          return {
+            ...current,
+            [payload.id]: {
+              ...food,
+              x: clampPercent(payload.x),
+              y: clampPercent(payload.y)
+            }
+          };
+        });
+      })
+      .on("broadcast", { event: "table_food_pour" }, ({ payload }) => {
+        if (
+          typeof payload?.id !== "string" ||
+          typeof payload?.targetId !== "string" ||
+          typeof payload?.pourUntil !== "number"
+        ) {
+          return;
+        }
+
+        setTableFoods((current) => {
+          const food = current[payload.id];
+
+          if (!food) {
+            return current;
+          }
+
+          return {
+            ...current,
+            [payload.id]: {
+              ...food,
+              pourTargetId: payload.targetId,
+              pourUntil: payload.pourUntil
+            }
+          };
+        });
+      })
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState<PresenceUser>();
+        const nextPresence = Object.values(state).flat();
+        setPresence(nextPresence);
+      })
+      .subscribe(async (status) => {
+        const isSubscribed = status === "SUBSCRIBED";
+        setConnected(isSubscribed);
+
+        if (isSubscribed) {
+          await channel.track(user);
+        }
+      });
+
+    channelRef.current = channel;
+
+    return () => {
+      isActive = false;
+      setConnected(false);
+      channelRef.current = null;
+      void client.removeChannel(channel);
+    };
+  }, [onRoomTitleChange, onTableShapeChange, roomName, supabase, user]);
+
+  const updateChatHistoryVisibility = useCallback(
+    (nextValue: boolean) => {
+      if (!canManageChatSettings) {
+        return;
+      }
+
+      setChatHistoryVisible(nextValue);
+      void channelRef.current?.send({
+        type: "broadcast",
+        event: "room_settings",
+        payload: { chatHistoryVisible: nextValue }
+      });
+    },
+    [canManageChatSettings]
+  );
+
+  const updateRoomTitle = useCallback((nextValue: string) => {
+    const nextTitle = nextValue.slice(0, 28);
+    setRoomTitle(nextTitle);
+    onRoomTitleChange?.(nextTitle);
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "room_settings",
+      payload: { roomTitle: nextTitle }
+    });
+  }, [onRoomTitleChange]);
+
+  const updateTableShape = useCallback((nextShape: TableShape) => {
+    setTableShape(nextShape);
+    onTableShapeChange?.(nextShape);
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "room_settings",
+      payload: { tableShape: nextShape }
+    });
+  }, [onTableShapeChange]);
+
+  const selectMenuItem = useCallback(
+    (event: ReactPointerEvent<HTMLButtonElement>, itemId: string) => {
+      const listElement = menuListRef.current;
+      const listRect = listElement?.getBoundingClientRect();
+      const pointerX = listRect
+        ? ((event.clientX - listRect.left) / listRect.width) * 100
+        : 50;
+      const pointerY = listRect
+        ? ((event.clientY - listRect.top) / listRect.height) * 100
+        : 50;
+      const nextSelection: MenuSelection = {
+        id: createId(),
+        userId: sessionIdRef.current,
+        nickname,
+        role: selectedRole,
+        itemId,
+        x: clampPercent(Math.max(38, pointerX)),
+        y: clampPercent(pointerY),
+        at: Date.now()
+      };
+
+      setCompletedOrder(null);
+      setMenuSelections((current) => ({
+        ...current,
+        [nextSelection.id]: nextSelection
+      }));
+      void channelRef.current?.send({
+        type: "broadcast",
+        event: "menu_selection",
+        payload: nextSelection
+      });
+    },
+    [nickname, selectedRole]
+  );
+
+  const removeMenuSelection = useCallback((selectionId: string) => {
+    setMenuSelections((current) => {
+      const nextSelections = { ...current };
+      delete nextSelections[selectionId];
+      return nextSelections;
+    });
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "menu_selection_remove",
+      payload: { id: selectionId }
+    });
+  }, []);
+
+  const votePaymentMethod = useCallback(
+    (method: PaymentMethod) => {
+      if (completedOrder) {
+        return;
+      }
+
+      const nextVote: PaymentVote = {
+        userId: sessionIdRef.current,
+        nickname,
+        role: selectedRole,
+        method,
+        at: Date.now()
+      };
+
+      setPaymentVotes((current) => ({
+        ...current,
+        [nextVote.userId]: nextVote
+      }));
+      void channelRef.current?.send({
+        type: "broadcast",
+        event: "payment_vote",
+        payload: nextVote
+      });
+    },
+    [completedOrder, nickname, selectedRole]
+  );
+
+  const claimSecretCheckout = useCallback(() => {
+    if (completedOrder) {
+      return;
+    }
+
+    const nextCheckout: SecretCheckout = {
+      userId: sessionIdRef.current,
+      nickname,
+      role: selectedRole,
+      at: Date.now()
+    };
+
+    setSecretAmount("");
+    setSecretCheckout(nextCheckout);
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "secret_checkout",
+      payload: nextCheckout
+    });
+  }, [completedOrder, nickname, selectedRole]);
+
+  const completeSecretCheckout = useCallback(() => {
+    if (!isSecretCheckoutMine || secretCheckoutAmount <= 0) {
+      return;
+    }
+
+    const nextCompletedOrder: CompletedOrder = {
+      id: createId(),
+      payerNickname: nickname,
+      payerRole: selectedRole,
+      amount: secretCheckoutAmount,
+      at: Date.now()
+    };
+
+    setCompletedOrder(nextCompletedOrder);
+    setPaymentVotes({});
+    setSecretCheckout(null);
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "order_completed",
+      payload: nextCompletedOrder
+    });
+  }, [isSecretCheckoutMine, nickname, secretCheckoutAmount, selectedRole]);
+
+  const placeOrderedItemsOnTable = useCallback(() => {
+    if (menuSelectionList.length === 0) {
+      return;
+    }
+
+    const nextFoods = menuSelectionList.flatMap((selection, index) => {
+      const menuItem = menuItems.find((item) => item.id === selection.itemId);
+
+      if (!menuItem) {
+        return [];
+      }
+
+      const column = index % 4;
+      const row = Math.floor(index / 4) % 3;
+      const jitter = (index % 2) * 3;
+
+      return [{
+        id: `food-${selection.id}`,
+        itemId: menuItem.id,
+        name: menuItem.name,
+        icon: menuItem.icon,
+        kind: menuItem.kind as MenuItemKind,
+        ownerId: selection.userId,
+        ownerNickname: selection.nickname,
+        ownerRole: selection.role,
+        x: 28 + column * 15 + jitter,
+        y: 32 + row * 17 + (column % 2) * 4,
+        at: Date.now()
+      }];
+    });
+
+    if (nextFoods.length === 0) {
+      return;
+    }
+
+    setTableFoods((current) => {
+      const mergedFoods = { ...current };
+      nextFoods.forEach((food) => {
+        mergedFoods[food.id] = food;
+      });
+      return mergedFoods;
+    });
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "table_food_batch",
+      payload: { foods: nextFoods }
+    });
+  }, [menuSelectionList]);
+
+  const moveTableFood = useCallback((foodId: string, x: number, y: number) => {
+    setTableFoods((current) => {
+      const food = current[foodId];
+
+      if (!food || food.ownerId !== sessionIdRef.current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        [foodId]: {
+          ...food,
+          x: clampPercent(x),
+          y: clampPercent(y)
+        }
+      };
+    });
+  }, []);
+
+  const finishMoveTableFood = useCallback((foodId: string) => {
+    const food = tableFoods[foodId];
+
+    if (!food || food.ownerId !== sessionIdRef.current) {
+      return;
+    }
+
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "table_food_move",
+      payload: { id: food.id, x: food.x, y: food.y }
+    });
+  }, [tableFoods]);
+
+  const pourDrinkToMember = useCallback((food: TableFood, targetId: string) => {
+    if (food.ownerId !== sessionIdRef.current || food.kind !== "drink") {
+      return;
+    }
+
+    const pourUntil = Date.now() + 1800;
+    setActivePourFoodId(null);
+    setTableFoods((current) => ({
+      ...current,
+      [food.id]: {
+        ...food,
+        pourTargetId: targetId,
+        pourUntil
+      }
+    }));
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "table_food_pour",
+      payload: { id: food.id, targetId, pourUntil }
+    });
+  }, []);
+
+  const sendMessage = useCallback(
+    async (body: string, kind: ChatMessage["kind"] = "normal") => {
+      const cleanBody = body.trim();
+
+      if (!cleanBody) {
+        return;
+      }
+
+      const sentAt = Date.now();
+
+      if (cooldownUntil > sentAt) {
+        return;
+      }
+
+      const nextMessage: ChatMessage = {
+        id: createId(),
+        nickname,
+        role: selectedRole,
+        body: cleanBody.slice(0, 120),
+        at: sentAt,
+        kind
+      };
+
+      setCooldownUntil(sentAt + chatCooldownMs);
+      setCooldownTick((value) => value + 1);
+      keepComposerFocus();
+
+      if (supabase && channelRef.current && connected) {
+        setMessages((current) => mergeMessage(current, nextMessage));
+        const { error } = await supabase
+          .from("hasik_messages")
+          .insert({
+            id: nextMessage.id,
+            room: roomName,
+            nickname: nextMessage.nickname,
+            role: nextMessage.role,
+            body: nextMessage.body,
+            kind: nextMessage.kind ?? "normal"
+          });
+
+        if (error) {
+          setRealtimeMode("setup");
+          setMessages((current) => [
+            ...current.slice(-79),
+            {
+              id: createId(),
+              nickname: "시스템",
+              role: "부장",
+              body: "Supabase 테이블 설정이 필요합니다. 데모 메시지로만 표시됩니다.",
+              at: Date.now(),
+              kind: "system"
+            }
+          ]);
+        }
+      } else {
+        setMessages((current) => mergeMessage(current, nextMessage));
+      }
+
+      setInput("");
+      setComposerVisible(true);
+      window.requestAnimationFrame(() => {
+        keepComposerFocus();
+
+        if (composerFocusedRef.current) {
+          scheduleTableCentering(Boolean(activeComposerInputRef.current?.closest(".mobile-composer")));
+        } else {
+          updateFloatingComposerRef.current();
+        }
+      });
+    },
+    [
+      connected,
+      cooldownUntil,
+      keepComposerFocus,
+      nickname,
+      roomName,
+      scheduleTableCentering,
+      selectedRole,
+      supabase
+    ]
+  );
+
+  const reportProfile = useCallback(async () => {
+    if (!activeProfile) {
+      return;
+    }
+
+    if (!supabase) {
+      setReportStatus("데모 모드에서는 신고가 저장되지 않습니다.");
+      return;
+    }
+
+    setIsReporting(true);
+
+    const { error } = await supabase.from("hasik_reports").insert({
+      room: roomName,
+      message_id: activeProfile.id,
+      reported_nickname: activeProfile.nickname,
+      reported_role: activeProfile.role,
+      message_body: activeProfile.body,
+      reporter_session_id: sessionIdRef.current
+    });
+
+    setIsReporting(false);
+
+    if (error) {
+      setReportStatus("신고 저장에 실패했습니다. Supabase 신고 테이블 설정을 확인해주세요.");
+      return;
+    }
+
+    setReportStatus("신고가 접수됐습니다.");
+  }, [activeProfile, roomName, supabase]);
+
+  const renderComposer = (className: string, shellRef?: RefObject<HTMLDivElement | null>) => {
+    const isFloatingComposer = className.includes("mobile-composer");
+
+    return (
+    <div
+      className={className}
+      ref={shellRef}
+      onFocusCapture={() => {
+        composerFocusedRef.current = true;
+        setComposerVisible(isFloatingComposer);
+        syncKeyboardInset();
+        scheduleTableCentering(isFloatingComposer);
+        window.setTimeout(syncKeyboardInset, 260);
+      }}
+      onBlurCapture={() => {
+        window.setTimeout(() => {
+          composerFocusedRef.current = false;
+          syncKeyboardInset();
+          updateFloatingComposerRef.current();
+        }, 120);
+      }}
+    >
+      <form
+        className="chat-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void sendMessage(input);
+        }}
+      >
+        <button
+          type="button"
+          className="icon-action"
+          title="확성기"
+          onPointerDown={(event) => event.preventDefault()}
+          onClick={() => void sendMessage(`${nickname}님이 확성기를 켰습니다`, "system")}
+        >
+          <Megaphone size={18} />
+        </button>
+        <input
+          aria-label="채팅 입력"
+          maxLength={120}
+          placeholder="내 자리에서 한마디"
+          value={input}
+          ref={(element) => {
+            if (element) {
+              activeComposerInputRef.current = element;
+            }
+          }}
+          onFocus={(event) => {
+            activeComposerInputRef.current = event.currentTarget;
+            setComposerVisible(isFloatingComposer);
+            scheduleTableCentering(isFloatingComposer);
+          }}
+          onChange={(event) => setInput(event.target.value)}
+        />
+        <button
+          className="send-button"
+          type="submit"
+          title={isCoolingDown ? "잠시 후 보내기" : "보내기"}
+          disabled={isCoolingDown || !input.trim()}
+          onPointerDown={(event) => event.preventDefault()}
+        >
+          <Send size={18} />
+        </button>
+      </form>
+    </div>
+    );
+  };
+
+  return (
+    <main className="min-h-screen bg-[#17120f] text-[#fff8ec]">
+      <div className="app-shell">
+        <section className="hero-room" aria-label="회식방">
+          <div className="topbar">
+            <div>
+              <h1>{roomTitle || "이름 없는 회식방"}</h1>
+            </div>
+            {onLeave ? (
+              <button type="button" className="leave-room-button" onClick={onLeave}>
+                메인 메뉴
+              </button>
+            ) : null}
+          </div>
+
+          <div className="room-grid">
+            <aside className="left-rail" aria-label="입장 설정">
+              <div className="panel compact nickname-card">
+                <label className="nickname-label" htmlFor="nickname">
+                  닉네임
+                </label>
+                <input
+                  id="nickname"
+                  maxLength={12}
+                  value={nickname}
+                  disabled={accessMode === "anonymous"}
+                  onChange={(event) => setNickname(event.target.value)}
+                />
+                <span className="access-note">
+                  {accessMode === "anonymous" ? "익명으로만 참여" : "닉네임으로 참여"}
+                </span>
+                <div className="nickname-preview">
+                  <NameWithRole nickname={nickname} role={selectedRole} />
+                </div>
+                <button
+                  type="button"
+                  className="settings-button"
+                  onClick={() => setSettingsOpen(true)}
+                >
+                  <Settings2 size={18} />
+                  회식방 설정
+                </button>
+              </div>
+            </aside>
+
+            <section className="table-stage" aria-label="가상 테이블">
+              <div className="table-scene">
+                <div className="scene-toolbar">
+                  <div className="scene-stats">
+                    <span>접속 {onlineCount}명</span>
+                    <span className="stat-separator" aria-hidden="true">
+                      |
+                    </span>
+                    <span>누적 착석 {Math.max(stayMinutes, 1)}분</span>
+                  </div>
+                  <div className="scene-actions">
+                    <div className="analog-time" aria-label={`현재 ${formatClock(now)}`}>
+                      <div className="analog-clock" style={clockStyle} aria-hidden="true">
+                        {clockMarks.map((markAngle) => (
+                          <span
+                            key={markAngle}
+                            className="clock-mark"
+                            style={{ "--mark-angle": `${markAngle}deg` } as CSSProperties}
+                          />
+                        ))}
+                        <span className="clock-hand hour-hand" />
+                        <span className="clock-hand minute-hand" />
+                        <span className="clock-pin" />
+                      </div>
+                      <span>{formatPeriod(now)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className={`seat-map ${tableShape}`} aria-label="오늘의 자리 배치">
+                  <div className={`table ${tableShape}`} ref={tableCenterRef}>
+                    <div className="plate main-plate" aria-hidden="true">
+                      <Utensils size={20} />
+                    </div>
+                    <div className="bowl soup" aria-hidden="true" />
+                    <div className="glass cola" aria-hidden="true" />
+                    <div className="glass tea" aria-hidden="true" />
+                    {tableFoodList.map((food) => {
+                      const isMine = food.ownerId === sessionIdRef.current;
+                      const isPouring = Boolean(food.pourUntil && food.pourUntil > now);
+
+                      return (
+                        <div
+                          key={food.id}
+                          className={[
+                            "table-food",
+                            food.kind,
+                            isMine ? "mine" : "",
+                            isPouring ? "pouring" : ""
+                          ].join(" ")}
+                          style={{
+                            "--food-x": `${food.x}%`,
+                            "--food-y": `${food.y}%`
+                          } as CSSProperties}
+                        >
+                          <button
+                            type="button"
+                            className="table-food-button"
+                            title={food.name}
+                            onPointerDown={(event) => {
+                              if (!isMine) {
+                                return;
+                              }
+
+                              foodDragRef.current = {
+                                id: food.id,
+                                startX: event.clientX,
+                                startY: event.clientY,
+                                moved: false,
+                                lastX: food.x,
+                                lastY: food.y
+                              };
+                              event.currentTarget.setPointerCapture(event.pointerId);
+                            }}
+                            onPointerMove={(event) => {
+                              const dragState = foodDragRef.current;
+                              const tableElement = tableCenterRef.current;
+
+                              if (!dragState || dragState.id !== food.id || !tableElement) {
+                                return;
+                              }
+
+                              if (
+                                Math.abs(event.clientX - dragState.startX) > 3 ||
+                                Math.abs(event.clientY - dragState.startY) > 3
+                              ) {
+                                dragState.moved = true;
+                              }
+
+                              const tableRect = tableElement.getBoundingClientRect();
+                              const nextX = clampPercent(((event.clientX - tableRect.left) / tableRect.width) * 100);
+                              const nextY = clampPercent(((event.clientY - tableRect.top) / tableRect.height) * 100);
+                              dragState.lastX = nextX;
+                              dragState.lastY = nextY;
+                              moveTableFood(food.id, nextX, nextY);
+                            }}
+                            onPointerUp={(event) => {
+                              const dragState = foodDragRef.current;
+
+                              if (dragState?.id === food.id) {
+                                foodDragRef.current = null;
+                                event.currentTarget.releasePointerCapture(event.pointerId);
+
+                                if (dragState.moved) {
+                                  void channelRef.current?.send({
+                                    type: "broadcast",
+                                    event: "table_food_move",
+                                    payload: { id: food.id, x: dragState.lastX, y: dragState.lastY }
+                                  });
+                                  return;
+                                }
+                              }
+
+                              if (isMine && food.kind === "drink") {
+                                setActivePourFoodId((current) => (current === food.id ? null : food.id));
+                              }
+                            }}
+                          >
+                            <span>{food.icon}</span>
+                          </button>
+
+                          {activePourFoodId === food.id && isMine ? (
+                            <div className="pour-menu">
+                              {seatMembers
+                                .filter((member): member is PresenceUser => Boolean(member))
+                                .map((member) => (
+                                  <button
+                                    key={member.id}
+                                    type="button"
+                                    onClick={() => pourDrinkToMember(food, member.id)}
+                                  >
+                                    <NameWithRole nickname={member.nickname} role={member.role} />
+                                  </button>
+                                ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {seatMembers.map((member, index) => {
+                    const seatMessage = member
+                      ? latestMessageByMember.get(getMemberKey(member.nickname, member.role))
+                      : null;
+                    const visibleSeatMessage =
+                      seatMessage && now - seatMessage.at <= bubbleLifetimeMs ? seatMessage : null;
+                    const isMine = member?.id === sessionIdRef.current;
+
+                    return (
+                      <div
+                        key={member?.id ?? `empty-seat-${index}`}
+                        className={[
+                          "seat-slot",
+                          `slot-${index}`,
+                          member ? "occupied" : "empty",
+                          isMine ? "mine" : ""
+                        ].join(" ")}
+                      >
+                        {visibleSeatMessage ? (
+                          <button
+                            type="button"
+                            className={`seat-bubble ${visibleSeatMessage.kind ?? "normal"}`}
+                            onClick={() => setActiveProfile(visibleSeatMessage)}
+                          >
+                            <span>{visibleSeatMessage.body}</span>
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="seat-token"
+                          disabled={!visibleSeatMessage}
+                          onClick={() => {
+                            if (visibleSeatMessage) {
+                              setActiveProfile(visibleSeatMessage);
+                            }
+                          }}
+                        >
+                          {member ? (
+                            <NameWithRole nickname={member.nickname} role={member.role} />
+                          ) : (
+                            <span>빈자리</span>
+                          )}
+                          <small>{member ? (isMine ? "내 자리" : "착석 중") : "착석 가능"}</small>
+                        </button>
+                      </div>
+                    );
+                  })}
+                  {tableFoodList.map((food) => {
+                    if (!food.pourTargetId || !food.pourUntil || food.pourUntil <= now) {
+                      return null;
+                    }
+
+                    const targetIndex = seatMembers.findIndex((member) => member?.id === food.pourTargetId);
+                    const targetPosition = seatPositions[targetIndex >= 0 ? targetIndex : 0];
+                    const sceneStartX = 50 + (food.x - 50) * 0.56;
+                    const sceneStartY = 50 + (food.y - 50) * 0.4;
+
+                    return (
+                      <span
+                        key={`${food.id}-pour`}
+                        className="pour-flight"
+                        style={{
+                          "--from-x": `${sceneStartX}%`,
+                          "--from-y": `${sceneStartY}%`,
+                          "--to-x": `${targetPosition.x}%`,
+                          "--to-y": `${targetPosition.y}%`
+                        } as CSSProperties}
+                        aria-hidden="true"
+                      >
+                        잔
+                      </span>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  className="menu-trigger table-menu-trigger"
+                  onClick={() => setMenuOpen(true)}
+                >
+                  <Menu size={17} />
+                  메뉴판
+                </button>
+              </div>
+
+            </section>
+
+            <aside className="right-rail" aria-label="채팅 영역">
+              {isChatHistoryVisible ? (
+                <section className="chat-panel" aria-label="실시간 채팅">
+                  <div className="chat-feed" ref={chatFeedRef}>
+                    {messages.map((message) => (
+                      <article key={message.id} className={`chat-message ${message.kind ?? "normal"}`}>
+                        <button
+                          type="button"
+                          className="profile-trigger chat-name"
+                          onClick={() => setActiveProfile(message)}
+                        >
+                          <NameWithRole nickname={message.nickname} role={message.role} />
+                        </button>
+                        <p>{message.body}</p>
+                        <time className="message-time">{formatClock(message.at)}</time>
+                      </article>
+                    ))}
+                  </div>
+
+                  <div className="chat-header">
+                    <p>채팅</p>
+                    <button
+                      type="button"
+                      className="icon-action"
+                      title="골든벨"
+                      onClick={() => void sendMessage("제가 오늘 제로콜라 쏩니다", "bell")}
+                    >
+                      <Gift size={19} />
+                    </button>
+                  </div>
+                </section>
+              ) : null}
+
+              {renderComposer("composer-shell docked-composer", dockedComposerRef)}
+            </aside>
+          </div>
+        </section>
+
+      </div>
+      {renderComposer(
+        isComposerVisible
+          ? "composer-shell mobile-composer"
+          : "composer-shell mobile-composer composer-hidden"
+      )}
+      {isMenuOpen ? (
+        <div
+          className="profile-backdrop centered-backdrop"
+          role="presentation"
+          onClick={() => setMenuOpen(false)}
+        >
+          <section
+            className="menu-popover"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="menu-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="menu-head">
+              <div>
+                <p id="menu-title">메뉴판</p>
+                <span>원하는 메뉴를 눌러 같이 고르기</span>
+              </div>
+              <button
+                type="button"
+                className="profile-close"
+                onClick={() => setMenuOpen(false)}
+                aria-label="메뉴판 닫기"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="menu-list" ref={menuListRef}>
+              {menuItems.map((item) => {
+                const count = menuSelectionList.filter((selection) => selection.itemId === item.id).length;
+                const isSelectedByMe = menuSelectionList.some(
+                  (selection) =>
+                    selection.userId === sessionIdRef.current && selection.itemId === item.id
+                );
+
+                return (
+                  <div
+                    key={item.id}
+                    className={isSelectedByMe ? "menu-row selected" : "menu-row"}
+                  >
+                    <span className="menu-name">{item.name}</span>
+                    <button
+                      type="button"
+                      className="menu-select-zone"
+                      onPointerUp={(event) => selectMenuItem(event, item.id)}
+                    >
+                      <span className="menu-dots" aria-hidden="true" />
+                      <span className="menu-price">{formatPrice(item.price)}</span>
+                      <strong className="menu-count">{count > 0 ? count : ""}</strong>
+                    </button>
+                  </div>
+                );
+              })}
+              {menuSelectionList.map((selection) => {
+                const isMine = selection.userId === sessionIdRef.current;
+                const pointerStyle = {
+                  "--pointer-x": `${selection.x}%`,
+                  "--pointer-y": `${selection.y}%`
+                } as CSSProperties;
+
+                return isMine ? (
+                  <button
+                    key={selection.id}
+                    type="button"
+                    className="menu-pointer mine"
+                    style={pointerStyle}
+                    title="선택 취소"
+                    onPointerUp={(event) => {
+                      event.stopPropagation();
+                      removeMenuSelection(selection.id);
+                    }}
+                  >
+                    <Pointer size={21} />
+                  </button>
+                ) : (
+                  <span
+                    key={selection.id}
+                    className="menu-pointer"
+                    style={pointerStyle}
+                    title={`${selection.nickname} 선택`}
+                    aria-hidden="true"
+                  >
+                    <Pointer size={21} />
+                  </span>
+                );
+              })}
+            </div>
+
+            <div className="menu-order-summary">
+              {orderedMenuItems.length > 0 ? (
+                orderedMenuItems.map((item) => (
+                  <span key={item.id}>
+                    {item.name} {item.count}
+                  </span>
+                ))
+              ) : (
+                <span>아직 선택된 메뉴가 없습니다</span>
+              )}
+            </div>
+
+            <div className="menu-order-bar">
+              <span>{orderedMenuItems.length > 0 ? `합계 ${formatPrice(orderTotal)}` : "선택 대기"}</span>
+              <button
+                type="button"
+                className="order-button"
+                disabled={orderedMenuItems.length === 0}
+                onClick={() => {
+                  placeOrderedItemsOnTable();
+                  setMenuOpen(false);
+                  setPaymentOpen(true);
+                }}
+              >
+                주문하기
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {isPaymentOpen ? (
+        <div
+          className="profile-backdrop centered-backdrop"
+          role="presentation"
+          onClick={() => setPaymentOpen(false)}
+        >
+          <section
+            className="payment-popover"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="payment-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="menu-head">
+              <div>
+                <p id="payment-title">결제 수단 투표</p>
+                <span>
+                  현재 1위 {winningPaymentMethod.label} · {winningPaymentMethod.count}표
+                </span>
+              </div>
+              <button
+                type="button"
+                className="profile-close"
+                onClick={() => setPaymentOpen(false)}
+                aria-label="결제 투표 닫기"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="ordered-list">
+              {orderedMenuItems.map((item) => (
+                <div key={item.id}>
+                  <span>{item.name}</span>
+                  <strong>{item.count}</strong>
+                </div>
+              ))}
+              <div>
+                <span>합계</span>
+                <strong>{formatPrice(orderTotal)}</strong>
+              </div>
+            </div>
+
+            {completedOrder ? (
+              <div className="order-complete">
+                <strong>
+                  <NameWithRole
+                    nickname={completedOrder.payerNickname}
+                    role={completedOrder.payerRole}
+                  />{" "}
+                  몰래 계산 완료
+                </strong>
+                <span>{formatPrice(completedOrder.amount)}</span>
+              </div>
+            ) : (
+              <>
+                <div className="payment-options">
+                  {paymentVoteCounts.map((option) => {
+                    const Icon = option.icon;
+                    const isSelected = paymentVotes[sessionIdRef.current]?.method === option.id;
+
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={isSelected ? "payment-option selected" : "payment-option"}
+                        onClick={() => votePaymentMethod(option.id)}
+                      >
+                        <Icon size={19} />
+                        <span>
+                          <strong>{option.label}</strong>
+                          <small>{option.description}</small>
+                        </span>
+                        <em>{option.count}</em>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="secret-checkout">
+                  <div>
+                    <strong>몰래 계산</strong>
+                    <span>
+                      {secretCheckout
+                        ? isSecretCheckoutMine
+                          ? "지금 몰래 계산 중"
+                          : `${secretCheckout.nickname}님이 몰래 계산 중`
+                        : "투표가 끝나기 전에 먼저 계산하기"}
+                    </span>
+                  </div>
+
+                  {isSecretCheckoutMine ? (
+                    <form
+                      className="secret-form"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        completeSecretCheckout();
+                      }}
+                    >
+                      <input
+                        inputMode="numeric"
+                        aria-label="몰래 계산 금액"
+                        placeholder="합계 금액"
+                        value={secretAmount}
+                        onChange={(event) => setSecretAmount(event.target.value)}
+                      />
+                      <button
+                        type="submit"
+                        className="secret-pay-button"
+                        disabled={secretCheckoutAmount <= 0}
+                      >
+                        결제
+                      </button>
+                    </form>
+                  ) : (
+                    <button
+                      type="button"
+                      className="secret-claim-button"
+                      onClick={claimSecretCheckout}
+                    >
+                      {secretCheckout ? "막고 내가 계산" : "몰래 계산"}
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </section>
+        </div>
+      ) : null}
+      {isSettingsOpen ? (
+        <div
+          className="profile-backdrop"
+          role="presentation"
+          onClick={() => setSettingsOpen(false)}
+        >
+          <section
+            className="settings-popover"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="settings-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="settings-head">
+              <div>
+                <p id="settings-title">회식방 설정</p>
+                <span>
+                  결정권 <NameWithRole nickname={settingsController.nickname} role={settingsController.role} />
+                </span>
+              </div>
+              <button
+                type="button"
+                className="profile-close"
+                onClick={() => setSettingsOpen(false)}
+                aria-label="설정 닫기"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="settings-section">
+              <span>회식방 이름</span>
+              <input
+                aria-label="회식방 이름"
+                maxLength={28}
+                value={roomTitle}
+                onChange={(event) => updateRoomTitle(event.target.value)}
+              />
+            </div>
+
+            <div className="settings-section">
+              <span>테이블</span>
+              <div className="table-shape-list settings-options">
+                <button
+                  type="button"
+                  className={tableShape === "round" ? "shape-chip selected" : "shape-chip"}
+                  onClick={() => updateTableShape("round")}
+                >
+                  원탁
+                </button>
+                <button
+                  type="button"
+                  className={tableShape === "rectangle" ? "shape-chip selected" : "shape-chip"}
+                  onClick={() => updateTableShape("rectangle")}
+                >
+                  직사각형
+                </button>
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <span>내 직급</span>
+              <div className="role-list settings-options">
+                {roles.map((role) => (
+                  <button
+                    key={role}
+                    className={role === selectedRole ? "role-chip selected" : "role-chip"}
+                    type="button"
+                    onClick={() => setSelectedRole(role)}
+                  >
+                    <span className={`role-label ${getRoleTone(role)}`}>{role}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <span>분위기</span>
+              <div className="mood-list settings-options">
+                {moods.map((item) => (
+                  <button
+                    key={item.id}
+                    className={item.id === mood ? "mood-chip selected" : "mood-chip"}
+                    type="button"
+                    onClick={() => setMood(item.id)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <span>채팅</span>
+              <button
+                type="button"
+                className="toggle-button"
+                disabled={!canManageChatSettings}
+                onClick={() => updateChatHistoryVisibility(!isChatHistoryVisible)}
+              >
+                {isChatHistoryVisible ? <Eye size={18} /> : <EyeOff size={18} />}
+                채팅 기록 {isChatHistoryVisible ? "보이기" : "숨기기"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {activeProfile ? (
+        <div
+          className="profile-backdrop centered-backdrop"
+          role="presentation"
+          onClick={() => setActiveProfile(null)}
+        >
+          <section
+            className="profile-popover"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="profile-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="profile-head">
+              <div className="profile-avatar" aria-hidden="true">
+                <UserRound size={24} />
+              </div>
+              <div>
+                <p id="profile-title">
+                  <NameWithRole nickname={activeProfile.nickname} role={activeProfile.role} />
+                </p>
+              </div>
+              <button
+                type="button"
+                className="profile-close"
+                onClick={() => setActiveProfile(null)}
+                aria-label="프로필 닫기"
+              >
+                ×
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="report-button"
+              onClick={() => void reportProfile()}
+              disabled={isReporting}
+            >
+              <Flag size={18} />
+              {isReporting ? "신고 접수 중" : "이 사용자 신고"}
+            </button>
+            {reportStatus ? <p className="report-status">{reportStatus}</p> : null}
+          </section>
+        </div>
+      ) : null}
+    </main>
+  );
+}
