@@ -5,6 +5,8 @@
 ## 구조
 
 - `index.html`: 큰 사이트의 루트 홈
+- `assets/`: 루트 사이트 이미지 자산
+- `pantry/`: 상시 소통 공간인 탕비실 프로토타입
 - `lunchtime/`: 정적 HTML 점심시간 프로토타입
 - `hasik/`: Next.js/Supabase 회식방 MVP
 - `.github/workflows/pages.yml`: GitHub Pages 배포 워크플로
@@ -30,6 +32,7 @@ npm run dev
 `main` 브랜치에 푸시하면 GitHub Actions가 Pages 아티팩트를 만듭니다.
 
 - `/`: `(주) 백수` 루트 홈
+- `/pantry/`: 탕비실 소통/간식 미니게임
 - `/lunchtime/`: 점심시간 정적 사이트
 - `/hasik/`: `hasik` Next 정적 export
 

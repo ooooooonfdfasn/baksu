@@ -36,9 +36,11 @@ jobs:
 
       - name: Assemble Pages artifact
         run: |
-          mkdir -p _site/lunchtime _site/hasik
+          mkdir -p _site/assets _site/lunchtime _site/pantry _site/hasik
           cp index.html _site/index.html
+          cp -R assets/. _site/assets/
           cp lunchtime/index.html lunchtime/lunchtime.html _site/lunchtime/
+          cp pantry/index.html _site/pantry/
           cp -R hasik/out/. _site/hasik/
           touch _site/.nojekyll
 

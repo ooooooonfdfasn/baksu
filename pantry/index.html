@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>탕비실 | (주) 백수</title>
+    <meta
+      name="description"
+      content="(주) 백수의 상시 소통 공간, 탕비실"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f6f5;
+        --ink: #111315;
+        --muted: #5c6670;
+        --line: #d8dde1;
+        --panel: #ffffff;
+        --panel-soft: #eef7f1;
+        --green: #0f9d59;
+        --green-dark: #0a7040;
+        --red: #df503f;
+        --yellow: #ffd45a;
+        --blue: #246bfe;
+        --shadow: 0 16px 48px rgba(17, 19, 21, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-width: 320px;
+        min-height: 100%;
+        margin: 0;
+      }
+
+      body {
+        background:
+          linear-gradient(90deg, rgba(17, 19, 21, 0.045) 1px, transparent 1px),
+          linear-gradient(0deg, rgba(17, 19, 21, 0.045) 1px, transparent 1px),
+          var(--bg);
+        background-size: 42px 42px;
+        color: var(--ink);
+        font-family:
+          Arial,
+          "Apple SD Gothic Neo",
+          "Noto Sans KR",
+          sans-serif;
+        letter-spacing: 0;
+      }
+
+      a,
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 58px;
+        padding: 0 24px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(14px);
+      }
+
+      .brand-mark,
+      .topnav {
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .brand-mark {
+        gap: 10px;
+        font-size: 15px;
+        font-weight: 950;
+      }
+
+      .brand-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow:
+          18px 0 0 var(--yellow),
+          36px 0 0 var(--red);
+      }
+
+      .topnav {
+        gap: 7px;
+      }
+
+      .nav-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        padding: 0 11px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 850;
+        white-space: nowrap;
+      }
+
+      .pantry-shell {
+        width: min(1180px, calc(100% - 48px));
+        margin: 0 auto;
+        padding: 34px 0 48px;
+      }
+
+      .page-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 20px;
+        align-items: end;
+        margin-bottom: 18px;
+      }
+
+      .eyebrow {
+        display: block;
+        color: var(--green-dark);
+        font-size: 12px;
+        font-weight: 950;
+      }
+
+      h1 {
+        margin: 8px 0 0;
+        font-size: clamp(48px, 8vw, 96px);
+        font-weight: 950;
+        line-height: 0.94;
+      }
+
+      .subtitle {
+        margin: 14px 0 0;
+        color: var(--muted);
+        font-size: 17px;
+        font-weight: 800;
+        line-height: 1.55;
+      }
+
+      .office-clock {
+        display: grid;
+        gap: 6px;
+        min-width: 180px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .clock-label {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .clock-value {
+        font-size: 30px;
+        font-weight: 950;
+      }
+
+      .pantry-grid {
+        display: grid;
+        grid-template-columns: minmax(340px, 1fr) minmax(320px, 0.78fr);
+        gap: 14px;
+        align-items: start;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 48px;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .panel-title {
+        font-size: 14px;
+        font-weight: 950;
+      }
+
+      .panel-state {
+        color: var(--green-dark);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .chat-feed {
+        display: grid;
+        gap: 10px;
+        min-height: 360px;
+        max-height: 480px;
+        overflow: auto;
+        padding: 14px;
+        background:
+          linear-gradient(90deg, rgba(17, 19, 21, 0.035) 1px, transparent 1px),
+          linear-gradient(0deg, rgba(17, 19, 21, 0.035) 1px, transparent 1px),
+          #fbfcfb;
+        background-size: 28px 28px;
+      }
+
+      .memo {
+        display: grid;
+        gap: 5px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        background: #ffffff;
+      }
+
+      .memo-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .memo-body {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 800;
+        line-height: 1.48;
+      }
+
+      .chat-form {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        border-top: 1px solid var(--line);
+      }
+
+      textarea,
+      input {
+        width: 100%;
+        border: 1px solid var(--line);
+        background: #ffffff;
+        color: var(--ink);
+        outline: 0;
+      }
+
+      textarea {
+        min-height: 82px;
+        padding: 10px;
+        resize: vertical;
+      }
+
+      input {
+        min-height: 42px;
+        padding: 0 10px;
+      }
+
+      textarea:focus,
+      input:focus {
+        border-color: var(--green);
+        box-shadow: 0 0 0 3px rgba(15, 157, 89, 0.14);
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+      }
+
+      .send-button,
+      .snack-button,
+      .reset-button {
+        min-height: 42px;
+        border: 1px solid var(--green-dark);
+        background: var(--green);
+        color: #ffffff;
+        padding: 0 14px;
+        font-size: 13px;
+        font-weight: 950;
+      }
+
+      .reset-button {
+        border-color: var(--line);
+        background: var(--panel-soft);
+        color: var(--green-dark);
+      }
+
+      .side-stack {
+        display: grid;
+        gap: 14px;
+      }
+
+      .snack-machine {
+        padding: 18px;
+      }
+
+      .machine-window {
+        display: grid;
+        place-items: center;
+        min-height: 160px;
+        margin: 14px 0;
+        border: 1px solid var(--line);
+        background:
+          linear-gradient(135deg, rgba(255, 212, 90, 0.24), rgba(15, 157, 89, 0.16)),
+          #ffffff;
+        text-align: center;
+      }
+
+      .snack-name {
+        display: block;
+        font-size: clamp(34px, 5vw, 56px);
+        font-weight: 950;
+        line-height: 1;
+      }
+
+      .snack-note {
+        display: block;
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 850;
+      }
+
+      .score-board {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        border: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .score-item {
+        min-height: 76px;
+        padding: 12px;
+        border-right: 1px solid var(--line);
+      }
+
+      .score-item:last-child {
+        border-right: 0;
+      }
+
+      .score-label {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .score-value {
+        display: block;
+        margin-top: 8px;
+        font-size: 23px;
+        font-weight: 950;
+      }
+
+      .inventory {
+        display: grid;
+      }
+
+      .inventory-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        min-height: 50px;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .inventory-row:last-child {
+        border-bottom: 0;
+      }
+
+      .inventory-name {
+        font-size: 14px;
+        font-weight: 900;
+      }
+
+      .inventory-state {
+        color: var(--green-dark);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .office-notice {
+        padding: 14px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 1.55;
+      }
+
+      @media (max-width: 900px) {
+        .topbar {
+          align-items: stretch;
+          flex-direction: column;
+          gap: 10px;
+          padding: 12px 16px;
+        }
+
+        .topnav {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          width: 100%;
+        }
+
+        .page-head,
+        .pantry-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .pantry-shell {
+          width: calc(100% - 24px);
+          padding-top: 24px;
+        }
+
+        .topnav,
+        .form-row,
+        .score-board {
+          grid-template-columns: 1fr;
+        }
+
+        .score-item {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .score-item:last-child {
+          border-bottom: 0;
+        }
+
+        .send-button,
+        .snack-button,
+        .reset-button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand-mark" href="../index.html" aria-label="(주) 백수 홈">
+        <span class="brand-dot" aria-hidden="true"></span>
+        <span>(주) 백수</span>
+      </a>
+      <nav class="topnav" aria-label="서비스 이동">
+        <a class="nav-link" href="../index.html">회사소개</a>
+        <a class="nav-link" href="../lunchtime/">점심시간</a>
+        <a class="nav-link" href="../hasik/">회식</a>
+      </nav>
+    </header>
+
+    <main class="pantry-shell">
+      <section class="page-head" aria-label="탕비실 소개">
+        <div>
+          <span class="eyebrow">PANTRY</span>
+          <h1>탕비실</h1>
+          <p class="subtitle">업무중 상시 개방. 커피, 간식, 짧은 잡담, 소확횡이 오가는 사내 휴게 공간.</p>
+        </div>
+        <div class="office-clock" aria-label="현재 근무 상태">
+          <span class="clock-label">현재 근무 상태</span>
+          <span class="clock-value" id="clockValue">--:--</span>
+          <span class="clock-label" id="shiftLabel">탕비실 확인중</span>
+        </div>
+      </section>
+
+      <section class="pantry-grid" aria-label="탕비실 기능">
+        <section class="panel" aria-label="탕비실 메모">
+          <div class="panel-head">
+            <span class="panel-title">정수기 옆 메모</span>
+            <span class="panel-state">로컬 저장</span>
+          </div>
+          <div class="chat-feed" id="memoFeed" aria-live="polite"></div>
+          <form class="chat-form" id="memoForm">
+            <textarea id="memoInput" maxlength="120" placeholder="탕비실에 남길 말"></textarea>
+            <div class="form-row">
+              <input id="nameInput" maxlength="14" placeholder="익명 인턴" />
+              <button class="send-button" type="submit">메모 붙이기</button>
+            </div>
+          </form>
+        </section>
+
+        <div class="side-stack">
+          <section class="panel snack-machine" aria-label="간식 미니게임">
+            <div class="panel-head">
+              <span class="panel-title">간식 뽑기</span>
+              <span class="panel-state">소확횡</span>
+            </div>
+            <div class="machine-window">
+              <div>
+                <span class="snack-name" id="snackName">커피믹스</span>
+                <span class="snack-note" id="snackNote">탕비실 기본 복지</span>
+              </div>
+            </div>
+            <button class="snack-button" type="button" id="snackButton">오늘의 간식 뽑기</button>
+          </section>
+
+          <section class="score-board" aria-label="탕비실 점수">
+            <div class="score-item">
+              <span class="score-label">소확횡 점수</span>
+              <span class="score-value" id="joyScore">0</span>
+            </div>
+            <div class="score-item">
+              <span class="score-label">월급루팡</span>
+              <span class="score-value" id="loafScore">0분</span>
+            </div>
+            <div class="score-item">
+              <span class="score-label">간식 기록</span>
+              <span class="score-value" id="snackCount">0회</span>
+            </div>
+          </section>
+
+          <section class="panel" aria-label="탕비실 재고">
+            <div class="panel-head">
+              <span class="panel-title">오늘의 재고판</span>
+              <button class="reset-button" type="button" id="resetButton">초기화</button>
+            </div>
+            <div class="inventory" id="inventoryList"></div>
+            <p class="office-notice">
+              신고와 차단은 다음 단계에서 붙일 핵심 운영 기능입니다. 익명이어도 사내 질서는 지킵니다.
+            </p>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const memoFeed = document.querySelector("#memoFeed");
+      const memoForm = document.querySelector("#memoForm");
+      const memoInput = document.querySelector("#memoInput");
+      const nameInput = document.querySelector("#nameInput");
+      const snackButton = document.querySelector("#snackButton");
+      const snackName = document.querySelector("#snackName");
+      const snackNote = document.querySelector("#snackNote");
+      const joyScore = document.querySelector("#joyScore");
+      const loafScore = document.querySelector("#loafScore");
+      const snackCount = document.querySelector("#snackCount");
+      const inventoryList = document.querySelector("#inventoryList");
+      const resetButton = document.querySelector("#resetButton");
+      const clockValue = document.querySelector("#clockValue");
+      const shiftLabel = document.querySelector("#shiftLabel");
+
+      const memoKey = "baksu:pantry:memos";
+      const scoreKey = "baksu:pantry:score";
+      const inventoryKey = "baksu:pantry:inventory";
+
+      const seedMemos = [
+        {
+          author: "익명 인턴",
+          body: "커피믹스 마지막 하나 가져갑니다. 마음만은 정규직입니다.",
+          at: Date.now() - 1000 * 60 * 17
+        },
+        {
+          author: "탕비실 과장",
+          body: "오전 11시에 출근한 사람은 이미 오늘 절반은 해낸 겁니다.",
+          at: Date.now() - 1000 * 60 * 9
+        },
+        {
+          author: "재택 대리",
+          body: "정수기 앞에서 회의하는 척 3분 쉬고 갑니다.",
+          at: Date.now() - 1000 * 60 * 3
+        }
+      ];
+
+      const snacks = [
+        ["커피믹스", "기본급 같은 안정감", 7],
+        ["초코파이", "인턴도 웃게 하는 복지", 10],
+        ["컵라면", "식대처럼 느껴지는 큰 손", 15],
+        ["아이스 아메리카노", "현대인의 사내 연료", 12],
+        ["비타민 젤리", "건강한 척 가능한 선택", 8],
+        ["빈 과자통", "복지의 현실 점검", 2]
+      ];
+
+      const defaultInventory = [
+        ["커피믹스", true],
+        ["정수기 냉수", true],
+        ["종이컵", true],
+        ["컵라면", false],
+        ["몰래 먹는 과자", true]
+      ];
+
+      function loadJson(key, fallback) {
+        try {
+          const saved = localStorage.getItem(key);
+          return saved ? JSON.parse(saved) : fallback;
+        } catch {
+          return fallback;
+        }
+      }
+
+      let memos = loadJson(memoKey, seedMemos);
+      let score = loadJson(scoreKey, { joy: 0, loafMinutes: 0, snacks: 0 });
+      let inventory = loadJson(inventoryKey, defaultInventory);
+
+      function formatTime(value) {
+        return new Intl.DateTimeFormat("ko-KR", {
+          hour: "2-digit",
+          minute: "2-digit"
+        }).format(new Date(value));
+      }
+
+      function renderClock() {
+        const now = new Date();
+        clockValue.textContent = formatTime(now);
+        const hour = now.getHours();
+        shiftLabel.textContent = hour >= 9 && hour < 18 ? "업무중 상시 개방" : "잔업 탕비실 운영중";
+      }
+
+      function renderMemos() {
+        memoFeed.innerHTML = "";
+        memos
+          .slice()
+          .sort((a, b) => b.at - a.at)
+          .slice(0, 20)
+          .forEach((memo) => {
+            const item = document.createElement("article");
+            item.className = "memo";
+            item.innerHTML = `
+              <div class="memo-meta">
+                <span>${escapeHtml(memo.author)}</span>
+                <span>${formatTime(memo.at)}</span>
+              </div>
+              <p class="memo-body">${escapeHtml(memo.body)}</p>
+            `;
+            memoFeed.append(item);
+          });
+      }
+
+      function renderScore() {
+        joyScore.textContent = String(score.joy);
+        loafScore.textContent = `${score.loafMinutes}분`;
+        snackCount.textContent = `${score.snacks}회`;
+      }
+
+      function renderInventory() {
+        inventoryList.innerHTML = "";
+        inventory.forEach(([name, available], index) => {
+          const row = document.createElement("button");
+          row.type = "button";
+          row.className = "inventory-row";
+          row.innerHTML = `
+            <span class="inventory-name">${escapeHtml(name)}</span>
+            <span class="inventory-state">${available ? "있음" : "품절"}</span>
+          `;
+          row.addEventListener("click", () => {
+            inventory[index][1] = !inventory[index][1];
+            localStorage.setItem(inventoryKey, JSON.stringify(inventory));
+            renderInventory();
+          });
+          inventoryList.append(row);
+        });
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (char) => {
+          const entities = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            "\"": "&quot;",
+            "'": "&#39;"
+          };
+          return entities[char];
+        });
+      }
+
+      memoForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const body = memoInput.value.trim();
+        const author = nameInput.value.trim() || "익명 인턴";
+
+        if (!body) {
+          return;
+        }
+
+        memos = [{ author, body, at: Date.now() }, ...memos].slice(0, 30);
+        localStorage.setItem(memoKey, JSON.stringify(memos));
+        memoInput.value = "";
+        renderMemos();
+      });
+
+      snackButton.addEventListener("click", () => {
+        const [name, note, points] = snacks[Math.floor(Math.random() * snacks.length)];
+        snackName.textContent = name;
+        snackNote.textContent = note;
+        score.joy += points;
+        score.loafMinutes += Math.max(1, Math.round(points / 3));
+        score.snacks += 1;
+        localStorage.setItem(scoreKey, JSON.stringify(score));
+        renderScore();
+      });
+
+      resetButton.addEventListener("click", () => {
+        inventory = defaultInventory.map(([name, available]) => [name, available]);
+        localStorage.setItem(inventoryKey, JSON.stringify(inventory));
+        renderInventory();
+      });
+
+      renderClock();
+      renderMemos();
+      renderScore();
+      renderInventory();
+      window.setInterval(renderClock, 1000 * 30);
+    </script>
+  </body>
+</html>

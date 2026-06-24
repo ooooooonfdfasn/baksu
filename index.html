@@ -6,14 +6,14 @@
     <title>(주) 백수</title>
     <meta
       name="description"
-      content="집에서 함께 접속하는 백수 사무실과 하위 서비스 모음"
+      content="집에 있지만 함께 근무중인 사람들을 위한 페이퍼 컴퍼니형 소통 서비스"
     />
     <style>
       :root {
         color-scheme: light;
         --bg: #f4f6f5;
         --ink: #111315;
-        --muted: #5f6871;
+        --muted: #5c6670;
         --line: #d8dde1;
         --panel: #ffffff;
         --panel-soft: #eef7f1;
@@ -22,11 +22,16 @@
         --red: #df503f;
         --yellow: #ffd45a;
         --blue: #246bfe;
-        --shadow: 0 18px 60px rgba(17, 19, 21, 0.12);
+        --navy: #1d2d44;
+        --shadow: 0 18px 60px rgba(17, 19, 21, 0.16);
       }
 
       * {
         box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
       }
 
       html,
@@ -52,7 +57,10 @@
       }
 
       a,
-      button {
+      button,
+      input,
+      select,
+      textarea {
         font: inherit;
       }
 
@@ -61,24 +69,22 @@
         text-decoration: none;
       }
 
-      .site-shell {
-        min-height: 100dvh;
-        display: grid;
-        grid-template-rows: auto minmax(0, 1fr);
+      button {
+        cursor: pointer;
       }
 
       .topbar {
         position: sticky;
         top: 0;
-        z-index: 10;
+        z-index: 20;
         display: flex;
         align-items: center;
         justify-content: space-between;
         min-height: 58px;
         padding: 0 24px;
-        border-bottom: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(216, 221, 225, 0.9);
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(14px);
       }
 
       .brand-mark,
@@ -90,7 +96,7 @@
       .brand-mark {
         gap: 10px;
         font-size: 15px;
-        font-weight: 900;
+        font-weight: 950;
       }
 
       .brand-dot {
@@ -104,7 +110,7 @@
       }
 
       .topnav {
-        gap: 8px;
+        gap: 7px;
       }
 
       .nav-link {
@@ -112,324 +118,897 @@
         align-items: center;
         justify-content: center;
         min-height: 34px;
-        padding: 0 12px;
+        padding: 0 11px;
         border: 1px solid var(--line);
         background: var(--panel);
         color: var(--ink);
         font-size: 13px;
-        font-weight: 800;
+        font-weight: 850;
+        white-space: nowrap;
       }
 
-      .home {
+      .hero {
+        position: relative;
+        min-height: clamp(570px, 82svh, 760px);
+        overflow: hidden;
+        border-bottom: 1px solid var(--line);
+        background: #202326;
+      }
+
+      .hero::before {
+        position: absolute;
+        inset: 0;
+        content: "";
+        background:
+          linear-gradient(90deg, rgba(0, 0, 0, 0.76) 0%, rgba(0, 0, 0, 0.42) 45%, rgba(0, 0, 0, 0.08) 100%),
+          linear-gradient(0deg, rgba(0, 0, 0, 0.34) 0%, rgba(0, 0, 0, 0) 42%),
+          url("assets/baksu-office-hero.png") center / cover;
+      }
+
+      .hero-inner {
+        position: relative;
+        z-index: 1;
         display: grid;
-        grid-template-columns: minmax(320px, 0.92fr) minmax(420px, 1.08fr);
-        gap: 32px;
-        align-items: center;
+        align-content: center;
+        min-height: inherit;
         width: min(1180px, calc(100% - 48px));
         margin: 0 auto;
-        padding: 36px 0;
+        padding: 46px 0 92px;
+        color: #ffffff;
       }
 
-      .intro {
-        display: grid;
-        gap: 24px;
+      .hero-kicker {
+        display: inline-flex;
+        width: fit-content;
+        min-height: 32px;
+        align-items: center;
+        padding: 0 10px;
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        background: rgba(255, 255, 255, 0.12);
+        font-size: 12px;
+        font-weight: 900;
       }
 
-      .status-strip {
+      h1 {
+        max-width: 760px;
+        margin: 18px 0 0;
+        font-size: clamp(58px, 10vw, 132px);
+        font-weight: 950;
+        line-height: 0.9;
+      }
+
+      .hero-copy {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        max-width: 700px;
+        margin: 24px 0 0;
+        font-size: clamp(21px, 2.6vw, 34px);
+        font-weight: 850;
+        line-height: 1.25;
+      }
+
+      .hero-subcopy {
+        max-width: 650px;
+        margin: 18px 0 0;
+        color: rgba(255, 255, 255, 0.84);
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1.65;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 28px;
+      }
+
+      .primary-action,
+      .secondary-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        padding: 0 18px;
+        border: 1px solid transparent;
+        font-size: 15px;
+        font-weight: 900;
+      }
+
+      .primary-action {
+        background: var(--green);
+        color: #ffffff;
+      }
+
+      .secondary-action {
+        border-color: rgba(255, 255, 255, 0.72);
+        background: rgba(255, 255, 255, 0.12);
+        color: #ffffff;
+      }
+
+      .section {
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .section:nth-of-type(odd) {
+        background: rgba(244, 246, 245, 0.72);
+      }
+
+      .section-inner {
+        width: min(1180px, calc(100% - 48px));
+        margin: 0 auto;
+        padding: 54px 0;
+      }
+
+      .section-head {
+        display: grid;
+        grid-template-columns: minmax(0, 0.75fr) minmax(260px, 0.55fr);
+        gap: 28px;
+        align-items: end;
+        margin-bottom: 24px;
+      }
+
+      .eyebrow {
+        display: block;
+        color: var(--green-dark);
+        font-size: 12px;
+        font-weight: 950;
+      }
+
+      h2 {
+        margin: 8px 0 0;
+        font-size: clamp(30px, 4vw, 56px);
+        font-weight: 950;
+        line-height: 1;
+      }
+
+      .section-summary {
+        margin: 0;
+        color: var(--muted);
+        font-size: 15px;
+        font-weight: 750;
+        line-height: 1.6;
+      }
+
+      .company-grid,
+      .service-grid,
+      .policy-grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .company-grid {
+        grid-template-columns: minmax(260px, 0.75fr) minmax(360px, 1.25fr);
+      }
+
+      .facts-table,
+      .timeline,
+      .apply-panel,
+      .policy-item {
         border: 1px solid var(--line);
         background: var(--panel);
       }
 
-      .status-item {
+      .facts-table {
+        display: grid;
+      }
+
+      .fact-row {
+        display: grid;
+        grid-template-columns: 120px minmax(0, 1fr);
+        min-height: 48px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .fact-row:last-child {
+        border-bottom: 0;
+      }
+
+      .fact-label,
+      .fact-value {
+        display: flex;
+        align-items: center;
         min-width: 0;
-        padding: 12px;
+        padding: 0 14px;
+        font-size: 13px;
+      }
+
+      .fact-label {
         border-right: 1px solid var(--line);
+        background: var(--panel-soft);
+        color: var(--green-dark);
+        font-weight: 950;
       }
 
-      .status-item:last-child {
-        border-right: 0;
-      }
-
-      .status-label {
-        display: block;
-        color: var(--muted);
-        font-size: 11px;
+      .fact-value {
+        color: var(--ink);
         font-weight: 800;
       }
 
-      .status-value {
-        display: block;
-        margin-top: 5px;
-        overflow: hidden;
-        font-size: 15px;
-        font-weight: 900;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-      }
-
-      h1 {
-        margin: 0;
-        font-size: clamp(54px, 8vw, 104px);
-        font-weight: 900;
-        line-height: 0.94;
-      }
-
-      .slogan {
-        max-width: 620px;
-        margin: 0;
-        color: #2b3036;
-        font-size: clamp(20px, 2.4vw, 30px);
-        font-weight: 850;
-        line-height: 1.34;
-      }
-
-      .service-list {
+      .timeline {
         display: grid;
-        gap: 10px;
+      }
+
+      .timeline-row {
+        display: grid;
+        grid-template-columns: 126px minmax(0, 1fr);
+        min-height: 66px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .timeline-row:last-child {
+        border-bottom: 0;
+      }
+
+      .timeline-year,
+      .timeline-copy {
+        display: flex;
+        align-items: center;
+        padding: 14px;
+      }
+
+      .timeline-year {
+        border-right: 1px solid var(--line);
+        color: var(--red);
+        font-size: 13px;
+        font-weight: 950;
+      }
+
+      .timeline-copy {
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 750;
+        line-height: 1.5;
+      }
+
+      .service-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
 
       .service-card {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 14px;
-        align-items: center;
-        min-height: 86px;
-        padding: 16px;
+        gap: 16px;
+        min-height: 236px;
+        padding: 18px;
         border: 1px solid var(--line);
         background: var(--panel);
       }
 
-      .service-card:hover {
+      .service-card.featured {
         border-color: var(--green);
-        box-shadow: 0 12px 34px rgba(15, 157, 89, 0.16);
+        box-shadow: 0 14px 42px rgba(15, 157, 89, 0.16);
       }
 
-      .service-title {
-        display: block;
-        font-size: 19px;
+      .service-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 0 9px;
+        border: 1px solid var(--line);
+        background: var(--panel-soft);
+        color: var(--green-dark);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .service-card h3,
+      .apply-panel h3,
+      .policy-item h3 {
+        margin: 0;
+        font-size: 22px;
         font-weight: 950;
       }
 
-      .service-copy {
-        display: block;
-        margin-top: 6px;
+      .service-card p,
+      .policy-item p {
+        margin: 0;
         color: var(--muted);
+        font-size: 14px;
+        font-weight: 750;
+        line-height: 1.55;
+      }
+
+      .service-link {
+        align-self: end;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        border: 1px solid var(--ink);
+        background: var(--ink);
+        color: #ffffff;
         font-size: 13px;
+        font-weight: 900;
+      }
+
+      .service-link.is-muted {
+        border-color: var(--line);
+        background: var(--panel-soft);
+        color: var(--green-dark);
+      }
+
+      .feature-strip {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        border: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .feature-item {
+        min-height: 98px;
+        padding: 14px;
+        border-right: 1px solid var(--line);
+      }
+
+      .feature-item:last-child {
+        border-right: 0;
+      }
+
+      .feature-name {
+        display: block;
+        font-size: 15px;
+        font-weight: 950;
+      }
+
+      .feature-copy {
+        display: block;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
         font-weight: 750;
         line-height: 1.45;
       }
 
-      .service-state {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 34px;
-        padding: 0 12px;
-        border: 1px solid currentColor;
-        color: var(--green-dark);
+      .apply-panel {
+        display: grid;
+        grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
+        gap: 0;
+      }
+
+      .apply-copy,
+      .apply-form {
+        padding: 22px;
+      }
+
+      .apply-copy {
+        border-right: 1px solid var(--line);
+        background: var(--panel-soft);
+      }
+
+      .apply-copy p {
+        margin: 12px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 750;
+        line-height: 1.6;
+      }
+
+      .apply-form {
+        display: grid;
+        gap: 12px;
+      }
+
+      .field-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        color: var(--muted);
         font-size: 12px;
         font-weight: 900;
-        white-space: nowrap;
       }
 
-      .service-card:nth-child(2) .service-state {
-        color: var(--blue);
-      }
-
-      .preview-zone {
-        align-self: stretch;
-        display: grid;
-        grid-template-rows: auto minmax(0, 1fr);
-        min-height: 570px;
+      input,
+      select,
+      textarea {
+        width: 100%;
+        min-height: 42px;
         border: 1px solid var(--line);
-        background: var(--panel);
-        box-shadow: var(--shadow);
+        background: #ffffff;
+        color: var(--ink);
+        padding: 0 11px;
+        outline: 0;
       }
 
-      .preview-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        min-height: 48px;
-        padding: 0 14px;
-        border-bottom: 1px solid var(--line);
+      textarea {
+        min-height: 76px;
+        resize: vertical;
+        padding-top: 10px;
       }
 
-      .preview-title {
-        font-size: 13px;
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: var(--green);
+        box-shadow: 0 0 0 3px rgba(15, 157, 89, 0.14);
+      }
+
+      .submit-button {
+        min-height: 44px;
+        border: 1px solid var(--green-dark);
+        background: var(--green);
+        color: #ffffff;
+        font-size: 14px;
         font-weight: 950;
       }
 
-      .preview-state {
-        color: var(--green-dark);
-        font-size: 12px;
-        font-weight: 900;
+      .apply-result {
+        min-height: 72px;
+        padding: 12px;
+        border: 1px dashed var(--line);
+        background: #fbfcfb;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 1.5;
       }
 
-      .preview-frame-wrap {
-        position: relative;
-        min-height: 0;
-        overflow: hidden;
-        background: #ffffff;
+      .policy-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
 
-      .preview-frame {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        border: 0;
-        pointer-events: none;
+      .policy-item {
+        min-height: 180px;
+        padding: 18px;
       }
 
-      .preview-overlay {
-        position: absolute;
-        right: 14px;
-        bottom: 14px;
-        display: inline-flex;
-        align-items: center;
-        min-height: 34px;
-        padding: 0 12px;
-        background: rgba(17, 19, 21, 0.88);
+      .footer {
+        background: var(--ink);
         color: #ffffff;
+      }
+
+      .footer-inner {
+        width: min(1180px, calc(100% - 48px));
+        margin: 0 auto;
+        padding: 28px 0;
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        color: rgba(255, 255, 255, 0.72);
         font-size: 12px;
-        font-weight: 850;
+        font-weight: 750;
+        line-height: 1.5;
       }
 
-      @media (max-width: 900px) {
-        .site-shell {
-          display: block;
-        }
-
-        .home {
-          grid-template-columns: 1fr;
-          width: min(640px, calc(100% - 28px));
-          padding: 28px 0;
-        }
-
-        .preview-zone {
-          min-height: 430px;
-        }
-      }
-
-      @media (max-width: 560px) {
+      @media (max-width: 980px) {
         .topbar {
           align-items: stretch;
           flex-direction: column;
-          justify-content: center;
           gap: 10px;
-          padding: 12px 14px;
-        }
-
-        .brand-dot {
-          box-shadow:
-            14px 0 0 var(--yellow),
-            28px 0 0 var(--red);
+          padding: 12px 16px;
         }
 
         .topnav {
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           width: 100%;
         }
 
-        .home {
-          width: calc(100% - 24px);
-          gap: 24px;
-        }
-
-        .status-strip,
-        .service-card {
+        .section-head,
+        .company-grid,
+        .apply-panel {
           grid-template-columns: 1fr;
         }
 
-        .status-item {
+        .apply-copy {
           border-right: 0;
           border-bottom: 1px solid var(--line);
         }
 
-        .status-item:last-child {
-          border-bottom: 0;
+        .service-grid,
+        .policy-grid {
+          grid-template-columns: 1fr;
         }
 
-        .service-state {
+        .feature-strip {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .feature-item:nth-child(3) {
+          border-right: 0;
+        }
+
+        .feature-item:nth-child(-n + 3) {
+          border-bottom: 1px solid var(--line);
+        }
+      }
+
+      @media (max-width: 620px) {
+        .hero-inner,
+        .section-inner,
+        .footer-inner {
+          width: calc(100% - 24px);
+        }
+
+        .hero {
+          min-height: 650px;
+        }
+
+        .hero::before {
+          background:
+            linear-gradient(90deg, rgba(0, 0, 0, 0.78) 0%, rgba(0, 0, 0, 0.42) 100%),
+            linear-gradient(0deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0) 44%),
+            url("assets/baksu-office-hero.png") 62% center / cover;
+        }
+
+        .topnav {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .primary-action,
+        .secondary-action {
           width: 100%;
         }
 
-        .preview-zone {
-          min-height: 360px;
+        .feature-strip,
+        .field-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .feature-item,
+        .feature-item:nth-child(3) {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .feature-item:last-child {
+          border-bottom: 0;
+        }
+
+        .fact-row,
+        .timeline-row {
+          grid-template-columns: 1fr;
+        }
+
+        .fact-label,
+        .timeline-year {
+          min-height: 34px;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .footer-inner {
+          display: grid;
         }
       }
     </style>
   </head>
   <body>
-    <div class="site-shell">
-      <header class="topbar">
-        <a class="brand-mark" href="index.html" aria-label="(주) 백수 홈">
-          <span class="brand-dot" aria-hidden="true"></span>
-          <span>(주) 백수</span>
-        </a>
-        <nav class="topnav" aria-label="서비스 이동">
-          <a class="nav-link" href="lunchtime/">점심시간</a>
-          <a class="nav-link" href="hasik/">회식</a>
-        </nav>
-      </header>
+    <header class="topbar">
+      <a class="brand-mark" href="index.html" aria-label="(주) 백수 홈">
+        <span class="brand-dot" aria-hidden="true"></span>
+        <span>(주) 백수</span>
+      </a>
+      <nav class="topnav" aria-label="주요 이동">
+        <a class="nav-link" href="#company">회사소개</a>
+        <a class="nav-link" href="#services">서비스</a>
+        <a class="nav-link" href="pantry/">탕비실</a>
+        <a class="nav-link" href="#apply">입사지원</a>
+        <a class="nav-link" href="#policy">이용안내</a>
+      </nav>
+    </header>
 
-      <main class="home">
-        <section class="intro" aria-label="(주) 백수 소개">
-          <div class="status-strip" aria-label="서비스 상태">
-            <div class="status-item">
-              <span class="status-label">회사 위치</span>
-              <span class="status-value">각자의 집</span>
-            </div>
-            <div class="status-item">
-              <span class="status-label">접속 상태</span>
-              <span class="status-value">함께 근무중</span>
-            </div>
-            <div class="status-item">
-              <span class="status-label">하위 공간</span>
-              <span class="status-value">점심시간 / 회식</span>
-            </div>
+    <main>
+      <section class="hero" aria-label="(주) 백수 대표 화면">
+        <div class="hero-inner">
+          <span class="hero-kicker">소통을 위한 페이퍼 컴퍼니</span>
+          <h1>(주) 백수</h1>
+          <div class="hero-copy" aria-label="대표 문구">
+            <span>우리는 집에 있지만 함께 근무중이다.</span>
+            <span>백수라고 다 같은 백수가 아니다. 서열이 있다.</span>
           </div>
+          <p class="hero-subcopy">
+            집에서 쉬는 시간, 일자리 찾는 시간, 아무것도 안 하는 시간을 회사의 업무시간처럼 다루는
+            장난스러운 사내 포털입니다.
+          </p>
+          <div class="hero-actions" aria-label="주요 행동">
+            <a class="primary-action" href="pantry/">탕비실 입장</a>
+            <a class="secondary-action" href="#apply">입사 지원하기</a>
+          </div>
+        </div>
+      </section>
 
-          <div>
-            <h1>백수 사무실</h1>
-            <p class="slogan">
-              집에 흩어진 사람들이 같은 회사에 접속하듯 모이는 작은 온라인 사무실.
+      <section class="section" id="company" aria-labelledby="company-title">
+        <div class="section-inner">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">COMPANY</span>
+              <h2 id="company-title">백수를 하나의 직장처럼</h2>
+            </div>
+            <p class="section-summary">
+              대표, 연혁, 복지, 사내 공간을 갖춘 회사 홈페이지 형식으로 백수의 하루를 브랜드화합니다.
             </p>
           </div>
 
-          <div class="service-list" aria-label="서비스 목록">
-            <a class="service-card" href="lunchtime/">
-              <span>
-                <span class="service-title">점심시간</span>
-                <span class="service-copy">메뉴, 잡담, 날씨와 뉴스를 한 화면에서 보는 익명 점심방.</span>
-              </span>
-              <span class="service-state">바로 입장</span>
-            </a>
-            <a class="service-card" href="hasik/">
-              <span>
-                <span class="service-title">회식 hasik</span>
-                <span class="service-copy">퇴근 후 익명 역할로 방을 만들고 같이 앉는 회식방.</span>
-              </span>
-              <span class="service-state">Next 앱</span>
-            </a>
-          </div>
-        </section>
+          <div class="company-grid">
+            <div class="facts-table" aria-label="회사 기본 정보">
+              <div class="fact-row">
+                <span class="fact-label">회사명</span>
+                <span class="fact-value">(주) 백수</span>
+              </div>
+              <div class="fact-row">
+                <span class="fact-label">대표</span>
+                <span class="fact-value">현재 검토중</span>
+              </div>
+              <div class="fact-row">
+                <span class="fact-label">소재지</span>
+                <span class="fact-value">각자의 방, 거실, 카페 끝자리</span>
+              </div>
+              <div class="fact-row">
+                <span class="fact-label">주요사업</span>
+                <span class="fact-value">채팅, 소통, 타임킬링, 정보공유</span>
+              </div>
+              <div class="fact-row">
+                <span class="fact-label">퇴사</span>
+                <span class="fact-value">현생 회사 입사</span>
+              </div>
+            </div>
 
-        <aside class="preview-zone" aria-label="점심시간 미리보기">
-          <div class="preview-header">
-            <span class="preview-title">점심시간 화면</span>
-            <span class="preview-state">입장 가능</span>
+            <div class="timeline" aria-label="회사 이력">
+              <div class="timeline-row">
+                <span class="timeline-year">오전 11:00</span>
+                <span class="timeline-copy">눈은 떴지만 아직 출근 처리가 되지 않은 상태를 정식 근무로 인정.</span>
+              </div>
+              <div class="timeline-row">
+                <span class="timeline-year">점심 전</span>
+                <span class="timeline-copy">탕비실을 상시 개방하고 소확횡 복지를 핵심 사내 문화로 지정.</span>
+              </div>
+              <div class="timeline-row">
+                <span class="timeline-year">17:00 이후</span>
+                <span class="timeline-copy">회식방을 예비 사내 행사로 등록. 익명 롤플레잉과 투표 문화 연구중.</span>
+              </div>
+            </div>
           </div>
-          <div class="preview-frame-wrap">
-            <iframe class="preview-frame" src="lunchtime/lunchtime.html" title="점심시간 미리보기"></iframe>
-            <span class="preview-overlay">점심시간 열기</span>
+        </div>
+      </section>
+
+      <section class="section" id="services" aria-labelledby="services-title">
+        <div class="section-inner">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">SERVICES</span>
+              <h2 id="services-title">업무시간에 맞춰 열리는 사내 공간</h2>
+            </div>
+            <p class="section-summary">
+              지금은 메인 홈페이지와 탕비실 소통 경험을 우선 만들고, 점심시간과 회식은 기존 흐름을 하위 서비스로 유지합니다.
+            </p>
           </div>
-        </aside>
-      </main>
-    </div>
+
+          <div class="service-grid">
+            <article class="service-card featured">
+              <div class="service-meta">
+                <span class="tag">업무중 상시</span>
+                <span class="tag">소확횡</span>
+              </div>
+              <h3>탕비실</h3>
+              <p>커피, 간식, 짧은 잡담, 월급루팡을 한데 모은 사내 휴게 공간입니다.</p>
+              <a class="service-link" href="pantry/">탕비실 입장</a>
+            </article>
+
+            <article class="service-card">
+              <div class="service-meta">
+                <span class="tag">11:00 - 13:00</span>
+                <span class="tag">메뉴공유</span>
+              </div>
+              <h3>점심시간</h3>
+              <p>오늘 메뉴와 익명 대화를 한 화면에서 넘겨보는 점심 전용 공간입니다.</p>
+              <a class="service-link is-muted" href="lunchtime/">점심시간 보기</a>
+            </article>
+
+            <article class="service-card">
+              <div class="service-meta">
+                <span class="tag">17:00 이후</span>
+                <span class="tag">익명회식방</span>
+              </div>
+              <h3>회식</h3>
+              <p>퇴근 후 롤플레잉, 투표, 미니게임을 붙일 수 있는 예비 사내 행사입니다.</p>
+              <a class="service-link is-muted" href="hasik/">회식방 보기</a>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="features-title">
+        <div class="section-inner">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">BENEFITS</span>
+              <h2 id="features-title">공통 제공 기능</h2>
+            </div>
+            <p class="section-summary">
+              애드센스와 서비스 운영에 필요한 기본 카테고리는 회사 홈페이지 말투로 정리했습니다.
+            </p>
+          </div>
+
+          <div class="feature-strip" aria-label="공통 기능 목록">
+            <div class="feature-item">
+              <span class="feature-name">채팅</span>
+              <span class="feature-copy">짧고 가벼운 익명 대화</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-name">소통</span>
+              <span class="feature-copy">혼자 있는 시간을 사내 분위기로 전환</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-name">타임킬링</span>
+              <span class="feature-copy">업무 아닌 업무를 위한 작은 장치</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-name">월급루팡</span>
+              <span class="feature-copy">양심의 가책을 UI로 완화</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-name">정보공유</span>
+              <span class="feature-copy">점심, 생활, 구직 정보를 가볍게 유통</span>
+            </div>
+            <div class="feature-item">
+              <span class="feature-name">일자리소개</span>
+              <span class="feature-copy">퇴사 처리 가능한 현생 링크 후보</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="apply" aria-labelledby="apply-title">
+        <div class="section-inner">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">RECRUIT</span>
+              <h2 id="apply-title">입사 지원하기</h2>
+            </div>
+            <p class="section-summary">
+              회원가입 흐름은 면접 놀이로 시작합니다. 응답은 브라우저에만 저장되는 프로토타입입니다.
+            </p>
+          </div>
+
+          <section class="apply-panel" aria-label="입사 지원서">
+            <div class="apply-copy">
+              <h3>인턴 채용 절차</h3>
+              <p>
+                간단한 앙케이트를 제출하면 면접관이 이력서를 검토하고, 최종 결제중이라는
+                이해할 수 없는 단계를 거쳐 인턴으로 채용됩니다.
+              </p>
+            </div>
+            <form class="apply-form" id="applyForm">
+              <div class="field-grid">
+                <label>
+                  1주일 중 집에 있는 시간
+                  <select id="homeHours" required>
+                    <option value="상시대기">상시대기</option>
+                    <option value="주 3일">주 3일</option>
+                    <option value="주말 집중">주말 집중</option>
+                  </select>
+                </label>
+                <label>
+                  특기
+                  <input id="skillInput" maxlength="18" placeholder="예: 누워서 폰 보기" required />
+                </label>
+              </div>
+              <label>
+                지원 동기 20자 이내
+                <input id="motiveInput" maxlength="20" placeholder="함께 근무하고 싶습니다" required />
+              </label>
+              <button class="submit-button" type="submit">면접 제출</button>
+              <div class="apply-result" id="applyResult" aria-live="polite">
+                지원서를 제출하면 인사팀이 업무 태도를 상상합니다.
+              </div>
+            </form>
+          </section>
+        </div>
+      </section>
+
+      <section class="section" id="policy" aria-labelledby="policy-title">
+        <div class="section-inner">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">GUIDE</span>
+              <h2 id="policy-title">이용 안내</h2>
+            </div>
+            <p class="section-summary">
+              회사 홈페이지에 있어야 하는 필수 안내를 서비스 톤에 맞춰 배치했습니다.
+            </p>
+          </div>
+
+          <div class="policy-grid">
+            <article class="policy-item">
+              <h3>서비스 소개</h3>
+              <p>백수의 하루를 사내 공간처럼 나누고, 각 공간에 소통과 작은 기능을 붙입니다.</p>
+            </article>
+            <article class="policy-item">
+              <h3>이용가이드</h3>
+              <p>탕비실은 상시 이용, 점심시간은 11시부터 13시, 회식은 17시 이후 분위기로 운영합니다.</p>
+            </article>
+            <article class="policy-item">
+              <h3>개인정보처리방침</h3>
+              <p>현재 프로토타입의 입력값은 브라우저 저장소 중심으로 다루며, 서버 저장은 별도 고지 후 연결합니다.</p>
+            </article>
+            <article class="policy-item">
+              <h3>이용약관</h3>
+              <p>익명이어도 사람을 괴롭히는 행위는 사내 징계 대상입니다. 신고와 차단 흐름을 우선 기능으로 둡니다.</p>
+            </article>
+            <article class="policy-item">
+              <h3>문의</h3>
+              <p>서비스 제안, 버그, 간식 입고 요청은 향후 문의 폼 또는 운영 메일로 받을 예정입니다.</p>
+            </article>
+            <article class="policy-item">
+              <h3>광고/제휴</h3>
+              <p>구직, 학습, 생활 정보처럼 이용자에게 맥락이 있는 카테고리만 우선 검토합니다.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <span>(주) 백수 | 소통을 위한 페이퍼 컴퍼니</span>
+        <span>집에 있지만 함께 근무중입니다.</span>
+      </div>
+    </footer>
+
+    <script>
+      const applyForm = document.querySelector("#applyForm");
+      const applyResult = document.querySelector("#applyResult");
+      const skillInput = document.querySelector("#skillInput");
+      const motiveInput = document.querySelector("#motiveInput");
+      const homeHours = document.querySelector("#homeHours");
+
+      const nicknameSeeds = ["탕비실", "재택", "인턴", "대기", "루팡", "면접"];
+
+      function getRandomNickname(skill) {
+        const seed = nicknameSeeds[Math.floor(Math.random() * nicknameSeeds.length)];
+        const suffix = Math.floor(100 + Math.random() * 900);
+        const cleanSkill = skill.trim().slice(0, 2) || "백수";
+        return `${seed}${cleanSkill}${suffix}`;
+      }
+
+      function setApplyMessage(message) {
+        applyResult.textContent = message;
+      }
+
+      applyForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const skill = skillInput.value.trim();
+        const motive = motiveInput.value.trim();
+
+        if (!skill || !motive) {
+          setApplyMessage("인사팀이 빈칸을 발견했습니다.");
+          return;
+        }
+
+        setApplyMessage("면접관이 이력서를 검토중입니다...");
+
+        window.setTimeout(() => {
+          setApplyMessage("최종 결제중입니다...");
+        }, 650);
+
+        window.setTimeout(() => {
+          const nickname = getRandomNickname(skill);
+          const profile = {
+            nickname,
+            homeHours: homeHours.value,
+            skill,
+            motive,
+            hiredAt: new Date().toISOString()
+          };
+
+          localStorage.setItem("baksu:profile", JSON.stringify(profile));
+          setApplyMessage(
+            `축하합니다! ${nickname}님은 (주) 백수의 인턴으로 채용되셨습니다. 앞으로 소중한 한 가족으로서 최선을 다해 부탁드립니다.`
+          );
+        }, 1350);
+      });
+    </script>
   </body>
 </html>
