@@ -430,6 +430,76 @@ button {
   line-height: 1.75;
 }
 
+.policy-stack {
+  display: grid;
+  gap: 28px;
+  border-top: 2px solid var(--ink);
+}
+
+.policy-card {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.28fr) minmax(0, 0.72fr);
+  gap: 34px;
+  padding: 34px 0;
+  border-bottom: 1px solid var(--line);
+  scroll-margin-top: 110px;
+}
+
+.policy-card > span {
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.policy-card h3 {
+  margin: 0 0 18px;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.policy-card p,
+.policy-card li {
+  color: var(--body);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.75;
+}
+
+.policy-card p {
+  margin: 0 0 18px;
+}
+
+.policy-card ul {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.policy-card li {
+  position: relative;
+  padding-left: 14px;
+}
+
+.policy-card li::before {
+  position: absolute;
+  left: 0;
+  top: 12px;
+  width: 4px;
+  height: 4px;
+  background: var(--blue);
+  content: "";
+}
+
+.policy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
 .legal-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -714,6 +784,7 @@ button {
   .history-grid,
   .recruit-panel,
   .guide-panel,
+  .policy-card,
   .legal-list {
     grid-template-columns: 1fr;
   }

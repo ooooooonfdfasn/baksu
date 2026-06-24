@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://ooooooonfdfasn.github.io/baksu/sitemap.xml
