@@ -409,6 +409,77 @@
         line-height: 1.55;
       }
 
+      .related-docs {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .related-docs-head {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .related-docs-head span {
+        display: block;
+        color: var(--green-dark);
+        font-size: 12px;
+        font-weight: 950;
+      }
+
+      .related-docs-head h2 {
+        margin: 6px 0 0;
+        font-size: 24px;
+        font-weight: 950;
+        line-height: 1.2;
+      }
+
+      .related-docs-head a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        padding: 0 12px;
+        border: 1px solid var(--green-dark);
+        color: var(--green-dark);
+        font-size: 12px;
+        font-weight: 950;
+        white-space: nowrap;
+      }
+
+      .related-doc-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .related-doc-list a {
+        display: grid;
+        gap: 8px;
+        min-height: 112px;
+        padding: 18px;
+        border-right: 1px solid var(--line);
+      }
+
+      .related-doc-list a:last-child {
+        border-right: 0;
+      }
+
+      .related-doc-list strong {
+        font-size: 17px;
+        font-weight: 950;
+      }
+
+      .related-doc-list small {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 1.5;
+      }
+
       @media (max-width: 900px) {
         .topbar {
           align-items: stretch;
@@ -419,13 +490,23 @@
 
         .topnav {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           width: 100%;
         }
 
         .page-head,
-        .pantry-grid {
+        .pantry-grid,
+        .related-doc-list {
           grid-template-columns: 1fr;
+        }
+
+        .related-doc-list a {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .related-doc-list a:last-child {
+          border-bottom: 0;
         }
       }
 
@@ -436,9 +517,15 @@
         }
 
         .topnav,
+        .related-docs-head,
         .form-row,
         .score-board {
           grid-template-columns: 1fr;
+        }
+
+        .related-docs-head {
+          align-items: stretch;
+          flex-direction: column;
         }
 
         .score-item {
@@ -468,6 +555,7 @@
         <a class="nav-link" href="../index.html">회사소개</a>
         <a class="nav-link" href="../lunchtime/">점심시간</a>
         <a class="nav-link" href="../hasik/">회식</a>
+        <a class="nav-link" href="../articles/">사내문서</a>
       </nav>
     </header>
 
@@ -541,6 +629,26 @@
               신고와 차단은 다음 단계에서 붙일 핵심 운영 기능입니다. 익명이어도 사내 질서는 지킵니다.
             </p>
           </section>
+        </div>
+      </section>
+
+      <section class="related-docs" aria-label="탕비실 관련 사내문서">
+        <div class="related-docs-head">
+          <div>
+            <span>INTERNAL DOCUMENTS</span>
+            <h2>탕비실 관련 안내</h2>
+          </div>
+          <a href="../articles/">문서실 전체</a>
+        </div>
+        <div class="related-doc-list">
+          <a href="../articles/pantry-guide.html">
+            <strong>탕비실 이용 가이드</strong>
+            <small>메모, 간식 뽑기, 재고판을 부담 없이 쓰는 기준입니다.</small>
+          </a>
+          <a href="../articles/snack-minigame-benefits.html">
+            <strong>사내 복지: 간식과 미니게임</strong>
+            <small>짧은 휴식과 소확횡을 복지처럼 다루는 이유입니다.</small>
+          </a>
         </div>
       </section>
     </main>

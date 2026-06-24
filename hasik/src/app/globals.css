@@ -1788,6 +1788,13 @@ input:focus {
   font-weight: 950;
 }
 
+.lobby-panel-head a {
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 950;
+  text-decoration: none;
+}
+
 .lobby-label {
   color: var(--muted);
   font-size: 12px;
@@ -1825,7 +1832,18 @@ input:focus {
   padding: 0;
 }
 
+.lobby-doc-panel {
+  gap: 0;
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: 0;
+}
+
 .room-list-panel .lobby-panel-head {
+  padding: 12px;
+}
+
+.lobby-doc-panel .lobby-panel-head {
   padding: 12px;
 }
 
@@ -1878,6 +1896,37 @@ input:focus {
   color: var(--blue);
   font-style: normal;
   font-weight: 950;
+}
+
+.lobby-doc-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+}
+
+.lobby-doc-list a {
+  display: grid;
+  gap: 8px;
+  min-height: 128px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.lobby-doc-list strong {
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1.35;
+}
+
+.lobby-doc-list small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.5;
 }
 
 @media (max-width: 1120px) {
@@ -2266,6 +2315,18 @@ input:focus {
     grid-column: auto;
   }
 
+  .lobby-doc-panel {
+    width: 100%;
+  }
+
+  .lobby-doc-list {
+    grid-template-columns: 1fr;
+  }
+
+  .lobby-doc-list a {
+    min-height: 88px;
+  }
+
   .room-list-item {
     min-height: 62px;
   }
@@ -2351,6 +2412,7 @@ h1 {
 .payment-popover,
 .lobby-modal,
 .lobby-panel,
+.lobby-doc-list a,
 .menu-item,
 .menu-trigger,
 .create-room-open-button,
@@ -2413,6 +2475,10 @@ input {
   overflow: hidden;
 }
 
+.lobby-doc-panel {
+  overflow: hidden;
+}
+
 .panel,
 .chat-panel,
 .profile-popover,
@@ -2447,6 +2513,7 @@ input {
 .create-room-options button:hover,
 .create-room-button:hover,
 .room-list-item:hover,
+.lobby-doc-list a:hover,
 .profile-close:hover,
 .report-button:hover {
   border-color: var(--bhc-orange);

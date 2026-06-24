@@ -231,6 +231,27 @@ export function HasikApp() {
               ))}
             </div>
           </section>
+
+          <section className="lobby-panel lobby-doc-panel" aria-label="회식 관련 사내문서">
+            <div className="lobby-panel-head">
+              <strong>회식 전 확인 문서</strong>
+              <a href="../articles/">전체</a>
+            </div>
+            <div className="lobby-doc-list">
+              <a href="../articles/dinner-room-rules.html">
+                <strong>회식방 이용 규칙</strong>
+                <small>익명회식방과 닉네임 방을 편하게 쓰는 기준입니다.</small>
+              </a>
+              <a href="../articles/anonymous-chat-etiquette.html">
+                <strong>익명 대화 예절</strong>
+                <small>처음 보는 사람과도 안전하게 대화하는 방법입니다.</small>
+              </a>
+              <a href="../articles/report-block-policy.html">
+                <strong>신고/차단 정책 안내</strong>
+                <small>불편한 상황을 발견했을 때의 처리 기준입니다.</small>
+              </a>
+            </div>
+          </section>
         </div>
       </section>
 
