@@ -183,9 +183,7 @@
       }
 
       #company,
-      #business,
-      #company-pages,
-      .legal-card {
+      #business {
         scroll-margin-top: 104px;
       }
 
@@ -648,93 +646,6 @@
         line-height: 1.6;
       }
 
-      .legal {
-        padding: 120px 0;
-        background: var(--white);
-      }
-
-      .legal-list {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        border-top: 2px solid var(--ink);
-      }
-
-      .legal-card {
-        min-height: 360px;
-        padding: 34px 30px;
-        border-right: 1px solid var(--line);
-        border-bottom: 1px solid var(--line);
-        background: var(--white);
-        scroll-margin-top: 110px;
-      }
-
-      .legal-card:last-child {
-        border-right: 0;
-      }
-
-      .legal-card span {
-        display: block;
-        color: var(--blue);
-        font-size: 14px;
-        font-weight: 900;
-      }
-
-      .legal-card h3 {
-        margin: 18px 0 18px;
-        font-size: 28px;
-        font-weight: 900;
-        line-height: 1.25;
-      }
-
-      .legal-card p,
-      .legal-card li {
-        color: var(--body);
-        font-size: 15px;
-        font-weight: 500;
-        line-height: 1.75;
-      }
-
-      .legal-card p {
-        margin: 0 0 18px;
-      }
-
-      .legal-card ul {
-        display: grid;
-        gap: 10px;
-        margin: 0;
-        padding: 0;
-        list-style: none;
-      }
-
-      .legal-card li {
-        position: relative;
-        padding-left: 14px;
-      }
-
-      .legal-card li::before {
-        position: absolute;
-        left: 0;
-        top: 12px;
-        width: 4px;
-        height: 4px;
-        background: var(--blue);
-        content: "";
-      }
-
-      .contact-link {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 160px;
-        height: 42px;
-        margin-top: 6px;
-        border: 1px solid var(--blue);
-        border-radius: 42px;
-        color: var(--blue);
-        font-size: 14px;
-        font-weight: 900;
-      }
-
       .footer {
         background: var(--ink);
       }
@@ -960,8 +871,7 @@
 
         .business,
         .history,
-        .recruit,
-        .legal {
+        .recruit {
           padding: 78px 0;
         }
 
@@ -981,15 +891,6 @@
         .business-list,
         .recruit-panel {
           grid-template-columns: 1fr;
-        }
-
-        .legal-list {
-          grid-template-columns: 1fr;
-        }
-
-        .legal-card {
-          min-height: 0;
-          border-right: 0;
         }
 
         .business-card,
@@ -1227,52 +1128,6 @@
         </div>
       </section>
 
-      <section class="legal" id="company-pages">
-        <div class="w-1600">
-          <div class="section-head">
-            <div>
-              <span class="section-kicker">COMPANY GUIDE</span>
-              <h2>회사 안내 바로가기</h2>
-            </div>
-            <p>
-              회사 이력, 입사 지원 절차, 이용 안내는 각각의 전용 페이지에서 자세히 확인할 수 있습니다.
-              메인 화면은 주백수의 첫인상과 사내 공간 진입에 집중합니다.
-            </p>
-          </div>
-
-          <div class="legal-list" aria-label="회사 안내 페이지">
-            <article class="legal-card">
-              <span>HISTORY</span>
-              <h3>회사 이력</h3>
-              <p>
-                오전 11시에 시작된 페이퍼 컴퍼니의 주요 업무 기록과 사내 공간 편입 과정을
-                회사 연혁처럼 정리했습니다.
-              </p>
-              <a class="contact-link" href="history.html">회사 이력 보기</a>
-            </article>
-
-            <article class="legal-card">
-              <span>RECRUIT</span>
-              <h3>입사 지원 절차</h3>
-              <p>
-                회원가입을 면접처럼, 프로필을 이력서처럼 다루는 주백수식 입사 과정을 따로
-                안내합니다.
-              </p>
-              <a class="contact-link" href="recruit.html">지원 절차 보기</a>
-            </article>
-
-            <article class="legal-card">
-              <span>GUIDE</span>
-              <h3>이용 안내</h3>
-              <p>
-                개인정보 처리 방침, 이용 약관, 문의 안내를 한 페이지에 모아 실제 회사 홈페이지
-                문법으로 정리했습니다.
-              </p>
-              <a class="contact-link" href="guide.html">이용 안내 보기</a>
-            </article>
-          </div>
-        </div>
-      </section>
     </div>
 
     <footer class="footer" id="footer">
