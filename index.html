@@ -161,31 +161,6 @@
         color: var(--blue);
       }
 
-      .top-language {
-        display: flex;
-        gap: 4px;
-        margin: 0;
-        padding: 0;
-        list-style: none;
-      }
-
-      .top-language a {
-        display: block;
-        width: 44px;
-        height: 22px;
-        border-radius: 4px;
-        color: #000000;
-        font-size: 12px;
-        font-weight: 700;
-        line-height: 22px;
-        text-align: center;
-      }
-
-      .top-language a.on {
-        background: var(--blue);
-        color: var(--white);
-      }
-
       .mobile-menu-button {
         display: none;
         width: 34px;
@@ -925,10 +900,6 @@
       }
 
       @media (max-width: 1200px) {
-        .top-language {
-          display: none;
-        }
-
         .mobile-menu-button {
           display: block;
         }
@@ -1130,17 +1101,9 @@
             <li><a href="lunchtime/lunchtime.html">점심시간</a></li>
             <li><a href="hasik/">회식</a></li>
             <li><a href="#recruit">입사지원</a></li>
-            <li><a href="#privacy">개인정보 처리 방침</a></li>
-            <li><a href="#terms">이용 약관</a></li>
             <li><a href="#contact">문의</a></li>
           </ul>
         </nav>
-
-        <ul class="top-language" aria-label="언어 선택">
-          <li><a class="on" href="index.html">KOR</a></li>
-          <li><a href="#company">ENG</a></li>
-          <li><a href="#company">JPN</a></li>
-        </ul>
 
         <button
           class="mobile-menu-button"
