@@ -460,33 +460,38 @@
       .business-card::before {
         position: absolute;
         inset: 0;
+        z-index: 1;
         content: "";
-        opacity: 0.5;
-        background:
-          linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.82)),
-          url("assets/baksu-office-hero.png") center / cover;
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.86));
+      }
+
+      .business-card-image {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        opacity: 0.88;
         transition: transform 0.5s ease;
       }
 
-      .business-card:nth-child(2)::before {
-        background:
-          linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.82)),
-          url("assets/baksu-office-hero.png") 32% center / cover;
+      .business-card:nth-child(2) .business-card-image {
+        object-position: 54% center;
       }
 
-      .business-card:nth-child(3)::before {
-        background:
-          linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.82)),
-          url("assets/baksu-office-hero.png") 78% center / cover;
+      .business-card:nth-child(3) .business-card-image {
+        object-position: 56% center;
       }
 
-      .business-card:hover::before {
+      .business-card:hover .business-card-image {
         transform: scale(1.06);
       }
 
       .business-card-content {
         position: relative;
-        z-index: 1;
+        z-index: 2;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
@@ -1101,6 +1106,7 @@
 
           <div class="business-list">
             <article class="business-card">
+              <img class="business-card-image" src="assets/baksu-pantry-card.jpg" alt="" aria-hidden="true" loading="lazy" />
               <div class="business-card-content">
                 <span>ALWAYS OPEN</span>
                 <h3>탕비실</h3>
@@ -1110,6 +1116,7 @@
             </article>
 
             <article class="business-card">
+              <img class="business-card-image" src="assets/baksu-lunchtime-card.jpg" alt="" aria-hidden="true" loading="lazy" />
               <div class="business-card-content">
                 <span>11:00 - 13:00</span>
                 <h3>점심시간</h3>
@@ -1119,6 +1126,7 @@
             </article>
 
             <article class="business-card">
+              <img class="business-card-image" src="assets/baksu-hasik-card.jpg" alt="" aria-hidden="true" loading="lazy" />
               <div class="business-card-content">
                 <span>AFTER 17:00</span>
                 <h3>회식</h3>
