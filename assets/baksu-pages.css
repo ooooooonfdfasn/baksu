@@ -739,8 +739,23 @@ button {
 }
 
 .doc-board a:hover,
-.doc-back a:hover {
+.doc-back a:hover,
+.doc-service-link:hover {
   color: var(--blue);
+}
+
+.doc-service-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  margin: 0 0 22px;
+  padding: 0 12px;
+  border: 1px solid rgba(11, 77, 163, 0.24);
+  border-left: 4px solid var(--blue);
+  background: #fff4bf;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .doc-article p {
