@@ -1672,8 +1672,22 @@ input:focus {
   flex: 0 0 auto;
 }
 
-.create-room-open-button,
-.lobby-profile-button {
+.lobby-guide-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 2px;
+  color: var(--text);
+  font-weight: 950;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.lobby-guide-link:hover {
+  color: var(--blue);
+}
+
+.create-room-open-button {
   min-height: 48px;
   border: 1px solid var(--line);
   background: var(--panel);
@@ -1685,41 +1699,6 @@ input:focus {
 .create-room-open-button {
   width: 132px;
   padding: 0 18px;
-}
-
-.lobby-profile-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 126px;
-  max-width: 180px;
-  padding: 4px 12px 4px 4px;
-}
-
-.lobby-profile-button > span:last-child {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.lobby-avatar {
-  display: inline-grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border: 1px solid var(--line);
-  background: var(--blue);
-  color: var(--ink);
-  font-size: 15px;
-  font-weight: 950;
-  line-height: 1;
-}
-
-.lobby-avatar.large {
-  width: 56px;
-  height: 56px;
-  font-size: 20px;
 }
 
 .lobby-modal {
@@ -1757,18 +1736,6 @@ input:focus {
   padding: 16px;
 }
 
-.profile-summary {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 64px;
-}
-
-.profile-summary strong {
-  font-size: 20px;
-  font-weight: 950;
-}
-
 .lobby-panel {
   display: grid;
   gap: 10px;
@@ -1801,14 +1768,12 @@ input:focus {
   font-weight: 900;
 }
 
-.session-switch,
 .create-room-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.session-switch button,
 .create-room-options button,
 .create-room-button,
 .room-list-item {
@@ -1832,28 +1797,8 @@ input:focus {
   padding: 0;
 }
 
-.lobby-doc-panel {
-  gap: 0;
-  width: min(760px, 100%);
-  margin: 0 auto;
-  padding: 0;
-}
-
 .room-list-panel .lobby-panel-head {
   padding: 12px;
-}
-
-.lobby-doc-panel .lobby-panel-head {
-  padding: 12px;
-}
-
-.join-notice {
-  margin: 0;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--line);
-  color: var(--blue);
-  font-size: 13px;
-  font-weight: 900;
 }
 
 .room-list {
@@ -1896,37 +1841,6 @@ input:focus {
   color: var(--blue);
   font-style: normal;
   font-weight: 950;
-}
-
-.lobby-doc-list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  padding: 12px;
-}
-
-.lobby-doc-list a {
-  display: grid;
-  gap: 8px;
-  min-height: 128px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  background: var(--panel);
-  color: var(--text);
-  text-decoration: none;
-}
-
-.lobby-doc-list strong {
-  font-size: 15px;
-  font-weight: 950;
-  line-height: 1.35;
-}
-
-.lobby-doc-list small {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1.5;
 }
 
 @media (max-width: 1120px) {
@@ -2293,16 +2207,9 @@ input:focus {
     padding: 0 11px;
   }
 
-  .lobby-profile-button {
-    min-width: 0;
-    max-width: 128px;
+  .lobby-guide-link {
     min-height: 42px;
-    padding: 3px 8px 3px 3px;
-  }
-
-  .lobby-avatar {
-    width: 34px;
-    height: 34px;
+    font-size: 14px;
   }
 
   .lobby-grid {
@@ -2313,18 +2220,6 @@ input:focus {
   .room-list-panel {
     width: 100%;
     grid-column: auto;
-  }
-
-  .lobby-doc-panel {
-    width: 100%;
-  }
-
-  .lobby-doc-list {
-    grid-template-columns: 1fr;
-  }
-
-  .lobby-doc-list a {
-    min-height: 88px;
   }
 
   .room-list-item {
@@ -2412,11 +2307,9 @@ h1 {
 .payment-popover,
 .lobby-modal,
 .lobby-panel,
-.lobby-doc-list a,
 .menu-item,
 .menu-trigger,
 .create-room-open-button,
-.lobby-profile-button,
 .role-chip,
 .mood-chip,
 .shape-chip,
@@ -2475,10 +2368,6 @@ input {
   overflow: hidden;
 }
 
-.lobby-doc-panel {
-  overflow: hidden;
-}
-
 .panel,
 .chat-panel,
 .profile-popover,
@@ -2497,7 +2386,6 @@ input {
 .menu-item:hover,
 .menu-trigger:hover,
 .create-room-open-button:hover,
-.lobby-profile-button:hover,
 .icon-action:hover,
 .send-button:hover,
 .settings-button:hover,
@@ -2509,11 +2397,9 @@ input {
 .secret-pay-button:hover,
 .order-button:hover,
 .payment-option:hover,
-.session-switch button:hover,
 .create-room-options button:hover,
 .create-room-button:hover,
 .room-list-item:hover,
-.lobby-doc-list a:hover,
 .profile-close:hover,
 .report-button:hover {
   border-color: var(--bhc-orange);
@@ -2522,7 +2408,6 @@ input {
 .role-chip.selected,
 .mood-chip.selected,
 .shape-chip.selected,
-.session-switch .selected,
 .create-room-options .selected,
 .seat-slot.mine .seat-token,
 .send-button,
@@ -2556,7 +2441,6 @@ input {
   font-weight: 950;
 }
 
-.session-switch button,
 .create-room-options button,
 .room-list-item {
   border: 2px solid rgba(255, 198, 45, 0.48);
@@ -2566,16 +2450,6 @@ input {
 }
 
 .create-room-open-button {
-  border-color: var(--bhc-brown) !important;
-  background: var(--bhc-yellow) !important;
-  color: var(--bhc-brown) !important;
-}
-
-.lobby-profile-button {
-  background: var(--bhc-cream) !important;
-}
-
-.lobby-avatar {
   border-color: var(--bhc-brown) !important;
   background: var(--bhc-yellow) !important;
   color: var(--bhc-brown) !important;

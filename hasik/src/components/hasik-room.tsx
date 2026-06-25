@@ -27,12 +27,9 @@ type Mood = "quiet" | "talk" | "afterwork";
 type RealtimeMode = "demo" | "setup" | "live";
 type PaymentMethod = "split" | "single" | "roulette" | "rps";
 type MenuItemKind = "food" | "drink";
-export type RoomAccessMode = "anonymous" | "nickname";
 export type TableShape = "round" | "rectangle";
 
 interface HasikRoomProps {
-  accessMode?: RoomAccessMode;
-  initialNickname?: string;
   initialRoomTitle?: string;
   initialTableShape?: TableShape;
   roomNameOverride?: string;
@@ -207,6 +204,10 @@ function createId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function createAnonymousNickname() {
+  return `익명${Math.floor(100 + Math.random() * 900)}`;
+}
+
 function formatClock(value: number) {
   return new Intl.DateTimeFormat("ko-KR", {
     hour: "2-digit",
@@ -317,8 +318,6 @@ function mergeMessage(current: ChatMessage[], nextMessage: ChatMessage) {
 }
 
 export function HasikRoom({
-  accessMode = "anonymous",
-  initialNickname,
   initialRoomTitle = "퇴근 후 익명 회식방",
   initialTableShape = "round",
   roomNameOverride,
@@ -328,7 +327,7 @@ export function HasikRoom({
 }: HasikRoomProps = {}) {
   const [selectedRole, setSelectedRole] = useState<Role>("대리");
   const [mood, setMood] = useState<Mood>("afterwork");
-  const [nickname, setNickname] = useState(initialNickname ?? (accessMode === "anonymous" ? "익명대리" : "김대리"));
+  const [nickname] = useState(createAnonymousNickname);
   const [roomTitle, setRoomTitle] = useState(initialRoomTitle);
   const [tableShape, setTableShape] = useState<TableShape>(initialTableShape);
   const [input, setInput] = useState("");
@@ -1387,19 +1386,8 @@ export function HasikRoom({
           <div className="room-grid">
             <aside className="left-rail" aria-label="입장 설정">
               <div className="panel compact nickname-card">
-                <label className="nickname-label" htmlFor="nickname">
-                  닉네임
-                </label>
-                <input
-                  id="nickname"
-                  maxLength={12}
-                  value={nickname}
-                  disabled={accessMode === "anonymous"}
-                  onChange={(event) => setNickname(event.target.value)}
-                />
-                <span className="access-note">
-                  {accessMode === "anonymous" ? "익명으로만 참여" : "닉네임으로 참여"}
-                </span>
+                <span className="nickname-label">익명 참여</span>
+                <span className="access-note">이 방은 익명으로만 입장합니다.</span>
                 <div className="nickname-preview">
                   <NameWithRole nickname={nickname} role={selectedRole} />
                 </div>

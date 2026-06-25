@@ -153,7 +153,7 @@
         box-shadow: inset 0 0 0 1px var(--strong);
       }
 
-      .baksu-home-link {
+      .baksu-doc-link {
         z-index: 9;
         grid-column: 11 / 13;
         grid-row: 1 / 3;
@@ -161,39 +161,12 @@
         justify-self: end;
         display: inline-flex;
         align-items: center;
-        gap: 6px;
         min-width: 0;
         min-height: 28px;
-        margin-right: 8px;
-        padding: 0 8px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        background: rgba(255, 255, 255, 0.16);
-        color: #ffffff;
-        font-size: 12px;
-        font-weight: 800;
-        line-height: 1;
-        text-decoration: none;
-        white-space: nowrap;
-      }
-
-      .baksu-home-link:hover {
-        background: rgba(255, 255, 255, 0.24);
-      }
-
-      .baksu-doc-link {
-        z-index: 9;
-        grid-column: 10 / 11;
-        grid-row: 1 / 3;
-        align-self: center;
-        justify-self: end;
-        display: inline-flex;
-        align-items: center;
-        min-width: 0;
-        min-height: 28px;
-        margin-right: 4px;
-        padding: 0 8px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        background: rgba(255, 255, 255, 0.12);
+        margin-right: 10px;
+        padding: 0;
+        border: 0;
+        background: transparent;
         color: #ffffff;
         font-size: 12px;
         font-weight: 800;
@@ -203,38 +176,7 @@
       }
 
       .baksu-doc-link:hover {
-        background: rgba(255, 255, 255, 0.22);
-      }
-
-      .baksu-logo-mark {
-        position: relative;
-        width: 16px;
-        height: 12px;
-        border: 1px solid currentColor;
-        flex: 0 0 auto;
-      }
-
-      .baksu-logo-mark::before {
-        position: absolute;
-        left: 2px;
-        top: 3px;
-        width: 3px;
-        height: 3px;
-        background: currentColor;
-        box-shadow:
-          4px 0 0 currentColor,
-          8px 0 0 currentColor;
-        content: "";
-      }
-
-      .baksu-logo-mark::after {
-        position: absolute;
-        left: 2px;
-        right: 2px;
-        bottom: 2px;
-        height: 1px;
-        background: currentColor;
-        content: "";
+        text-decoration: underline;
       }
 
       .sheet-cell {
@@ -686,19 +628,10 @@
           grid-column: 1 / 7;
         }
 
-        .baksu-home-link {
-          grid-column: 5 / 7;
-          font-size: 11px;
-          min-height: 24px;
-          margin-right: 6px;
-          padding: 0 6px;
-        }
-
         .baksu-doc-link {
-          grid-column: 4 / 5;
+          grid-column: 5 / 7;
           min-height: 24px;
-          margin-right: 4px;
-          padding: 0 5px;
+          margin-right: 8px;
           font-size: 11px;
         }
 
@@ -790,11 +723,7 @@
     <main class="screen" id="mainScreen">
       <section class="sheet-grid" aria-label="점심시간 스프레드시트 화면">
         <h1 class="title-cell">점심시간</h1>
-        <a class="baksu-doc-link" href="../articles/lunch-menu.html" aria-label="점심시간 사내문서 보기">사내문서</a>
-        <a class="baksu-home-link" href="../index.html" aria-label="(주) 백수 메인으로 이동">
-          <span class="baksu-logo-mark" aria-hidden="true"></span>
-          <span>(주) 백수</span>
-        </a>
+        <a class="baksu-doc-link" href="../articles/lunch-menu.html" aria-label="점심시간 이용안내 보기">이용안내</a>
         <div class="cell-layer" id="cellLayer" aria-hidden="true"></div>
         <div class="overlay-layer">
           <section class="merged banner-cell" aria-label="상단 정보 배너">
@@ -862,11 +791,7 @@
     <main class="screen option-screen" id="optionScreen" hidden>
       <section class="sheet-grid option-grid" aria-label="옵션 화면">
         <h1 class="title-cell">옵션</h1>
-        <a class="baksu-doc-link" href="../articles/lunch-menu.html" aria-label="점심시간 사내문서 보기">사내문서</a>
-        <a class="baksu-home-link" href="../index.html" aria-label="(주) 백수 메인으로 이동">
-          <span class="baksu-logo-mark" aria-hidden="true"></span>
-          <span>(주) 백수</span>
-        </a>
+        <a class="baksu-doc-link" href="../articles/lunch-menu.html" aria-label="점심시간 이용안내 보기">이용안내</a>
         <div class="cell-layer" id="optionCellLayer" aria-hidden="true"></div>
         <div class="overlay-layer">
           <div class="option-back-cell">
