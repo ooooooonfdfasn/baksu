@@ -359,17 +359,11 @@
       }
 
       .signature {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 132px;
-        height: 54px;
-        border: 2px solid var(--red);
-        border-radius: 50%;
-        color: var(--red);
-        font-size: 19px;
-        font-weight: 900;
-        transform: rotate(-8deg);
+        display: block;
+        width: 92px;
+        height: 92px;
+        object-fit: contain;
+        transform: rotate(-5deg);
       }
 
       .message-side {
@@ -1076,7 +1070,7 @@
               </p>
               <div class="message-sign">
                 <span>대표이사</span>
-                <span class="signature">백수일동</span>
+                <img class="signature" src="assets/baksu-seal-stamp.png" alt="(주)백수 도장" />
               </div>
             </div>
 
@@ -1160,7 +1154,6 @@
             </ul>
             <dl class="footer-info">
               <dd>(주)백수</dd>
-              <dd>대표 : 백수일동</dd>
               <dd class="no-line">사업자등록번호 : 검토중</dd>
               <dd>본사 : 각자의 집</dd>
               <dd class="no-line">지사 : 침대와 책상 사이</dd>
