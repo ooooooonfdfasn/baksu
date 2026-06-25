@@ -683,6 +683,86 @@ button {
   line-height: 1.5;
 }
 
+.doc-shell {
+  width: min(980px, calc(100% - 64px));
+  margin: 0 auto;
+  padding: 125px 0 82px;
+}
+
+.doc-index,
+.doc-article {
+  color: var(--ink);
+}
+
+.doc-index h1,
+.doc-article h1 {
+  margin: 0 0 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.doc-index p {
+  margin: 0 0 22px;
+  color: var(--body);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.75;
+}
+
+.doc-board {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.doc-board li {
+  display: flex;
+  align-items: center;
+  min-height: 39px;
+  border-bottom: 1px solid var(--line);
+}
+
+.doc-board a {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 39px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-board a:hover,
+.doc-back a:hover {
+  color: var(--blue);
+}
+
+.doc-article p {
+  margin: 0 0 16px;
+  color: var(--body);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.85;
+}
+
+.doc-back {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.doc-back a {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+}
+
 .legal-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1026,6 +1106,11 @@ button {
     min-height: 0;
     padding: 22px 0;
     line-height: 1.6;
+  }
+
+  .doc-shell {
+    width: calc(100% - 32px);
+    padding: 92px 0 62px;
   }
 }
 
