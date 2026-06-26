@@ -809,7 +809,7 @@ input:focus {
   min-height: 38px;
   padding: 8px 10px;
   border-radius: 17px;
-  background: rgb(var(--bubble-bg-rgb) / 0.5);
+  background: var(--bubble-bg);
   color: #271815;
   text-align: center;
   font-size: 13px;
@@ -868,7 +868,7 @@ input:focus {
   top: -9px;
   bottom: auto;
   border-top: 0;
-  border-bottom: 10px solid rgb(var(--bubble-bg-rgb) / 0.5);
+  border-bottom: 10px solid var(--bubble-bg);
   transform: translateX(-50%);
 }
 
@@ -883,7 +883,7 @@ input:focus {
   z-index: 1;
   width: 0;
   height: 0;
-  border-top: 10px solid rgb(var(--bubble-bg-rgb) / 0.5);
+  border-top: 10px solid var(--bubble-bg);
   border-right: 10px solid transparent;
   border-bottom: 0;
   border-left: 10px solid transparent;
@@ -899,8 +899,6 @@ input:focus {
   overflow: hidden;
   text-align: center;
   word-break: keep-all;
-  -webkit-text-stroke: 0.3px var(--bubble-bg);
-  text-shadow: 0 0 1px var(--bubble-bg);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: var(--seat-bubble-line-clamp);
 }
@@ -908,14 +906,14 @@ input:focus {
 .seat-bubble.bell {
   --bubble-bg: #ffe0a7;
   --bubble-bg-rgb: 255 224 167;
-  background: rgb(var(--bubble-bg-rgb) / 0.5);
+  background: var(--bubble-bg);
   color: #402514;
 }
 
 .seat-bubble.system {
   --bubble-bg: #dbf7ec;
   --bubble-bg-rgb: 219 247 236;
-  background: rgb(var(--bubble-bg-rgb) / 0.5);
+  background: var(--bubble-bg);
   color: #173729;
 }
 
@@ -1393,11 +1391,15 @@ input:focus {
 .menu-order-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 10px;
   padding: 12px 16px 16px;
   font-size: 13px;
   font-weight: 900;
+}
+
+.menu-order-bar span {
+  margin-right: auto;
 }
 
 .order-button {
@@ -1477,20 +1479,9 @@ input:focus {
   display: grid;
   gap: 10px;
   margin: 0 16px 16px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  background: var(--panel-strong);
-}
-
-.secret-checkout > div:first-child {
-  display: grid;
-  gap: 3px;
-}
-
-.secret-checkout span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .secret-form {
@@ -2803,7 +2794,7 @@ input:disabled {
   --bubble-bg-rgb: 255 248 223;
   min-width: 55px;
   border-radius: 999px !important;
-  background: rgb(var(--bubble-bg-rgb) / 0.5) !important;
+  background: var(--bubble-bg) !important;
 }
 
 .seat-bubble,

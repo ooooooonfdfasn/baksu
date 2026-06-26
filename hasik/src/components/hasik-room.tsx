@@ -1569,7 +1569,7 @@ export function HasikRoom({
             </div>
 
             <div className="menu-order-bar">
-              <span>{orderedMenuItems.length > 0 ? `합계 ${formatPrice(orderTotal)}` : "선택 대기"}</span>
+              {orderedMenuItems.length > 0 ? <span>합계 {formatPrice(orderTotal)}</span> : null}
               <button
                 type="button"
                 className="order-button"
@@ -1665,17 +1665,6 @@ export function HasikRoom({
                 </div>
 
                 <div className="secret-checkout">
-                  <div>
-                    <strong>몰래 계산</strong>
-                    <span>
-                      {secretCheckout
-                        ? isSecretCheckoutMine
-                          ? "지금 몰래 계산 중"
-                          : `${secretCheckout.nickname}님이 몰래 계산 중`
-                        : "투표가 끝나기 전에 먼저 계산하기"}
-                    </span>
-                  </div>
-
                   {isSecretCheckoutMine ? (
                     <form
                       className="secret-form"
