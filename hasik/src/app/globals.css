@@ -438,7 +438,7 @@ input:focus {
   background-position: center;
   background-size: cover;
   filter: blur(5px) saturate(0.92);
-  opacity: 0.62;
+  opacity: 0.82;
   pointer-events: none;
   transform: scale(1.04);
   -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 17%, #000 82%, transparent 100%);
