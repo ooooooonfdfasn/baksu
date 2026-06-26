@@ -1402,6 +1402,53 @@ input:focus {
   margin-right: auto;
 }
 
+.money-pill {
+  display: inline-grid;
+  place-items: center;
+  min-height: 32px;
+  width: fit-content;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 248, 236, 0.09);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.topbar-money {
+  min-height: 38px;
+}
+
+.order-choice-panel {
+  display: grid;
+  gap: 10px;
+  margin: 0 16px 16px;
+  padding: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.order-choice-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.order-choice-button {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  color: var(--text);
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.order-choice-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .order-button {
   min-width: 104px;
   min-height: 40px;
@@ -1450,6 +1497,11 @@ input:focus {
   text-align: left;
 }
 
+.payment-option:disabled {
+  cursor: default;
+  opacity: 0.66;
+}
+
 .payment-option.selected {
   border-color: var(--blue);
   background: var(--panel-strong);
@@ -1473,6 +1525,21 @@ input:focus {
   color: var(--blue);
   font-style: normal;
   font-weight: 950;
+}
+
+.payment-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px 0;
+}
+
+.payment-status-text {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-align: right;
 }
 
 .secret-checkout {
@@ -1647,6 +1714,7 @@ input:focus {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 8px;
   flex: 0 0 auto;
   margin-left: auto;
@@ -2518,7 +2586,9 @@ h1 {
 .secret-claim-button,
 .secret-pay-button,
 .order-button,
+.order-choice-button,
 .payment-option,
+.money-pill,
 .profile-close,
 .report-button,
 .seat-bubble,
@@ -2595,6 +2665,7 @@ input {
 .secret-claim-button:hover,
 .secret-pay-button:hover,
 .order-button:hover,
+.order-choice-button:hover,
 .payment-option:hover,
 .create-room-options button:hover,
 .create-room-button:hover,
@@ -2613,6 +2684,7 @@ input {
 .create-room-button,
 .secret-claim-button,
 .secret-pay-button,
+.order-choice-button,
 .order-button,
 .toggle-button[aria-pressed="true"] {
   border-color: var(--bhc-brown) !important;
@@ -2637,6 +2709,7 @@ input {
 .send-button,
 .secret-claim-button,
 .secret-pay-button,
+.order-choice-button,
 .order-button {
   font-weight: 950;
 }

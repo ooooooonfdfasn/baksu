@@ -91,6 +91,7 @@ interface CompletedOrder {
   payerRole: Role;
   amount: number;
   at: number;
+  label?: string;
 }
 
 interface PaymentVote {
@@ -101,7 +102,16 @@ interface PaymentVote {
   at: number;
 }
 
+interface PaymentParticipant {
+  userId: string;
+  nickname: string;
+  role: Role;
+  at: number;
+}
+
 const chatCooldownMs = 500;
+const defaultWalletBalance = 120000;
+const walletStorageKey = "hasik:wallet-balance";
 const roles: Role[] = ["인턴", "사원", "대리", "과장", "부장"];
 const menuItems = [
   { id: "kimchi-jeon", name: "김치전", price: 16000, kind: "food", icon: "전" },
@@ -347,6 +357,24 @@ function getAssetPath(path: string) {
   return `${assetBasePath}${path}`;
 }
 
+function getSavedWalletBalance() {
+  if (typeof window === "undefined") {
+    return defaultWalletBalance;
+  }
+
+  try {
+    const savedBalance = Number(localStorage.getItem(walletStorageKey));
+
+    if (Number.isFinite(savedBalance) && savedBalance >= 0) {
+      return Math.floor(savedBalance);
+    }
+  } catch {
+    return defaultWalletBalance;
+  }
+
+  return defaultWalletBalance;
+}
+
 function isRoomVenue(value: unknown): value is RoomVenue {
   return value === "a" || value === "b" || value === "c";
 }
@@ -495,9 +523,15 @@ export function HasikRoom({
   const [activeProfile, setActiveProfile] = useState<ChatMessage | null>(null);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [isMenuOpen, setMenuOpen] = useState(false);
+  const [isOrderChoiceOpen, setOrderChoiceOpen] = useState(false);
   const [isPaymentOpen, setPaymentOpen] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(getSavedWalletBalance);
   const [menuSelections, setMenuSelections] = useState<Record<string, MenuSelection>>({});
   const [paymentVotes, setPaymentVotes] = useState<Record<string, PaymentVote>>({});
+  const [paymentParticipants, setPaymentParticipants] = useState<Record<string, PaymentParticipant>>({});
+  const [paymentVoteEndsAt, setPaymentVoteEndsAt] = useState<number | null>(null);
+  const [paymentVoteClosedAt, setPaymentVoteClosedAt] = useState<number | null>(null);
+  const [finalPaymentMethod, setFinalPaymentMethod] = useState<PaymentMethod | null>(null);
   const [secretCheckout, setSecretCheckout] = useState<SecretCheckout | null>(null);
   const [secretAmount, setSecretAmount] = useState("");
   const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null);
@@ -552,10 +586,25 @@ export function HasikRoom({
       count: paymentVoteList.filter((vote) => vote.method === option.id).length
     }));
   }, [paymentVoteList]);
+  const paymentParticipantList = useMemo(
+    () => Object.values(paymentParticipants),
+    [paymentParticipants]
+  );
+  const paymentParticipantCount = paymentParticipantList.length;
+  const paymentRequiredVoteCount =
+    paymentParticipantCount > 0 ? Math.floor(paymentParticipantCount / 2) + 1 : 1;
+  const selectedPaymentVoteCount = paymentVoteList.filter(
+    (vote) => paymentParticipants[vote.userId]
+  ).length;
   const winningPaymentMethod = paymentVoteCounts.reduce(
     (winner, option) => (option.count > winner.count ? option : winner),
     paymentVoteCounts[0]
   );
+  const finalPaymentOption =
+    paymentOptions.find((option) => option.id === finalPaymentMethod) ?? null;
+  const paymentVoteRemainingSeconds = paymentVoteEndsAt
+    ? Math.max(0, Math.ceil((paymentVoteEndsAt - now) / 1000))
+    : null;
   const isSecretCheckoutMine = secretCheckout?.userId === sessionIdRef.current;
   const secretCheckoutAmount = Number(secretAmount.replace(/[^\d]/g, ""));
   const selectedVenue = roomVenues.find((venue) => venue.id === roomVenue) ?? roomVenues[0];
@@ -645,6 +694,14 @@ export function HasikRoom({
   }, [supabase]);
 
   useEffect(() => {
+    try {
+      localStorage.setItem(walletStorageKey, String(walletBalance));
+    } catch {
+      return;
+    }
+  }, [walletBalance]);
+
+  useEffect(() => {
     setQuickJoinEnabled(initialQuickJoinEnabled);
   }, [initialQuickJoinEnabled]);
 
@@ -694,6 +751,41 @@ export function HasikRoom({
       document.body.style.overscrollBehavior = previousOverscrollBehavior;
     };
   }, [isPaymentOpen]);
+
+  useEffect(() => {
+    if (!isPaymentOpen || completedOrder) {
+      return;
+    }
+
+    const participant: PaymentParticipant = {
+      userId: sessionIdRef.current,
+      nickname,
+      role: selectedRole,
+      at: Date.now()
+    };
+
+    setPaymentParticipants((current) => ({
+      ...current,
+      [participant.userId]: participant
+    }));
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "payment_participant_join",
+      payload: participant
+    });
+
+    return () => {
+      setPaymentParticipants((current) => {
+        const { [participant.userId]: _removed, ...nextParticipants } = current;
+        return nextParticipants;
+      });
+      void channelRef.current?.send({
+        type: "broadcast",
+        event: "payment_participant_leave",
+        payload: { userId: participant.userId }
+      });
+    };
+  }, [completedOrder, isPaymentOpen, nickname, selectedRole]);
 
   useEffect(() => {
     if (!supabase) {
@@ -848,6 +940,60 @@ export function HasikRoom({
           [nextVote.userId]: nextVote
         }));
       })
+      .on("broadcast", { event: "payment_participant_join" }, ({ payload }) => {
+        if (
+          typeof payload?.userId !== "string" ||
+          typeof payload?.nickname !== "string" ||
+          typeof payload?.role !== "string" ||
+          typeof payload?.at !== "number" ||
+          !roles.includes(payload.role as Role)
+        ) {
+          return;
+        }
+
+        const nextParticipant: PaymentParticipant = {
+          userId: payload.userId,
+          nickname: payload.nickname,
+          role: payload.role as Role,
+          at: payload.at
+        };
+
+        setPaymentParticipants((current) => ({
+          ...current,
+          [nextParticipant.userId]: nextParticipant
+        }));
+      })
+      .on("broadcast", { event: "payment_participant_leave" }, ({ payload }) => {
+        if (typeof payload?.userId !== "string") {
+          return;
+        }
+
+        setPaymentParticipants((current) => {
+          const { [payload.userId]: _removed, ...nextParticipants } = current;
+          return nextParticipants;
+        });
+      })
+      .on("broadcast", { event: "payment_vote_countdown" }, ({ payload }) => {
+        if (typeof payload?.endsAt !== "number" || !Number.isFinite(payload.endsAt)) {
+          return;
+        }
+
+        setPaymentVoteEndsAt(payload.endsAt);
+      })
+      .on("broadcast", { event: "payment_vote_closed" }, ({ payload }) => {
+        if (
+          typeof payload?.method !== "string" ||
+          !paymentOptions.some((option) => option.id === payload.method)
+        ) {
+          return;
+        }
+
+        setFinalPaymentMethod(payload.method as PaymentMethod);
+        setPaymentVoteClosedAt(
+          typeof payload?.at === "number" && Number.isFinite(payload.at) ? payload.at : Date.now()
+        );
+        setPaymentVoteEndsAt(null);
+      })
       .on("broadcast", { event: "secret_checkout" }, ({ payload }) => {
         if (
           typeof payload?.userId !== "string" ||
@@ -883,10 +1029,15 @@ export function HasikRoom({
           payerNickname: payload.payerNickname,
           payerRole: payload.payerRole as Role,
           amount: payload.amount,
-          at: payload.at
+          at: payload.at,
+          label: typeof payload?.label === "string" ? payload.label : undefined
         });
         setSecretCheckout(null);
         setPaymentVotes({});
+        setPaymentParticipants({});
+        setPaymentVoteEndsAt(null);
+        setPaymentVoteClosedAt(null);
+        setFinalPaymentMethod(null);
       })
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState<PresenceUser>();
@@ -1003,6 +1154,108 @@ export function HasikRoom({
     });
   }, [canManageRoomSettings, onQuickJoinChange]);
 
+  const resetPaymentSession = useCallback(() => {
+    setPaymentVotes({});
+    setPaymentParticipants({});
+    setPaymentVoteEndsAt(null);
+    setPaymentVoteClosedAt(null);
+    setFinalPaymentMethod(null);
+    setSecretCheckout(null);
+    setSecretAmount("");
+  }, []);
+
+  const completeSoloOrder = useCallback(() => {
+    if (orderTotal <= 0 || walletBalance < orderTotal) {
+      return;
+    }
+
+    const nextCompletedOrder: CompletedOrder = {
+      id: createId(),
+      payerNickname: nickname,
+      payerRole: selectedRole,
+      amount: orderTotal,
+      at: Date.now(),
+      label: "혼자 주문 완료"
+    };
+
+    setWalletBalance((current) => Math.max(0, current - orderTotal));
+    setCompletedOrder(nextCompletedOrder);
+    resetPaymentSession();
+    setOrderChoiceOpen(false);
+    setMenuOpen(false);
+    setPaymentOpen(false);
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "order_completed",
+      payload: nextCompletedOrder
+    });
+  }, [nickname, orderTotal, resetPaymentSession, selectedRole, walletBalance]);
+
+  const startTogetherOrder = useCallback(() => {
+    if (orderTotal <= 0) {
+      return;
+    }
+
+    setCompletedOrder(null);
+    resetPaymentSession();
+    setOrderChoiceOpen(false);
+    setMenuOpen(false);
+    setPaymentOpen(true);
+  }, [orderTotal, resetPaymentSession]);
+
+  const closePaymentVote = useCallback((method: PaymentMethod = winningPaymentMethod.id) => {
+    if (paymentVoteClosedAt) {
+      return;
+    }
+
+    const closedAt = Date.now();
+    setFinalPaymentMethod(method);
+    setPaymentVoteClosedAt(closedAt);
+    setPaymentVoteEndsAt(null);
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "payment_vote_closed",
+      payload: { method, at: closedAt }
+    });
+  }, [paymentVoteClosedAt, winningPaymentMethod.id]);
+
+  useEffect(() => {
+    if (
+      !isPaymentOpen ||
+      completedOrder ||
+      paymentVoteClosedAt ||
+      paymentVoteEndsAt ||
+      paymentParticipantCount <= 0 ||
+      selectedPaymentVoteCount < paymentRequiredVoteCount
+    ) {
+      return;
+    }
+
+    const endsAt = Date.now() + bubbleLifetimeMs;
+    setPaymentVoteEndsAt(endsAt);
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "payment_vote_countdown",
+      payload: { endsAt }
+    });
+  }, [
+    completedOrder,
+    isPaymentOpen,
+    paymentParticipantCount,
+    paymentRequiredVoteCount,
+    paymentVoteClosedAt,
+    paymentVoteEndsAt,
+    selectedPaymentVoteCount
+  ]);
+
+  useEffect(() => {
+    if (!paymentVoteEndsAt || paymentVoteClosedAt || now < paymentVoteEndsAt) {
+      return;
+    }
+
+    closePaymentVote();
+  }, [closePaymentVote, now, paymentVoteClosedAt, paymentVoteEndsAt]);
+
   const selectMenuItem = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>, itemId: string) => {
       const listElement = menuListRef.current;
@@ -1025,6 +1278,7 @@ export function HasikRoom({
       };
 
       setCompletedOrder(null);
+      setOrderChoiceOpen(false);
       setMenuSelections((current) => ({
         ...current,
         [nextSelection.id]: nextSelection
@@ -1039,6 +1293,7 @@ export function HasikRoom({
   );
 
   const removeMenuSelection = useCallback((selectionId: string) => {
+    setOrderChoiceOpen(false);
     setMenuSelections((current) => {
       const nextSelections = { ...current };
       delete nextSelections[selectionId];
@@ -1053,7 +1308,7 @@ export function HasikRoom({
 
   const votePaymentMethod = useCallback(
     (method: PaymentMethod) => {
-      if (completedOrder) {
+      if (completedOrder || paymentVoteClosedAt) {
         return;
       }
 
@@ -1075,7 +1330,7 @@ export function HasikRoom({
         payload: nextVote
       });
     },
-    [completedOrder, nickname, selectedRole]
+    [completedOrder, nickname, paymentVoteClosedAt, selectedRole]
   );
 
   const claimSecretCheckout = useCallback(() => {
@@ -1100,7 +1355,7 @@ export function HasikRoom({
   }, [completedOrder, nickname, selectedRole]);
 
   const completeSecretCheckout = useCallback(() => {
-    if (!isSecretCheckoutMine || secretCheckoutAmount <= 0) {
+    if (!isSecretCheckoutMine || secretCheckoutAmount <= 0 || secretCheckoutAmount > walletBalance) {
       return;
     }
 
@@ -1109,18 +1364,24 @@ export function HasikRoom({
       payerNickname: nickname,
       payerRole: selectedRole,
       amount: secretCheckoutAmount,
-      at: Date.now()
+      at: Date.now(),
+      label: "몰래 계산 완료"
     };
 
+    setWalletBalance((current) => Math.max(0, current - secretCheckoutAmount));
     setCompletedOrder(nextCompletedOrder);
     setPaymentVotes({});
+    setPaymentParticipants({});
+    setPaymentVoteEndsAt(null);
+    setPaymentVoteClosedAt(null);
+    setFinalPaymentMethod(null);
     setSecretCheckout(null);
     void channelRef.current?.send({
       type: "broadcast",
       event: "order_completed",
       payload: nextCompletedOrder
     });
-  }, [isSecretCheckoutMine, nickname, secretCheckoutAmount, selectedRole]);
+  }, [isSecretCheckoutMine, nickname, secretCheckoutAmount, selectedRole, walletBalance]);
 
   const sendMessage = useCallback(
     async (body: string, kind: ChatMessage["kind"] = "normal") => {
@@ -1285,6 +1546,7 @@ export function HasikRoom({
               <h1>{roomTitle || "이름 없는 회식방"}</h1>
             </div>
             <div className="topbar-actions">
+              <span className="money-pill topbar-money">내 돈 {formatPrice(walletBalance)}</span>
               {onLeave ? (
                 <button type="button" className="leave-room-button" onClick={onLeave}>
                   메인 메뉴
@@ -1574,14 +1836,35 @@ export function HasikRoom({
                 type="button"
                 className="order-button"
                 disabled={orderedMenuItems.length === 0}
-                onClick={() => {
-                  setMenuOpen(false);
-                  setPaymentOpen(true);
-                }}
+                onClick={() => setOrderChoiceOpen((value) => !value)}
               >
                 주문하기
               </button>
             </div>
+
+            {isOrderChoiceOpen ? (
+              <div className="order-choice-panel">
+                <span className="money-pill">내 돈 {formatPrice(walletBalance)}</span>
+                <div className="order-choice-actions">
+                  <button
+                    type="button"
+                    className="order-choice-button"
+                    disabled={orderTotal <= 0 || walletBalance < orderTotal}
+                    onClick={completeSoloOrder}
+                  >
+                    혼자 주문
+                  </button>
+                  <button
+                    type="button"
+                    className="order-choice-button"
+                    disabled={orderTotal <= 0}
+                    onClick={startTogetherOrder}
+                  >
+                    함께 주문
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </section>
         </div>
       ) : null}
@@ -1628,6 +1911,17 @@ export function HasikRoom({
               </div>
             </div>
 
+            <div className="payment-status-row">
+              <span className="money-pill">내 돈 {formatPrice(walletBalance)}</span>
+              <span className="payment-status-text">
+                {paymentVoteClosedAt && finalPaymentOption
+                  ? `투표 종료 · ${finalPaymentOption.label}`
+                  : paymentVoteRemainingSeconds !== null
+                    ? `${paymentVoteRemainingSeconds}초 뒤 자동 종료`
+                    : `${paymentParticipantCount}명 중 ${selectedPaymentVoteCount}명 선택 · 과반 ${paymentRequiredVoteCount}명`}
+              </span>
+            </div>
+
             {completedOrder ? (
               <div className="order-complete">
                 <strong>
@@ -1635,7 +1929,7 @@ export function HasikRoom({
                     nickname={completedOrder.payerNickname}
                     role={completedOrder.payerRole}
                   />{" "}
-                  몰래 계산 완료
+                  {completedOrder.label ?? "계산 완료"}
                 </strong>
                 <span>{formatPrice(completedOrder.amount)}</span>
               </div>
@@ -1651,6 +1945,7 @@ export function HasikRoom({
                         key={option.id}
                         type="button"
                         className={isSelected ? "payment-option selected" : "payment-option"}
+                        disabled={Boolean(paymentVoteClosedAt)}
                         onClick={() => votePaymentMethod(option.id)}
                       >
                         <Icon size={19} />
@@ -1683,7 +1978,7 @@ export function HasikRoom({
                       <button
                         type="submit"
                         className="secret-pay-button"
-                        disabled={secretCheckoutAmount <= 0}
+                        disabled={secretCheckoutAmount <= 0 || secretCheckoutAmount > walletBalance}
                       >
                         결제
                       </button>
