@@ -10,6 +10,8 @@ interface LobbyRoom {
   tableShape: TableShape;
   createdAt: number;
   hostName: string;
+  memberCount: number;
+  quickJoinEnabled: boolean;
 }
 
 const lobbyStorageKey = "hasik:lobby-rooms";
@@ -20,14 +22,18 @@ const defaultRooms: LobbyRoom[] = [
     title: "퇴근 후 익명 회식방",
     tableShape: "round",
     createdAt: Date.now() - 1000 * 60 * 34,
-    hostName: "시스템"
+    hostName: "시스템",
+    memberCount: 3,
+    quickJoinEnabled: true
   },
   {
     id: "team-dinner-room",
     title: "프로젝트 뒤풀이",
     tableShape: "rectangle",
     createdAt: Date.now() - 1000 * 60 * 12,
-    hostName: "익명"
+    hostName: "익명",
+    memberCount: 2,
+    quickJoinEnabled: true
   }
 ];
 
@@ -39,11 +45,71 @@ function createId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function isTableShape(value: unknown): value is TableShape {
+  return value === "round" || value === "rectangle";
+}
+
+function normalizeMemberCount(value: unknown) {
+  const count = Number(value);
+
+  if (!Number.isFinite(count)) {
+    return 1;
+  }
+
+  return Math.max(0, Math.floor(count));
+}
+
+function normalizeRooms(value: unknown): LobbyRoom[] {
+  if (!Array.isArray(value)) {
+    return defaultRooms;
+  }
+
+  return value
+    .flatMap((room): LobbyRoom[] => {
+      if (!room || typeof room !== "object") {
+        return [];
+      }
+
+      const sourceRoom = room as Partial<LobbyRoom>;
+      const id = typeof sourceRoom.id === "string" && sourceRoom.id.trim() ? sourceRoom.id : "";
+      const title =
+        typeof sourceRoom.title === "string" && sourceRoom.title.trim()
+          ? sourceRoom.title
+          : "이름 없는 회식방";
+      const tableShape = isTableShape(sourceRoom.tableShape) ? sourceRoom.tableShape : "round";
+      const createdAt =
+        typeof sourceRoom.createdAt === "number" && Number.isFinite(sourceRoom.createdAt)
+          ? sourceRoom.createdAt
+          : Date.now();
+      const memberCount = normalizeMemberCount(sourceRoom.memberCount);
+
+      if (!id || memberCount < 1) {
+        return [];
+      }
+
+      return [
+        {
+          id,
+          title,
+          tableShape,
+          createdAt,
+          hostName:
+            typeof sourceRoom.hostName === "string" && sourceRoom.hostName.trim()
+              ? sourceRoom.hostName
+              : "익명",
+          memberCount,
+          quickJoinEnabled: sourceRoom.quickJoinEnabled !== false
+        }
+      ];
+    });
+}
+
 export function HasikApp() {
   const [rooms, setRooms] = useState<LobbyRoom[]>(defaultRooms);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [newRoomTitle, setNewRoomTitle] = useState("새 회식방");
   const [newRoomTableShape, setNewRoomTableShape] = useState<TableShape>("round");
+  const [newRoomQuickJoinEnabled, setNewRoomQuickJoinEnabled] = useState(true);
   const [isCreateRoomOpen, setCreateRoomOpen] = useState(false);
 
   useEffect(() => {
@@ -51,15 +117,7 @@ export function HasikApp() {
       const savedRooms = localStorage.getItem(lobbyStorageKey);
 
       if (savedRooms) {
-        const parsedRooms = JSON.parse(savedRooms) as LobbyRoom[];
-        const anonymousRooms = parsedRooms.map((room) => ({
-          id: room.id,
-          title: room.title,
-          tableShape: room.tableShape,
-          createdAt: room.createdAt,
-          hostName: room.hostName || "익명"
-        }));
-        setRooms(anonymousRooms.length > 0 ? anonymousRooms : defaultRooms);
+        setRooms(normalizeRooms(JSON.parse(savedRooms)));
       }
     } catch {
       setRooms(defaultRooms);
@@ -74,9 +132,29 @@ export function HasikApp() {
     () => rooms.find((room) => room.id === selectedRoomId) ?? null,
     [rooms, selectedRoomId]
   );
+  const quickJoinRooms = useMemo(
+    () => rooms.filter((room) => room.quickJoinEnabled && room.memberCount > 0),
+    [rooms]
+  );
 
   function enterRoom(room: LobbyRoom) {
+    setRooms((current) =>
+      current.map((currentRoom) =>
+        currentRoom.id === room.id
+          ? { ...currentRoom, memberCount: currentRoom.memberCount + 1 }
+          : currentRoom
+      )
+    );
     setSelectedRoomId(room.id);
+  }
+
+  function quickJoinRoom() {
+    if (quickJoinRooms.length === 0) {
+      return;
+    }
+
+    const room = quickJoinRooms[Math.floor(Math.random() * quickJoinRooms.length)];
+    enterRoom(room);
   }
 
   function createRoom() {
@@ -87,12 +165,36 @@ export function HasikApp() {
       title,
       tableShape: newRoomTableShape,
       createdAt: Date.now(),
-      hostName: "익명"
+      hostName: "익명",
+      memberCount: 1,
+      quickJoinEnabled: newRoomQuickJoinEnabled
     };
 
     setRooms((current) => [nextRoom, ...current]);
     setNewRoomTitle("새 회식방");
+    setNewRoomTableShape("round");
+    setNewRoomQuickJoinEnabled(true);
     setCreateRoomOpen(false);
+    setSelectedRoomId(nextRoom.id);
+  }
+
+  function leaveRoom() {
+    if (!selectedRoom) {
+      setSelectedRoomId(null);
+      return;
+    }
+
+    setRooms((current) =>
+      current.flatMap((room) => {
+        if (room.id !== selectedRoom.id) {
+          return room.memberCount > 0 ? [room] : [];
+        }
+
+        const nextMemberCount = room.memberCount - 1;
+        return nextMemberCount > 0 ? [{ ...room, memberCount: nextMemberCount }] : [];
+      })
+    );
+    setSelectedRoomId(null);
   }
 
   function updateRoomTitle(roomId: string, title: string) {
@@ -114,7 +216,7 @@ export function HasikApp() {
         initialRoomTitle={selectedRoom.title}
         initialTableShape={selectedRoom.tableShape}
         roomNameOverride={selectedRoom.id}
-        onLeave={() => setSelectedRoomId(null)}
+        onLeave={leaveRoom}
         onRoomTitleChange={(title) => updateRoomTitle(selectedRoom.id, title)}
         onTableShapeChange={(tableShape) => updateRoomTableShape(selectedRoom.id, tableShape)}
       />
@@ -133,15 +235,26 @@ export function HasikApp() {
             <a className="lobby-guide-link" href="../articles/dinner-room-rules.html">
               이용안내
             </a>
-            <button
-              type="button"
-              className="create-room-open-button"
-              onClick={() => setCreateRoomOpen(true)}
-            >
-              새 회식방
-            </button>
           </div>
         </header>
+
+        <div className="lobby-primary-actions" aria-label="회식 참가 메뉴">
+          <button
+            type="button"
+            className="quick-join-button"
+            onClick={quickJoinRoom}
+            disabled={quickJoinRooms.length === 0}
+          >
+            빠른 참가
+          </button>
+          <button
+            type="button"
+            className="create-room-open-button"
+            onClick={() => setCreateRoomOpen(true)}
+          >
+            회식 만들기
+          </button>
+        </div>
 
         <div className="lobby-grid">
           <section className="lobby-panel room-list-panel" aria-label="회식방 목록">
@@ -150,7 +263,7 @@ export function HasikApp() {
               <span>{rooms.length}</span>
             </div>
             <div className="room-list">
-              {rooms.map((room) => (
+              {rooms.length > 0 ? rooms.map((room) => (
                 <button
                   key={room.id}
                   type="button"
@@ -160,12 +273,15 @@ export function HasikApp() {
                   <span>
                     <strong>{room.title}</strong>
                     <small>
-                      익명 전용 | {room.tableShape === "round" ? "원탁" : "직사각형"} | 방장 {room.hostName}
+                      익명 전용 | {room.tableShape === "round" ? "원탁" : "직사각형"} | {room.memberCount}명 |{" "}
+                      {room.quickJoinEnabled ? "빠른참가" : "직접참가"}
                     </small>
                   </span>
                   <em>참가</em>
                 </button>
-              ))}
+              )) : (
+                <p className="room-list-empty">열린 회식방이 없습니다.</p>
+              )}
             </div>
           </section>
 
@@ -187,14 +303,14 @@ export function HasikApp() {
           >
             <div className="lobby-modal-head">
               <div>
-                <p id="create-room-title">새 회식방</p>
+                <p id="create-room-title">회식 만들기</p>
                 <span>방 이름과 테이블 모양을 정하세요.</span>
               </div>
               <button
                 type="button"
                 className="profile-close"
                 onClick={() => setCreateRoomOpen(false)}
-                aria-label="새 회식방 닫기"
+                aria-label="회식 만들기 닫기"
               >
                 ×
               </button>
@@ -225,6 +341,14 @@ export function HasikApp() {
                   직사각형
                 </button>
               </div>
+              <label className="lobby-checkbox">
+                <input
+                  type="checkbox"
+                  checked={newRoomQuickJoinEnabled}
+                  onChange={(event) => setNewRoomQuickJoinEnabled(event.target.checked)}
+                />
+                <span>빠른참가 허용</span>
+              </label>
               <button type="button" className="create-room-button" onClick={createRoom}>
                 방 만들기
               </button>

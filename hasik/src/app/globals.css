@@ -1687,6 +1687,15 @@ input:focus {
   color: var(--blue);
 }
 
+.lobby-primary-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: min(760px, 100%);
+  margin: 14px auto 0;
+}
+
+.quick-join-button,
 .create-room-open-button {
   min-height: 48px;
   border: 1px solid var(--line);
@@ -1696,9 +1705,15 @@ input:focus {
   cursor: pointer;
 }
 
+.quick-join-button,
 .create-room-open-button {
-  width: 132px;
+  width: 100%;
   padding: 0 18px;
+}
+
+.quick-join-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
 }
 
 .lobby-modal {
@@ -1774,8 +1789,26 @@ input:focus {
   gap: 8px;
 }
 
+.lobby-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.lobby-checkbox input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--bhc-yellow);
+}
+
 .create-room-options button,
 .create-room-button,
+.quick-join-button,
 .room-list-item {
   min-height: 40px;
   border: 1px solid var(--line);
@@ -1841,6 +1874,14 @@ input:focus {
   color: var(--blue);
   font-style: normal;
   font-weight: 950;
+}
+
+.room-list-empty {
+  margin: 0;
+  padding: 18px 14px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
 }
 
 @media (max-width: 1120px) {
@@ -2201,8 +2242,13 @@ input:focus {
     gap: 6px;
   }
 
+  .lobby-primary-actions {
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .quick-join-button,
   .create-room-open-button {
-    width: auto;
     min-height: 42px;
     padding: 0 11px;
   }
@@ -2309,6 +2355,7 @@ h1 {
 .lobby-panel,
 .menu-item,
 .menu-trigger,
+.quick-join-button,
 .create-room-open-button,
 .role-chip,
 .mood-chip,
@@ -2385,6 +2432,7 @@ input {
 .shape-chip:hover,
 .menu-item:hover,
 .menu-trigger:hover,
+.quick-join-button:hover,
 .create-room-open-button:hover,
 .icon-action:hover,
 .send-button:hover,
@@ -2442,6 +2490,7 @@ input {
 }
 
 .create-room-options button,
+.quick-join-button,
 .room-list-item {
   border: 2px solid rgba(255, 198, 45, 0.48);
   border-radius: 999px;
@@ -2449,10 +2498,29 @@ input {
   color: var(--text);
 }
 
+.quick-join-button {
+  border-color: var(--bhc-brown) !important;
+  background: var(--bhc-orange) !important;
+  color: var(--bhc-brown) !important;
+}
+
+.quick-join-button:disabled {
+  border-color: rgba(255, 198, 45, 0.35) !important;
+  background: var(--panel) !important;
+  color: var(--muted) !important;
+}
+
 .create-room-open-button {
   border-color: var(--bhc-brown) !important;
   background: var(--bhc-yellow) !important;
   color: var(--bhc-brown) !important;
+}
+
+.lobby-checkbox input {
+  border: 0 !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .room-list-item {
