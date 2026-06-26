@@ -76,6 +76,10 @@ button {
   border-bottom: 1px solid var(--line);
 }
 
+.topbar > div:first-child {
+  min-width: 0;
+}
+
 .eyebrow {
   margin: 0 0 2px;
   color: var(--amber);
@@ -1595,6 +1599,15 @@ input:focus {
   gap: 8px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
 .leave-room-button {
   min-height: 36px;
   padding: 0 12px;
@@ -1603,6 +1616,22 @@ input:focus {
   color: var(--text);
   font-weight: 900;
   cursor: pointer;
+}
+
+.room-settings-icon-button {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 38px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.room-settings-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .access-note {
@@ -1916,12 +1945,18 @@ input:focus {
   }
 
   .topbar {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 12px;
+    align-items: center;
+    flex-direction: row;
+    gap: 8px;
     min-height: 0;
     padding-bottom: 8px;
     border-bottom: 0;
+  }
+
+  .topbar h1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   h1 {
@@ -2364,6 +2399,7 @@ h1 {
 .send-button,
 .settings-button,
 .leave-room-button,
+.room-settings-icon-button,
 .toggle-button,
 .secret-claim-button,
 .secret-pay-button,
@@ -2438,6 +2474,7 @@ input {
 .send-button:hover,
 .settings-button:hover,
 .leave-room-button:hover,
+.room-settings-icon-button:not(:disabled):hover,
 .seat-bubble:hover,
 .seat-token:not(:disabled):hover,
 .toggle-button:hover,
@@ -2471,6 +2508,7 @@ input {
 }
 
 .leave-room-button,
+.room-settings-icon-button,
 .menu-trigger,
 .settings-button,
 .toggle-button,

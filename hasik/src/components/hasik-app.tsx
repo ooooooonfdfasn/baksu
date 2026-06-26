@@ -10,11 +10,13 @@ interface LobbyRoom {
   tableShape: TableShape;
   createdAt: number;
   hostName: string;
+  hostSessionId: string;
   memberCount: number;
   quickJoinEnabled: boolean;
 }
 
 const lobbyStorageKey = "hasik:lobby-rooms";
+const lobbyUserStorageKey = "hasik:lobby-user-id";
 
 const defaultRooms: LobbyRoom[] = [
   {
@@ -23,6 +25,7 @@ const defaultRooms: LobbyRoom[] = [
     tableShape: "round",
     createdAt: Date.now() - 1000 * 60 * 34,
     hostName: "시스템",
+    hostSessionId: "system-host",
     memberCount: 3,
     quickJoinEnabled: true
   },
@@ -32,6 +35,7 @@ const defaultRooms: LobbyRoom[] = [
     tableShape: "rectangle",
     createdAt: Date.now() - 1000 * 60 * 12,
     hostName: "익명",
+    hostSessionId: "anonymous-host",
     memberCount: 2,
     quickJoinEnabled: true
   }
@@ -43,6 +47,28 @@ function createId() {
   }
 
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function getLobbyUserId() {
+  const nextId = `user-${createId()}`;
+
+  if (typeof window === "undefined") {
+    return nextId;
+  }
+
+  try {
+    const savedId = localStorage.getItem(lobbyUserStorageKey);
+
+    if (savedId) {
+      return savedId;
+    }
+
+    localStorage.setItem(lobbyUserStorageKey, nextId);
+  } catch {
+    return nextId;
+  }
+
+  return nextId;
 }
 
 function isTableShape(value: unknown): value is TableShape {
@@ -59,7 +85,7 @@ function normalizeMemberCount(value: unknown) {
   return Math.max(0, Math.floor(count));
 }
 
-function normalizeRooms(value: unknown): LobbyRoom[] {
+function normalizeRooms(value: unknown, fallbackHostSessionId: string): LobbyRoom[] {
   if (!Array.isArray(value)) {
     return defaultRooms;
   }
@@ -97,6 +123,10 @@ function normalizeRooms(value: unknown): LobbyRoom[] {
             typeof sourceRoom.hostName === "string" && sourceRoom.hostName.trim()
               ? sourceRoom.hostName
               : "익명",
+          hostSessionId:
+            typeof sourceRoom.hostSessionId === "string" && sourceRoom.hostSessionId.trim()
+              ? sourceRoom.hostSessionId
+              : fallbackHostSessionId,
           memberCount,
           quickJoinEnabled: sourceRoom.quickJoinEnabled !== false
         }
@@ -106,6 +136,7 @@ function normalizeRooms(value: unknown): LobbyRoom[] {
 
 export function HasikApp() {
   const [rooms, setRooms] = useState<LobbyRoom[]>(defaultRooms);
+  const [currentUserId] = useState(getLobbyUserId);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [newRoomTitle, setNewRoomTitle] = useState("새 회식방");
   const [newRoomTableShape, setNewRoomTableShape] = useState<TableShape>("round");
@@ -117,12 +148,12 @@ export function HasikApp() {
       const savedRooms = localStorage.getItem(lobbyStorageKey);
 
       if (savedRooms) {
-        setRooms(normalizeRooms(JSON.parse(savedRooms)));
+        setRooms(normalizeRooms(JSON.parse(savedRooms), currentUserId));
       }
     } catch {
       setRooms(defaultRooms);
     }
-  }, []);
+  }, [currentUserId]);
 
   useEffect(() => {
     localStorage.setItem(lobbyStorageKey, JSON.stringify(rooms));
@@ -166,6 +197,7 @@ export function HasikApp() {
       tableShape: newRoomTableShape,
       createdAt: Date.now(),
       hostName: "익명",
+      hostSessionId: currentUserId,
       memberCount: 1,
       quickJoinEnabled: newRoomQuickJoinEnabled
     };
@@ -209,16 +241,25 @@ export function HasikApp() {
     );
   }
 
+  function updateRoomQuickJoin(roomId: string, quickJoinEnabled: boolean) {
+    setRooms((current) =>
+      current.map((room) => (room.id === roomId ? { ...room, quickJoinEnabled } : room))
+    );
+  }
+
   if (selectedRoom) {
     return (
       <HasikRoom
         key={selectedRoom.id}
         initialRoomTitle={selectedRoom.title}
         initialTableShape={selectedRoom.tableShape}
+        initialQuickJoinEnabled={selectedRoom.quickJoinEnabled}
+        canManageRoomSettings={selectedRoom.hostSessionId === currentUserId}
         roomNameOverride={selectedRoom.id}
         onLeave={leaveRoom}
         onRoomTitleChange={(title) => updateRoomTitle(selectedRoom.id, title)}
         onTableShapeChange={(tableShape) => updateRoomTableShape(selectedRoom.id, tableShape)}
+        onQuickJoinChange={(quickJoinEnabled) => updateRoomQuickJoin(selectedRoom.id, quickJoinEnabled)}
       />
     );
   }

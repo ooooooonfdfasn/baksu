@@ -6,8 +6,6 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   CreditCard,
   Dices,
-  Eye,
-  EyeOff,
   Flag,
   Gift,
   Menu,
@@ -32,10 +30,13 @@ export type TableShape = "round" | "rectangle";
 interface HasikRoomProps {
   initialRoomTitle?: string;
   initialTableShape?: TableShape;
+  initialQuickJoinEnabled?: boolean;
+  canManageRoomSettings?: boolean;
   roomNameOverride?: string;
   onLeave?: () => void;
   onRoomTitleChange?: (title: string) => void;
   onTableShapeChange?: (shape: TableShape) => void;
+  onQuickJoinChange?: (enabled: boolean) => void;
 }
 
 interface ChatMessage {
@@ -117,19 +118,6 @@ interface TableFood {
 
 const chatCooldownMs = 500;
 const roles: Role[] = ["인턴", "사원", "대리", "과장", "부장"];
-const roleRank: Record<Role, number> = {
-  "인턴": 1,
-  "사원": 2,
-  "대리": 3,
-  "과장": 4,
-  "부장": 5
-};
-const moods: Array<{ id: Mood; label: string }> = [
-  { id: "afterwork", label: "퇴근 직후" },
-  { id: "talk", label: "수다 가능" },
-  { id: "quiet", label: "조용히 착석" }
-];
-
 const menuItems = [
   { id: "kimchi-jeon", name: "김치전", price: 16000, kind: "food", icon: "전" },
   { id: "fishcake-soup", name: "어묵탕", price: 18000, kind: "food", icon: "탕" },
@@ -320,16 +308,20 @@ function mergeMessage(current: ChatMessage[], nextMessage: ChatMessage) {
 export function HasikRoom({
   initialRoomTitle = "퇴근 후 익명 회식방",
   initialTableShape = "round",
+  initialQuickJoinEnabled = true,
+  canManageRoomSettings = false,
   roomNameOverride,
   onLeave,
   onRoomTitleChange,
-  onTableShapeChange
+  onTableShapeChange,
+  onQuickJoinChange
 }: HasikRoomProps = {}) {
-  const [selectedRole, setSelectedRole] = useState<Role>("대리");
-  const [mood, setMood] = useState<Mood>("afterwork");
+  const selectedRole: Role = "대리";
+  const mood: Mood = "afterwork";
   const [nickname] = useState(createAnonymousNickname);
   const [roomTitle, setRoomTitle] = useState(initialRoomTitle);
   const [tableShape, setTableShape] = useState<TableShape>(initialTableShape);
+  const [quickJoinEnabled, setQuickJoinEnabled] = useState(initialQuickJoinEnabled);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(seedMessages);
   const [presence, setPresence] = useState<PresenceUser[]>([]);
@@ -346,7 +338,6 @@ export function HasikRoom({
   const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null);
   const [tableFoods, setTableFoods] = useState<Record<string, TableFood>>({});
   const [activePourFoodId, setActivePourFoodId] = useState<string | null>(null);
-  const [isChatHistoryVisible, setChatHistoryVisible] = useState(true);
   const [reportStatus, setReportStatus] = useState("");
   const [isReporting, setIsReporting] = useState(false);
   const [cooldownUntil, setCooldownUntil] = useState(0);
@@ -426,32 +417,8 @@ export function HasikRoom({
       joinedAt: startedAt,
       mood
     }),
-    [mood, nickname, selectedRole, startedAt]
+    [nickname, startedAt]
   );
-
-  const roomMembers = useMemo(() => {
-    const membersById = new Map<string, PresenceUser>();
-
-    [user, ...presence].forEach((member) => {
-      membersById.set(member.id, member);
-    });
-
-    return Array.from(membersById.values());
-  }, [presence, user]);
-
-  const settingsController = useMemo(() => {
-    return [...roomMembers].sort((left, right) => {
-      const roleGap = roleRank[right.role] - roleRank[left.role];
-
-      if (roleGap !== 0) {
-        return roleGap;
-      }
-
-      return left.joinedAt - right.joinedAt;
-    })[0] ?? user;
-  }, [roomMembers, user]);
-
-  const canManageChatSettings = settingsController.id === sessionIdRef.current;
 
   const seatMembers = useMemo(() => {
     const nextMembers: PresenceUser[] = [user];
@@ -478,6 +445,11 @@ export function HasikRoom({
 
     return nextMessages;
   }, [messages]);
+
+  const visibleMessages = useMemo(
+    () => messages.filter((message) => now - message.at <= bubbleLifetimeMs),
+    [messages, now]
+  );
 
   const centerTableInVisualViewport = useCallback(() => {
     const tableElement = tableCenterRef.current;
@@ -544,6 +516,16 @@ export function HasikRoom({
   }, [supabase]);
 
   useEffect(() => {
+    setQuickJoinEnabled(initialQuickJoinEnabled);
+  }, [initialQuickJoinEnabled]);
+
+  useEffect(() => {
+    if (!canManageRoomSettings && isSettingsOpen) {
+      setSettingsOpen(false);
+    }
+  }, [canManageRoomSettings, isSettingsOpen]);
+
+  useEffect(() => {
     if (!isCoolingDown) {
       return;
     }
@@ -558,7 +540,7 @@ export function HasikRoom({
     if (feed) {
       feed.scrollTop = feed.scrollHeight;
     }
-  }, [messages]);
+  }, [visibleMessages]);
 
   useEffect(() => {
     setReportStatus("");
@@ -685,10 +667,6 @@ export function HasikRoom({
         setMessages((current) => mergeMessage(current, nextMessage));
       })
       .on("broadcast", { event: "room_settings" }, ({ payload }) => {
-        if (typeof payload?.chatHistoryVisible === "boolean") {
-          setChatHistoryVisible(payload.chatHistoryVisible);
-        }
-
         if (typeof payload?.roomTitle === "string") {
           const nextTitle = payload.roomTitle.slice(0, 28);
           setRoomTitle(nextTitle);
@@ -699,6 +677,11 @@ export function HasikRoom({
           const nextShape = payload.tableShape;
           setTableShape(nextShape);
           onTableShapeChange?.(nextShape);
+        }
+
+        if (typeof payload?.quickJoinEnabled === "boolean") {
+          setQuickJoinEnabled(payload.quickJoinEnabled);
+          onQuickJoinChange?.(payload.quickJoinEnabled);
         }
       })
       .on("broadcast", { event: "menu_selection" }, ({ payload }) => {
@@ -924,25 +907,13 @@ export function HasikRoom({
       channelRef.current = null;
       void client.removeChannel(channel);
     };
-  }, [onRoomTitleChange, onTableShapeChange, roomName, supabase, user]);
-
-  const updateChatHistoryVisibility = useCallback(
-    (nextValue: boolean) => {
-      if (!canManageChatSettings) {
-        return;
-      }
-
-      setChatHistoryVisible(nextValue);
-      void channelRef.current?.send({
-        type: "broadcast",
-        event: "room_settings",
-        payload: { chatHistoryVisible: nextValue }
-      });
-    },
-    [canManageChatSettings]
-  );
+  }, [onQuickJoinChange, onRoomTitleChange, onTableShapeChange, roomName, supabase, user]);
 
   const updateRoomTitle = useCallback((nextValue: string) => {
+    if (!canManageRoomSettings) {
+      return;
+    }
+
     const nextTitle = nextValue.slice(0, 28);
     setRoomTitle(nextTitle);
     onRoomTitleChange?.(nextTitle);
@@ -951,9 +922,13 @@ export function HasikRoom({
       event: "room_settings",
       payload: { roomTitle: nextTitle }
     });
-  }, [onRoomTitleChange]);
+  }, [canManageRoomSettings, onRoomTitleChange]);
 
   const updateTableShape = useCallback((nextShape: TableShape) => {
+    if (!canManageRoomSettings) {
+      return;
+    }
+
     setTableShape(nextShape);
     onTableShapeChange?.(nextShape);
     void channelRef.current?.send({
@@ -961,7 +936,21 @@ export function HasikRoom({
       event: "room_settings",
       payload: { tableShape: nextShape }
     });
-  }, [onTableShapeChange]);
+  }, [canManageRoomSettings, onTableShapeChange]);
+
+  const updateQuickJoin = useCallback((nextValue: boolean) => {
+    if (!canManageRoomSettings) {
+      return;
+    }
+
+    setQuickJoinEnabled(nextValue);
+    onQuickJoinChange?.(nextValue);
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "room_settings",
+      payload: { quickJoinEnabled: nextValue }
+    });
+  }, [canManageRoomSettings, onQuickJoinChange]);
 
   const selectMenuItem = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>, itemId: string) => {
@@ -1376,11 +1365,27 @@ export function HasikRoom({
             <div>
               <h1>{roomTitle || "이름 없는 회식방"}</h1>
             </div>
-            {onLeave ? (
-              <button type="button" className="leave-room-button" onClick={onLeave}>
-                메인 메뉴
+            <div className="topbar-actions">
+              {onLeave ? (
+                <button type="button" className="leave-room-button" onClick={onLeave}>
+                  메인 메뉴
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="room-settings-icon-button"
+                onClick={() => {
+                  if (canManageRoomSettings) {
+                    setSettingsOpen(true);
+                  }
+                }}
+                disabled={!canManageRoomSettings}
+                title={canManageRoomSettings ? "회식방 설정" : "방장만 설정할 수 있습니다"}
+                aria-label="회식방 설정"
+              >
+                <Settings2 size={20} />
               </button>
-            ) : null}
+            </div>
           </div>
 
           <div className="room-grid">
@@ -1391,14 +1396,6 @@ export function HasikRoom({
                 <div className="nickname-preview">
                   <NameWithRole nickname={nickname} role={selectedRole} />
                 </div>
-                <button
-                  type="button"
-                  className="settings-button"
-                  onClick={() => setSettingsOpen(true)}
-                >
-                  <Settings2 size={18} />
-                  회식방 설정
-                </button>
               </div>
             </aside>
 
@@ -1629,37 +1626,35 @@ export function HasikRoom({
             </section>
 
             <aside className="right-rail" aria-label="채팅 영역">
-              {isChatHistoryVisible ? (
-                <section className="chat-panel" aria-label="실시간 채팅">
-                  <div className="chat-feed" ref={chatFeedRef}>
-                    {messages.map((message) => (
-                      <article key={message.id} className={`chat-message ${message.kind ?? "normal"}`}>
-                        <button
-                          type="button"
-                          className="profile-trigger chat-name"
-                          onClick={() => setActiveProfile(message)}
-                        >
-                          <NameWithRole nickname={message.nickname} role={message.role} />
-                        </button>
-                        <p>{message.body}</p>
-                        <time className="message-time">{formatClock(message.at)}</time>
-                      </article>
-                    ))}
-                  </div>
+              <section className="chat-panel" aria-label="실시간 채팅">
+                <div className="chat-feed" ref={chatFeedRef}>
+                  {visibleMessages.map((message) => (
+                    <article key={message.id} className={`chat-message ${message.kind ?? "normal"}`}>
+                      <button
+                        type="button"
+                        className="profile-trigger chat-name"
+                        onClick={() => setActiveProfile(message)}
+                      >
+                        <NameWithRole nickname={message.nickname} role={message.role} />
+                      </button>
+                      <p>{message.body}</p>
+                      <time className="message-time">{formatClock(message.at)}</time>
+                    </article>
+                  ))}
+                </div>
 
-                  <div className="chat-header">
-                    <p>채팅</p>
-                    <button
-                      type="button"
-                      className="icon-action"
-                      title="골든벨"
-                      onClick={() => void sendMessage("제가 오늘 제로콜라 쏩니다", "bell")}
-                    >
-                      <Gift size={19} />
-                    </button>
-                  </div>
-                </section>
-              ) : null}
+                <div className="chat-header">
+                  <p>채팅</p>
+                  <button
+                    type="button"
+                    className="icon-action"
+                    title="골든벨"
+                    onClick={() => void sendMessage("제가 오늘 제로콜라 쏩니다", "bell")}
+                  >
+                    <Gift size={19} />
+                  </button>
+                </div>
+              </section>
 
               {renderComposer("composer-shell docked-composer", dockedComposerRef)}
             </aside>
@@ -1936,9 +1931,7 @@ export function HasikRoom({
             <div className="settings-head">
               <div>
                 <p id="settings-title">회식방 설정</p>
-                <span>
-                  결정권 <NameWithRole nickname={settingsController.nickname} role={settingsController.role} />
-                </span>
+                <span>방장 전용</span>
               </div>
               <button
                 type="button"
@@ -1981,47 +1974,14 @@ export function HasikRoom({
             </div>
 
             <div className="settings-section">
-              <span>내 직급</span>
-              <div className="role-list settings-options">
-                {roles.map((role) => (
-                  <button
-                    key={role}
-                    className={role === selectedRole ? "role-chip selected" : "role-chip"}
-                    type="button"
-                    onClick={() => setSelectedRole(role)}
-                  >
-                    <span className={`role-label ${getRoleTone(role)}`}>{role}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="settings-section">
-              <span>분위기</span>
-              <div className="mood-list settings-options">
-                {moods.map((item) => (
-                  <button
-                    key={item.id}
-                    className={item.id === mood ? "mood-chip selected" : "mood-chip"}
-                    type="button"
-                    onClick={() => setMood(item.id)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="settings-section">
-              <span>채팅</span>
+              <span>빠른입장</span>
               <button
                 type="button"
                 className="toggle-button"
-                disabled={!canManageChatSettings}
-                onClick={() => updateChatHistoryVisibility(!isChatHistoryVisible)}
+                aria-pressed={quickJoinEnabled}
+                onClick={() => updateQuickJoin(!quickJoinEnabled)}
               >
-                {isChatHistoryVisible ? <Eye size={18} /> : <EyeOff size={18} />}
-                채팅 기록 {isChatHistoryVisible ? "보이기" : "숨기기"}
+                {quickJoinEnabled ? "빠른입장 허용" : "빠른입장 차단"}
               </button>
             </div>
           </section>
