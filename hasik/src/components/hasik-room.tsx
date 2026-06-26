@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, PointerEvent as ReactPointerEvent, RefObject } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   CreditCard,
@@ -15,8 +15,7 @@ import {
   Send,
   Settings2,
   Users,
-  UserRound,
-  Utensils
+  UserRound
 } from "lucide-react";
 import { getHasikRoomName, getSupabaseBrowserClient } from "@/lib/supabase";
 
@@ -24,7 +23,6 @@ type Role = "인턴" | "사원" | "대리" | "과장" | "부장";
 type Mood = "quiet" | "talk" | "afterwork";
 type RealtimeMode = "demo" | "setup" | "live";
 type PaymentMethod = "split" | "single" | "roulette" | "rps";
-type MenuItemKind = "food" | "drink";
 export type TableShape = "round" | "rectangle";
 
 interface HasikRoomProps {
@@ -97,22 +95,6 @@ interface PaymentVote {
   nickname: string;
   role: Role;
   method: PaymentMethod;
-  at: number;
-}
-
-interface TableFood {
-  id: string;
-  itemId: string;
-  name: string;
-  icon: string;
-  kind: MenuItemKind;
-  ownerId: string;
-  ownerNickname: string;
-  ownerRole: Role;
-  x: number;
-  y: number;
-  pourTargetId?: string;
-  pourUntil?: number;
   at: number;
 }
 
@@ -215,27 +197,6 @@ function clampPercent(value: number) {
   return Math.min(100, Math.max(0, value));
 }
 
-function syncKeyboardInset() {
-  if (typeof window === "undefined") {
-    return 0;
-  }
-
-  const visualViewport = window.visualViewport;
-
-  if (!visualViewport) {
-    return 0;
-  }
-
-  const layoutHeight = Math.max(window.innerHeight, document.documentElement.clientHeight);
-  const rawKeyboardInset = Math.max(
-    0,
-    layoutHeight - visualViewport.height - visualViewport.offsetTop
-  );
-  const keyboardInset = rawKeyboardInset > 80 ? Math.round(rawKeyboardInset) : 0;
-  document.documentElement.style.setProperty("--keyboard-inset", `${keyboardInset}px`);
-  return keyboardInset;
-}
-
 function getLevel(minutes: number) {
   if (minutes >= 40) {
     return { title: "팀장석", progress: 100, next: "오늘의 골든벨" };
@@ -336,13 +297,10 @@ export function HasikRoom({
   const [secretCheckout, setSecretCheckout] = useState<SecretCheckout | null>(null);
   const [secretAmount, setSecretAmount] = useState("");
   const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null);
-  const [tableFoods, setTableFoods] = useState<Record<string, TableFood>>({});
-  const [activePourFoodId, setActivePourFoodId] = useState<string | null>(null);
   const [reportStatus, setReportStatus] = useState("");
   const [isReporting, setIsReporting] = useState(false);
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [cooldownTick, setCooldownTick] = useState(0);
-  const [isComposerVisible, setComposerVisible] = useState(true);
   const [hasMounted, setHasMounted] = useState(false);
   const [startedAt, setStartedAt] = useState(initialRenderTime);
   const [now, setNow] = useState(initialRenderTime);
@@ -350,20 +308,7 @@ export function HasikRoom({
   const channelRef = useRef<RealtimeChannel | null>(null);
   const chatFeedRef = useRef<HTMLDivElement | null>(null);
   const menuListRef = useRef<HTMLDivElement | null>(null);
-  const dockedComposerRef = useRef<HTMLDivElement | null>(null);
-  const tableCenterRef = useRef<HTMLDivElement | null>(null);
   const activeComposerInputRef = useRef<HTMLInputElement | null>(null);
-  const lastScrollYRef = useRef(0);
-  const composerFocusedRef = useRef(false);
-  const updateFloatingComposerRef = useRef<() => void>(() => undefined);
-  const foodDragRef = useRef<{
-    id: string;
-    startX: number;
-    startY: number;
-    moved: boolean;
-    lastX: number;
-    lastY: number;
-  } | null>(null);
 
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const roomName = useMemo(() => roomNameOverride ?? getHasikRoomName(), [roomNameOverride]);
@@ -407,7 +352,6 @@ export function HasikRoom({
   );
   const isSecretCheckoutMine = secretCheckout?.userId === sessionIdRef.current;
   const secretCheckoutAmount = Number(secretAmount.replace(/[^\d]/g, ""));
-  const tableFoodList = useMemo(() => Object.values(tableFoods), [tableFoods]);
 
   const user = useMemo<PresenceUser>(
     () => ({
@@ -450,46 +394,6 @@ export function HasikRoom({
     () => messages.filter((message) => now - message.at <= bubbleLifetimeMs),
     [messages, now]
   );
-
-  const centerTableInVisualViewport = useCallback(() => {
-    const tableElement = tableCenterRef.current;
-
-    if (!tableElement) {
-      return;
-    }
-
-    const keyboardInset = syncKeyboardInset();
-
-    const visualViewport = window.visualViewport;
-    const viewportHeight = visualViewport?.height ?? window.innerHeight;
-    const mobileComposer = document.querySelector<HTMLElement>(".mobile-composer");
-    const composerHeight =
-      mobileComposer && window.matchMedia("(max-width: 760px)").matches
-        ? mobileComposer.getBoundingClientRect().height + 12
-        : 0;
-    const usableViewportHeight = Math.max(180, viewportHeight - composerHeight - 12);
-    const tableRect = tableElement.getBoundingClientRect();
-    const visibleTop = window.scrollY + (visualViewport?.offsetTop ?? 0);
-    const visibleBottom = visibleTop + usableViewportHeight;
-    const tableCenter = window.scrollY + tableRect.top + tableRect.height / 2;
-    const centeredTop = tableCenter - usableViewportHeight / 2;
-    const tableBottom = window.scrollY + tableRect.bottom;
-    const coveredTableTop = tableBottom - usableViewportHeight + 24;
-    const nextScrollTop = Math.max(0, keyboardInset > 0 ? Math.max(centeredTop, coveredTableTop) : centeredTop);
-
-    if (Math.abs(nextScrollTop - window.scrollY) > 6 || tableBottom > visibleBottom) {
-      window.scrollTo({ top: nextScrollTop, behavior: "auto" });
-    }
-
-    lastScrollYRef.current = nextScrollTop;
-  }, []);
-
-  const scheduleTableCentering = useCallback((showFloatingComposer = true) => {
-    setComposerVisible(showFloatingComposer);
-    syncKeyboardInset();
-    window.setTimeout(centerTableInVisualViewport, 180);
-    window.setTimeout(centerTableInVisualViewport, 360);
-  }, [centerTableInVisualViewport]);
 
   const keepComposerFocus = useCallback(() => {
     const inputElement = activeComposerInputRef.current;
@@ -561,55 +465,6 @@ export function HasikRoom({
       document.body.style.overscrollBehavior = previousOverscrollBehavior;
     };
   }, [isPaymentOpen]);
-
-  useEffect(() => {
-    let keyboardTimer = 0;
-
-    const updateFloatingComposer = () => {
-      syncKeyboardInset();
-      const dockedComposer = dockedComposerRef.current;
-      const isMobile = window.matchMedia("(max-width: 760px)").matches;
-
-      if (!isMobile || !dockedComposer) {
-        setComposerVisible(false);
-        return;
-      }
-
-      const visualViewport = window.visualViewport;
-      const viewportHeight = visualViewport?.height ?? window.innerHeight;
-      const composerRect = dockedComposer.getBoundingClientRect();
-      const composerHeight = Math.max(56, composerRect.height || 72);
-      const floatingTop = viewportHeight - composerHeight - 8;
-      const isDockedComposerAtFloatingSlot =
-        composerRect.top <= floatingTop && composerRect.bottom > 0;
-
-      setComposerVisible(!isDockedComposerAtFloatingSlot);
-      lastScrollYRef.current = window.scrollY;
-    };
-
-    const scheduleKeyboardInsetSync = () => {
-      if (syncKeyboardInset() === 0 && document.activeElement !== activeComposerInputRef.current) {
-        composerFocusedRef.current = false;
-      }
-
-      window.clearTimeout(keyboardTimer);
-      keyboardTimer = window.setTimeout(updateFloatingComposer, 180);
-    };
-
-    updateFloatingComposerRef.current = updateFloatingComposer;
-    window.addEventListener("scroll", updateFloatingComposer, { passive: true });
-    window.addEventListener("resize", updateFloatingComposer);
-    window.visualViewport?.addEventListener("resize", scheduleKeyboardInsetSync);
-    updateFloatingComposer();
-
-    return () => {
-      window.removeEventListener("scroll", updateFloatingComposer);
-      window.removeEventListener("resize", updateFloatingComposer);
-      window.visualViewport?.removeEventListener("resize", scheduleKeyboardInsetSync);
-      window.clearTimeout(keyboardTimer);
-      document.documentElement.style.removeProperty("--keyboard-inset");
-    };
-  }, []);
 
   useEffect(() => {
     if (!supabase) {
@@ -791,99 +646,6 @@ export function HasikRoom({
         });
         setSecretCheckout(null);
         setPaymentVotes({});
-      })
-      .on("broadcast", { event: "table_food_batch" }, ({ payload }) => {
-        if (!Array.isArray(payload?.foods)) {
-          return;
-        }
-
-        const nextFoods = (payload.foods as unknown[]).filter((food): food is TableFood => {
-          const nextFood = food as Partial<TableFood> | null | undefined;
-
-          return (
-            typeof nextFood?.id === "string" &&
-            typeof nextFood?.itemId === "string" &&
-            typeof nextFood?.name === "string" &&
-            typeof nextFood?.icon === "string" &&
-            (nextFood?.kind === "food" || nextFood?.kind === "drink") &&
-            typeof nextFood?.ownerId === "string" &&
-            typeof nextFood?.ownerNickname === "string" &&
-            typeof nextFood?.ownerRole === "string" &&
-            roles.includes(nextFood.ownerRole as Role) &&
-            typeof nextFood?.x === "number" &&
-            typeof nextFood?.y === "number" &&
-            typeof nextFood?.at === "number"
-          );
-        });
-
-        if (nextFoods.length === 0) {
-          return;
-        }
-
-        setTableFoods((current) => {
-          const mergedFoods = { ...current };
-          nextFoods.forEach((food) => {
-            mergedFoods[food.id] = {
-              ...food,
-              ownerRole: food.ownerRole as Role,
-              x: clampPercent(food.x),
-              y: clampPercent(food.y)
-            };
-          });
-          return mergedFoods;
-        });
-      })
-      .on("broadcast", { event: "table_food_move" }, ({ payload }) => {
-        if (
-          typeof payload?.id !== "string" ||
-          typeof payload?.x !== "number" ||
-          typeof payload?.y !== "number"
-        ) {
-          return;
-        }
-
-        setTableFoods((current) => {
-          const food = current[payload.id];
-
-          if (!food) {
-            return current;
-          }
-
-          return {
-            ...current,
-            [payload.id]: {
-              ...food,
-              x: clampPercent(payload.x),
-              y: clampPercent(payload.y)
-            }
-          };
-        });
-      })
-      .on("broadcast", { event: "table_food_pour" }, ({ payload }) => {
-        if (
-          typeof payload?.id !== "string" ||
-          typeof payload?.targetId !== "string" ||
-          typeof payload?.pourUntil !== "number"
-        ) {
-          return;
-        }
-
-        setTableFoods((current) => {
-          const food = current[payload.id];
-
-          if (!food) {
-            return current;
-          }
-
-          return {
-            ...current,
-            [payload.id]: {
-              ...food,
-              pourTargetId: payload.targetId,
-              pourUntil: payload.pourUntil
-            }
-          };
-        });
       })
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState<PresenceUser>();
@@ -1071,110 +833,6 @@ export function HasikRoom({
     });
   }, [isSecretCheckoutMine, nickname, secretCheckoutAmount, selectedRole]);
 
-  const placeOrderedItemsOnTable = useCallback(() => {
-    if (menuSelectionList.length === 0) {
-      return;
-    }
-
-    const nextFoods = menuSelectionList.flatMap((selection, index) => {
-      const menuItem = menuItems.find((item) => item.id === selection.itemId);
-
-      if (!menuItem) {
-        return [];
-      }
-
-      const column = index % 4;
-      const row = Math.floor(index / 4) % 3;
-      const jitter = (index % 2) * 3;
-
-      return [{
-        id: `food-${selection.id}`,
-        itemId: menuItem.id,
-        name: menuItem.name,
-        icon: menuItem.icon,
-        kind: menuItem.kind as MenuItemKind,
-        ownerId: selection.userId,
-        ownerNickname: selection.nickname,
-        ownerRole: selection.role,
-        x: 28 + column * 15 + jitter,
-        y: 32 + row * 17 + (column % 2) * 4,
-        at: Date.now()
-      }];
-    });
-
-    if (nextFoods.length === 0) {
-      return;
-    }
-
-    setTableFoods((current) => {
-      const mergedFoods = { ...current };
-      nextFoods.forEach((food) => {
-        mergedFoods[food.id] = food;
-      });
-      return mergedFoods;
-    });
-    void channelRef.current?.send({
-      type: "broadcast",
-      event: "table_food_batch",
-      payload: { foods: nextFoods }
-    });
-  }, [menuSelectionList]);
-
-  const moveTableFood = useCallback((foodId: string, x: number, y: number) => {
-    setTableFoods((current) => {
-      const food = current[foodId];
-
-      if (!food || food.ownerId !== sessionIdRef.current) {
-        return current;
-      }
-
-      return {
-        ...current,
-        [foodId]: {
-          ...food,
-          x: clampPercent(x),
-          y: clampPercent(y)
-        }
-      };
-    });
-  }, []);
-
-  const finishMoveTableFood = useCallback((foodId: string) => {
-    const food = tableFoods[foodId];
-
-    if (!food || food.ownerId !== sessionIdRef.current) {
-      return;
-    }
-
-    void channelRef.current?.send({
-      type: "broadcast",
-      event: "table_food_move",
-      payload: { id: food.id, x: food.x, y: food.y }
-    });
-  }, [tableFoods]);
-
-  const pourDrinkToMember = useCallback((food: TableFood, targetId: string) => {
-    if (food.ownerId !== sessionIdRef.current || food.kind !== "drink") {
-      return;
-    }
-
-    const pourUntil = Date.now() + 1800;
-    setActivePourFoodId(null);
-    setTableFoods((current) => ({
-      ...current,
-      [food.id]: {
-        ...food,
-        pourTargetId: targetId,
-        pourUntil
-      }
-    }));
-    void channelRef.current?.send({
-      type: "broadcast",
-      event: "table_food_pour",
-      payload: { id: food.id, targetId, pourUntil }
-    });
-  }, []);
-
   const sendMessage = useCallback(
     async (body: string, kind: ChatMessage["kind"] = "normal") => {
       const cleanBody = body.trim();
@@ -1234,15 +892,8 @@ export function HasikRoom({
       }
 
       setInput("");
-      setComposerVisible(true);
       window.requestAnimationFrame(() => {
         keepComposerFocus();
-
-        if (composerFocusedRef.current) {
-          scheduleTableCentering(Boolean(activeComposerInputRef.current?.closest(".mobile-composer")));
-        } else {
-          updateFloatingComposerRef.current();
-        }
       });
     },
     [
@@ -1251,7 +902,6 @@ export function HasikRoom({
       keepComposerFocus,
       nickname,
       roomName,
-      scheduleTableCentering,
       selectedRole,
       supabase
     ]
@@ -1288,77 +938,56 @@ export function HasikRoom({
     setReportStatus("신고가 접수됐습니다.");
   }, [activeProfile, roomName, supabase]);
 
-  const renderComposer = (className: string, shellRef?: RefObject<HTMLDivElement | null>) => {
-    const isFloatingComposer = className.includes("mobile-composer");
-
+  const renderComposer = (className: string) => {
     return (
-    <div
-      className={className}
-      ref={shellRef}
-      onFocusCapture={() => {
-        composerFocusedRef.current = true;
-        setComposerVisible(isFloatingComposer);
-        syncKeyboardInset();
-        scheduleTableCentering(isFloatingComposer);
-        window.setTimeout(syncKeyboardInset, 260);
-      }}
-      onBlurCapture={() => {
-        window.setTimeout(() => {
-          composerFocusedRef.current = false;
-          syncKeyboardInset();
-          updateFloatingComposerRef.current();
-        }, 120);
-      }}
-    >
-      <form
-        className="chat-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void sendMessage(input);
-        }}
-      >
-        <button
-          type="button"
-          className="icon-action"
-          title="확성기"
-          onPointerDown={(event) => event.preventDefault()}
-          onClick={() => void sendMessage(`${nickname}님이 확성기를 켰습니다`, "system")}
-        >
-          <Megaphone size={18} />
-        </button>
-        <input
-          aria-label="채팅 입력"
-          maxLength={120}
-          placeholder="내 자리에서 한마디"
-          value={input}
-          ref={(element) => {
-            if (element) {
-              activeComposerInputRef.current = element;
-            }
+      <div className={className}>
+        <form
+          className="chat-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void sendMessage(input);
           }}
-          onFocus={(event) => {
-            activeComposerInputRef.current = event.currentTarget;
-            setComposerVisible(isFloatingComposer);
-            scheduleTableCentering(isFloatingComposer);
-          }}
-          onChange={(event) => setInput(event.target.value)}
-        />
-        <button
-          className="send-button"
-          type="submit"
-          title={isCoolingDown ? "잠시 후 보내기" : "보내기"}
-          disabled={isCoolingDown || !input.trim()}
-          onPointerDown={(event) => event.preventDefault()}
         >
-          <Send size={18} />
-        </button>
-      </form>
-    </div>
+          <button
+            type="button"
+            className="icon-action"
+            title="확성기"
+            onPointerDown={(event) => event.preventDefault()}
+            onClick={() => void sendMessage(`${nickname}님이 확성기를 켰습니다`, "system")}
+          >
+            <Megaphone size={18} />
+          </button>
+          <input
+            aria-label="채팅 입력"
+            maxLength={120}
+            placeholder="내 자리에서 한마디"
+            value={input}
+            ref={(element) => {
+              if (element) {
+                activeComposerInputRef.current = element;
+              }
+            }}
+            onFocus={(event) => {
+              activeComposerInputRef.current = event.currentTarget;
+            }}
+            onChange={(event) => setInput(event.target.value)}
+          />
+          <button
+            className="send-button"
+            type="submit"
+            title={isCoolingDown ? "잠시 후 보내기" : "보내기"}
+            disabled={isCoolingDown || !input.trim()}
+            onPointerDown={(event) => event.preventDefault()}
+          >
+            <Send size={18} />
+          </button>
+        </form>
+      </div>
     );
   };
 
   return (
-    <main className="min-h-screen bg-[#17120f] text-[#fff8ec]">
+    <main className="room-page min-h-screen bg-[#17120f] text-[#fff8ec]">
       <div className="app-shell">
         <section className="hero-room" aria-label="회식방">
           <div className="topbar">
@@ -1389,16 +1018,6 @@ export function HasikRoom({
           </div>
 
           <div className="room-grid">
-            <aside className="left-rail" aria-label="입장 설정">
-              <div className="panel compact nickname-card">
-                <span className="nickname-label">익명 참여</span>
-                <span className="access-note">이 방은 익명으로만 입장합니다.</span>
-                <div className="nickname-preview">
-                  <NameWithRole nickname={nickname} role={selectedRole} />
-                </div>
-              </div>
-            </aside>
-
             <section className="table-stage" aria-label="가상 테이블">
               <div className="table-scene">
                 <div className="scene-toolbar">
@@ -1428,116 +1047,7 @@ export function HasikRoom({
                   </div>
                 </div>
                 <div className={`seat-map ${tableShape}`} aria-label="오늘의 자리 배치">
-                  <div className={`table ${tableShape}`} ref={tableCenterRef}>
-                    <div className="plate main-plate" aria-hidden="true">
-                      <Utensils size={20} />
-                    </div>
-                    <div className="bowl soup" aria-hidden="true" />
-                    <div className="glass cola" aria-hidden="true" />
-                    <div className="glass tea" aria-hidden="true" />
-                    {tableFoodList.map((food) => {
-                      const isMine = food.ownerId === sessionIdRef.current;
-                      const isPouring = Boolean(food.pourUntil && food.pourUntil > now);
-
-                      return (
-                        <div
-                          key={food.id}
-                          className={[
-                            "table-food",
-                            food.kind,
-                            isMine ? "mine" : "",
-                            isPouring ? "pouring" : ""
-                          ].join(" ")}
-                          style={{
-                            "--food-x": `${food.x}%`,
-                            "--food-y": `${food.y}%`
-                          } as CSSProperties}
-                        >
-                          <button
-                            type="button"
-                            className="table-food-button"
-                            title={food.name}
-                            onPointerDown={(event) => {
-                              if (!isMine) {
-                                return;
-                              }
-
-                              foodDragRef.current = {
-                                id: food.id,
-                                startX: event.clientX,
-                                startY: event.clientY,
-                                moved: false,
-                                lastX: food.x,
-                                lastY: food.y
-                              };
-                              event.currentTarget.setPointerCapture(event.pointerId);
-                            }}
-                            onPointerMove={(event) => {
-                              const dragState = foodDragRef.current;
-                              const tableElement = tableCenterRef.current;
-
-                              if (!dragState || dragState.id !== food.id || !tableElement) {
-                                return;
-                              }
-
-                              if (
-                                Math.abs(event.clientX - dragState.startX) > 3 ||
-                                Math.abs(event.clientY - dragState.startY) > 3
-                              ) {
-                                dragState.moved = true;
-                              }
-
-                              const tableRect = tableElement.getBoundingClientRect();
-                              const nextX = clampPercent(((event.clientX - tableRect.left) / tableRect.width) * 100);
-                              const nextY = clampPercent(((event.clientY - tableRect.top) / tableRect.height) * 100);
-                              dragState.lastX = nextX;
-                              dragState.lastY = nextY;
-                              moveTableFood(food.id, nextX, nextY);
-                            }}
-                            onPointerUp={(event) => {
-                              const dragState = foodDragRef.current;
-
-                              if (dragState?.id === food.id) {
-                                foodDragRef.current = null;
-                                event.currentTarget.releasePointerCapture(event.pointerId);
-
-                                if (dragState.moved) {
-                                  void channelRef.current?.send({
-                                    type: "broadcast",
-                                    event: "table_food_move",
-                                    payload: { id: food.id, x: dragState.lastX, y: dragState.lastY }
-                                  });
-                                  return;
-                                }
-                              }
-
-                              if (isMine && food.kind === "drink") {
-                                setActivePourFoodId((current) => (current === food.id ? null : food.id));
-                              }
-                            }}
-                          >
-                            <span>{food.icon}</span>
-                          </button>
-
-                          {activePourFoodId === food.id && isMine ? (
-                            <div className="pour-menu">
-                              {seatMembers
-                                .filter((member): member is PresenceUser => Boolean(member))
-                                .map((member) => (
-                                  <button
-                                    key={member.id}
-                                    type="button"
-                                    onClick={() => pourDrinkToMember(food, member.id)}
-                                  >
-                                    <NameWithRole nickname={member.nickname} role={member.role} />
-                                  </button>
-                                ))}
-                            </div>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <div className={`table ${tableShape}`} />
 
                   {seatMembers.map((member, index) => {
                     const seatMessage = member
@@ -1586,32 +1096,6 @@ export function HasikRoom({
                       </div>
                     );
                   })}
-                  {tableFoodList.map((food) => {
-                    if (!food.pourTargetId || !food.pourUntil || food.pourUntil <= now) {
-                      return null;
-                    }
-
-                    const targetIndex = seatMembers.findIndex((member) => member?.id === food.pourTargetId);
-                    const targetPosition = seatPositions[targetIndex >= 0 ? targetIndex : 0];
-                    const sceneStartX = 50 + (food.x - 50) * 0.56;
-                    const sceneStartY = 50 + (food.y - 50) * 0.4;
-
-                    return (
-                      <span
-                        key={`${food.id}-pour`}
-                        className="pour-flight"
-                        style={{
-                          "--from-x": `${sceneStartX}%`,
-                          "--from-y": `${sceneStartY}%`,
-                          "--to-x": `${targetPosition.x}%`,
-                          "--to-y": `${targetPosition.y}%`
-                        } as CSSProperties}
-                        aria-hidden="true"
-                      >
-                        잔
-                      </span>
-                    );
-                  })}
                 </div>
                 <button
                   type="button"
@@ -1656,17 +1140,12 @@ export function HasikRoom({
                 </div>
               </section>
 
-              {renderComposer("composer-shell docked-composer", dockedComposerRef)}
+              {renderComposer("composer-shell docked-composer")}
             </aside>
           </div>
         </section>
 
       </div>
-      {renderComposer(
-        isComposerVisible
-          ? "composer-shell mobile-composer"
-          : "composer-shell mobile-composer composer-hidden"
-      )}
       {isMenuOpen ? (
         <div
           className="profile-backdrop centered-backdrop"
@@ -1775,7 +1254,6 @@ export function HasikRoom({
                 className="order-button"
                 disabled={orderedMenuItems.length === 0}
                 onClick={() => {
-                  placeOrderedItemsOnTable();
                   setMenuOpen(false);
                   setPaymentOpen(true);
                 }}
@@ -1975,14 +1453,14 @@ export function HasikRoom({
 
             <div className="settings-section">
               <span>빠른입장</span>
-              <button
-                type="button"
-                className="toggle-button"
-                aria-pressed={quickJoinEnabled}
-                onClick={() => updateQuickJoin(!quickJoinEnabled)}
-              >
-                {quickJoinEnabled ? "빠른입장 허용" : "빠른입장 차단"}
-              </button>
+              <label className="settings-checkbox">
+                <input
+                  type="checkbox"
+                  checked={quickJoinEnabled}
+                  onChange={(event) => updateQuickJoin(event.target.checked)}
+                />
+                <span>빠른입장 허용</span>
+              </label>
             </div>
           </section>
         </div>
