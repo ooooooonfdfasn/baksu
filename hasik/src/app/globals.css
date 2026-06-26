@@ -756,29 +756,29 @@ input:focus {
 .seat-map.round .slot-3,
 .seat-map.round .slot-5,
 .seat-map.round .slot-7 {
-  --seat-bubble-max-width: min(320px, 36vw);
+  --seat-bubble-max-width: min(340px, 38vw);
 }
 
 .seat-map.round .slot-2,
 .seat-map.round .slot-6 {
-  --seat-bubble-max-width: min(280px, 32vw);
+  --seat-bubble-max-width: min(320px, 34vw);
 }
 
 .seat-map.rectangle .slot-0,
 .seat-map.rectangle .slot-4 {
-  --seat-bubble-max-width: min(360px, 44vw);
+  --seat-bubble-max-width: min(420px, 48vw);
 }
 
 .seat-map.rectangle .slot-1,
 .seat-map.rectangle .slot-3,
 .seat-map.rectangle .slot-5,
 .seat-map.rectangle .slot-7 {
-  --seat-bubble-max-width: min(250px, 31vw);
+  --seat-bubble-max-width: min(320px, 35vw);
 }
 
 .seat-map.rectangle .slot-2,
 .seat-map.rectangle .slot-6 {
-  --seat-bubble-max-width: min(300px, 34vw);
+  --seat-bubble-max-width: min(360px, 38vw);
 }
 
 .seat-bubble {
@@ -788,7 +788,7 @@ input:focus {
   z-index: 4;
   isolation: isolate;
   justify-self: center;
-  width: fit-content;
+  width: max-content;
   min-width: 55px;
   max-width: var(--seat-bubble-max-width);
   min-height: 38px;
@@ -830,7 +830,29 @@ input:focus {
 
 .seat-map.rectangle .slot-3,
 .seat-map.rectangle .slot-7 {
-  --seat-bubble-offset: 14px;
+  --seat-bubble-offset: 18px;
+}
+
+.seat-map.rectangle .slot-3 .seat-bubble,
+.seat-map.rectangle .slot-4 .seat-bubble,
+.seat-map.rectangle .slot-5 .seat-bubble {
+  top: calc(100% + 10px);
+  bottom: auto;
+}
+
+.seat-map.rectangle .slot-3 .seat-bubble::before,
+.seat-map.rectangle .slot-4 .seat-bubble::before,
+.seat-map.rectangle .slot-5 .seat-bubble::before {
+  top: -1px;
+  bottom: auto;
+}
+
+.seat-map.rectangle .slot-3 .seat-bubble::after,
+.seat-map.rectangle .slot-4 .seat-bubble::after,
+.seat-map.rectangle .slot-5 .seat-bubble::after {
+  top: -7px;
+  bottom: auto;
+  transform: translateX(-50%) rotate(225deg);
 }
 
 .seat-bubble::before {
@@ -865,6 +887,7 @@ input:focus {
   display: -webkit-box;
   overflow: hidden;
   text-align: center;
+  word-break: keep-all;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: var(--seat-bubble-line-clamp);
 }
