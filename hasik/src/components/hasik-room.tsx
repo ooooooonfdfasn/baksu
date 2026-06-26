@@ -8,7 +8,6 @@ import {
   Dices,
   Flag,
   Gift,
-  Menu,
   Megaphone,
   Pointer,
   Scissors,
@@ -24,16 +23,19 @@ type Mood = "quiet" | "talk" | "afterwork";
 type RealtimeMode = "demo" | "setup" | "live";
 type PaymentMethod = "split" | "single" | "roulette" | "rps";
 export type TableShape = "round" | "rectangle";
+export type RoomVenue = "a" | "b" | "c";
 
 interface HasikRoomProps {
   initialRoomTitle?: string;
   initialTableShape?: TableShape;
+  initialRoomVenue?: RoomVenue;
   initialQuickJoinEnabled?: boolean;
   canManageRoomSettings?: boolean;
   roomNameOverride?: string;
   onLeave?: () => void;
   onRoomTitleChange?: (title: string) => void;
   onTableShapeChange?: (shape: TableShape) => void;
+  onRoomVenueChange?: (venue: RoomVenue) => void;
   onQuickJoinChange?: (enabled: boolean) => void;
 }
 
@@ -165,6 +167,24 @@ function createSeedMessages(baseTime: number): ChatMessage[] {
 }
 
 const seedMessages = createSeedMessages(initialRenderTime);
+const assetBasePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+const roomVenues: Array<{
+  id: RoomVenue;
+  label: string;
+  image: string;
+}> = [
+  { id: "a", label: "장소 A", image: "/assets/hasik/venue-a-pocha.png" },
+  { id: "b", label: "장소 B", image: "/assets/hasik/venue-b-hanok.png" },
+  { id: "c", label: "장소 C", image: "/assets/hasik/venue-c-lounge.png" }
+];
+
+function getAssetPath(path: string) {
+  return `${assetBasePath}${path}`;
+}
+
+function isRoomVenue(value: unknown): value is RoomVenue {
+  return value === "a" || value === "b" || value === "c";
+}
 
 function createId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -269,12 +289,14 @@ function mergeMessage(current: ChatMessage[], nextMessage: ChatMessage) {
 export function HasikRoom({
   initialRoomTitle = "퇴근 후 익명 회식방",
   initialTableShape = "round",
+  initialRoomVenue = "a",
   initialQuickJoinEnabled = true,
   canManageRoomSettings = false,
   roomNameOverride,
   onLeave,
   onRoomTitleChange,
   onTableShapeChange,
+  onRoomVenueChange,
   onQuickJoinChange
 }: HasikRoomProps = {}) {
   const selectedRole: Role = "대리";
@@ -282,6 +304,7 @@ export function HasikRoom({
   const [nickname] = useState(createAnonymousNickname);
   const [roomTitle, setRoomTitle] = useState(initialRoomTitle);
   const [tableShape, setTableShape] = useState<TableShape>(initialTableShape);
+  const [roomVenue, setRoomVenue] = useState<RoomVenue>(initialRoomVenue);
   const [quickJoinEnabled, setQuickJoinEnabled] = useState(initialQuickJoinEnabled);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(seedMessages);
@@ -352,6 +375,11 @@ export function HasikRoom({
   );
   const isSecretCheckoutMine = secretCheckout?.userId === sessionIdRef.current;
   const secretCheckoutAmount = Number(secretAmount.replace(/[^\d]/g, ""));
+  const selectedVenue = roomVenues.find((venue) => venue.id === roomVenue) ?? roomVenues[0];
+  const venueBackdropStyle = {
+    "--room-venue-image": `url("${getAssetPath(selectedVenue.image)}")`
+  } as CSSProperties;
+  const menuButtonImage = getAssetPath("/assets/hasik/menu-clipboard.png");
 
   const user = useMemo<PresenceUser>(
     () => ({
@@ -422,6 +450,10 @@ export function HasikRoom({
   useEffect(() => {
     setQuickJoinEnabled(initialQuickJoinEnabled);
   }, [initialQuickJoinEnabled]);
+
+  useEffect(() => {
+    setRoomVenue(initialRoomVenue);
+  }, [initialRoomVenue]);
 
   useEffect(() => {
     if (!canManageRoomSettings && isSettingsOpen) {
@@ -532,6 +564,11 @@ export function HasikRoom({
           const nextShape = payload.tableShape;
           setTableShape(nextShape);
           onTableShapeChange?.(nextShape);
+        }
+
+        if (isRoomVenue(payload?.roomVenue)) {
+          setRoomVenue(payload.roomVenue);
+          onRoomVenueChange?.(payload.roomVenue);
         }
 
         if (typeof payload?.quickJoinEnabled === "boolean") {
@@ -669,7 +706,7 @@ export function HasikRoom({
       channelRef.current = null;
       void client.removeChannel(channel);
     };
-  }, [onQuickJoinChange, onRoomTitleChange, onTableShapeChange, roomName, supabase, user]);
+  }, [onQuickJoinChange, onRoomTitleChange, onRoomVenueChange, onTableShapeChange, roomName, supabase, user]);
 
   const updateRoomTitle = useCallback((nextValue: string) => {
     if (!canManageRoomSettings) {
@@ -699,6 +736,20 @@ export function HasikRoom({
       payload: { tableShape: nextShape }
     });
   }, [canManageRoomSettings, onTableShapeChange]);
+
+  const updateRoomVenue = useCallback((nextVenue: RoomVenue) => {
+    if (!canManageRoomSettings) {
+      return;
+    }
+
+    setRoomVenue(nextVenue);
+    onRoomVenueChange?.(nextVenue);
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "room_settings",
+      payload: { roomVenue: nextVenue }
+    });
+  }, [canManageRoomSettings, onRoomVenueChange]);
 
   const updateQuickJoin = useCallback((nextValue: boolean) => {
     if (!canManageRoomSettings) {
@@ -1020,6 +1071,7 @@ export function HasikRoom({
           <div className="room-grid">
             <section className="table-stage" aria-label="가상 테이블">
               <div className="table-scene">
+                <div className="room-venue-backdrop" style={venueBackdropStyle} aria-hidden="true" />
                 <div className="scene-toolbar">
                   <div className="scene-stats">
                     <span>접속 {onlineCount}명</span>
@@ -1101,9 +1153,10 @@ export function HasikRoom({
                   type="button"
                   className="menu-trigger table-menu-trigger"
                   onClick={() => setMenuOpen(true)}
+                  aria-label="메뉴판 열기"
+                  title="메뉴판"
                 >
-                  <Menu size={17} />
-                  메뉴판
+                  <img src={menuButtonImage} alt="" draggable={false} />
                 </button>
               </div>
 
@@ -1448,6 +1501,22 @@ export function HasikRoom({
                 >
                   직사각형
                 </button>
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <span>장소</span>
+              <div className="venue-list settings-options">
+                {roomVenues.map((venue) => (
+                  <button
+                    key={venue.id}
+                    type="button"
+                    className={roomVenue === venue.id ? "shape-chip selected" : "shape-chip"}
+                    onClick={() => updateRoomVenue(venue.id)}
+                  >
+                    {venue.label}
+                  </button>
+                ))}
               </div>
             </div>
 

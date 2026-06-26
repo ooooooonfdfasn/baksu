@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { HasikRoom } from "@/components/hasik-room";
-import type { TableShape } from "@/components/hasik-room";
+import type { RoomVenue, TableShape } from "@/components/hasik-room";
 
 interface LobbyRoom {
   id: string;
   title: string;
   tableShape: TableShape;
+  roomVenue: RoomVenue;
   createdAt: number;
   hostName: string;
   hostSessionId: string;
@@ -23,6 +24,7 @@ const defaultRooms: LobbyRoom[] = [
     id: "main-room",
     title: "퇴근 후 익명 회식방",
     tableShape: "round",
+    roomVenue: "a",
     createdAt: Date.now() - 1000 * 60 * 34,
     hostName: "시스템",
     hostSessionId: "system-host",
@@ -33,6 +35,7 @@ const defaultRooms: LobbyRoom[] = [
     id: "team-dinner-room",
     title: "프로젝트 뒤풀이",
     tableShape: "rectangle",
+    roomVenue: "b",
     createdAt: Date.now() - 1000 * 60 * 12,
     hostName: "익명",
     hostSessionId: "anonymous-host",
@@ -75,6 +78,10 @@ function isTableShape(value: unknown): value is TableShape {
   return value === "round" || value === "rectangle";
 }
 
+function isRoomVenue(value: unknown): value is RoomVenue {
+  return value === "a" || value === "b" || value === "c";
+}
+
 function normalizeMemberCount(value: unknown) {
   const count = Number(value);
 
@@ -103,6 +110,7 @@ function normalizeRooms(value: unknown, fallbackHostSessionId: string): LobbyRoo
           ? sourceRoom.title
           : "이름 없는 회식방";
       const tableShape = isTableShape(sourceRoom.tableShape) ? sourceRoom.tableShape : "round";
+      const roomVenue = isRoomVenue(sourceRoom.roomVenue) ? sourceRoom.roomVenue : "a";
       const createdAt =
         typeof sourceRoom.createdAt === "number" && Number.isFinite(sourceRoom.createdAt)
           ? sourceRoom.createdAt
@@ -118,6 +126,7 @@ function normalizeRooms(value: unknown, fallbackHostSessionId: string): LobbyRoo
           id,
           title,
           tableShape,
+          roomVenue,
           createdAt,
           hostName:
             typeof sourceRoom.hostName === "string" && sourceRoom.hostName.trim()
@@ -140,6 +149,7 @@ export function HasikApp() {
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [newRoomTitle, setNewRoomTitle] = useState("새 회식방");
   const [newRoomTableShape, setNewRoomTableShape] = useState<TableShape>("round");
+  const [newRoomVenue, setNewRoomVenue] = useState<RoomVenue>("a");
   const [newRoomQuickJoinEnabled, setNewRoomQuickJoinEnabled] = useState(true);
   const [isCreateRoomOpen, setCreateRoomOpen] = useState(false);
 
@@ -195,6 +205,7 @@ export function HasikApp() {
       id: `room-${createId()}`,
       title,
       tableShape: newRoomTableShape,
+      roomVenue: newRoomVenue,
       createdAt: Date.now(),
       hostName: "익명",
       hostSessionId: currentUserId,
@@ -205,6 +216,7 @@ export function HasikApp() {
     setRooms((current) => [nextRoom, ...current]);
     setNewRoomTitle("새 회식방");
     setNewRoomTableShape("round");
+    setNewRoomVenue("a");
     setNewRoomQuickJoinEnabled(true);
     setCreateRoomOpen(false);
     setSelectedRoomId(nextRoom.id);
@@ -241,6 +253,12 @@ export function HasikApp() {
     );
   }
 
+  function updateRoomVenue(roomId: string, roomVenue: RoomVenue) {
+    setRooms((current) =>
+      current.map((room) => (room.id === roomId ? { ...room, roomVenue } : room))
+    );
+  }
+
   function updateRoomQuickJoin(roomId: string, quickJoinEnabled: boolean) {
     setRooms((current) =>
       current.map((room) => (room.id === roomId ? { ...room, quickJoinEnabled } : room))
@@ -253,12 +271,14 @@ export function HasikApp() {
         key={selectedRoom.id}
         initialRoomTitle={selectedRoom.title}
         initialTableShape={selectedRoom.tableShape}
+        initialRoomVenue={selectedRoom.roomVenue}
         initialQuickJoinEnabled={selectedRoom.quickJoinEnabled}
         canManageRoomSettings={selectedRoom.hostSessionId === currentUserId}
         roomNameOverride={selectedRoom.id}
         onLeave={leaveRoom}
         onRoomTitleChange={(title) => updateRoomTitle(selectedRoom.id, title)}
         onTableShapeChange={(tableShape) => updateRoomTableShape(selectedRoom.id, tableShape)}
+        onRoomVenueChange={(roomVenue) => updateRoomVenue(selectedRoom.id, roomVenue)}
         onQuickJoinChange={(quickJoinEnabled) => updateRoomQuickJoin(selectedRoom.id, quickJoinEnabled)}
       />
     );
@@ -380,6 +400,29 @@ export function HasikApp() {
                   onClick={() => setNewRoomTableShape("rectangle")}
                 >
                   직사각형
+                </button>
+              </div>
+              <div className="create-room-options venue-create-options">
+                <button
+                  type="button"
+                  className={newRoomVenue === "a" ? "selected" : ""}
+                  onClick={() => setNewRoomVenue("a")}
+                >
+                  장소 A
+                </button>
+                <button
+                  type="button"
+                  className={newRoomVenue === "b" ? "selected" : ""}
+                  onClick={() => setNewRoomVenue("b")}
+                >
+                  장소 B
+                </button>
+                <button
+                  type="button"
+                  className={newRoomVenue === "c" ? "selected" : ""}
+                  onClick={() => setNewRoomVenue("c")}
+                >
+                  장소 C
                 </button>
               </div>
               <label className="lobby-checkbox">

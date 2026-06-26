@@ -5,6 +5,9 @@ const githubPagesBasePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "/baksu/hasik";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.0.17"],
+  env: {
+    NEXT_PUBLIC_BASE_PATH: isGithubPages ? githubPagesBasePath : ""
+  },
   reactStrictMode: true,
   ...(isGithubPages
     ? {
