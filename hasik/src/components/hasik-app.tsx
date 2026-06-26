@@ -14,10 +14,12 @@ interface LobbyRoom {
   hostSessionId: string;
   memberCount: number;
   quickJoinEnabled: boolean;
+  debugMode?: boolean;
 }
 
 const lobbyStorageKey = "hasik:lobby-rooms";
 const lobbyUserStorageKey = "hasik:lobby-user-id";
+const debugRoomId = "debug-full-seats-room";
 
 const defaultRooms: LobbyRoom[] = [
   {
@@ -92,12 +94,34 @@ function normalizeMemberCount(value: unknown) {
   return Math.max(0, Math.floor(count));
 }
 
+function createDebugRoom(fallbackHostSessionId: string): LobbyRoom {
+  return {
+    id: debugRoomId,
+    title: "말풍선 디버그 방",
+    tableShape: "round",
+    roomVenue: "a",
+    createdAt: Date.now() - 1000 * 60,
+    hostName: "테스트",
+    hostSessionId: fallbackHostSessionId,
+    memberCount: 8,
+    quickJoinEnabled: false,
+    debugMode: true
+  };
+}
+
+function ensureDebugRoom(rooms: LobbyRoom[], fallbackHostSessionId: string) {
+  return [
+    createDebugRoom(fallbackHostSessionId),
+    ...rooms.filter((room) => room.id !== debugRoomId)
+  ];
+}
+
 function normalizeRooms(value: unknown, fallbackHostSessionId: string): LobbyRoom[] {
   if (!Array.isArray(value)) {
-    return defaultRooms;
+    return ensureDebugRoom(defaultRooms, fallbackHostSessionId);
   }
 
-  return value
+  const normalizedRooms = value
     .flatMap((room): LobbyRoom[] => {
       if (!room || typeof room !== "object") {
         return [];
@@ -137,15 +161,19 @@ function normalizeRooms(value: unknown, fallbackHostSessionId: string): LobbyRoo
               ? sourceRoom.hostSessionId
               : fallbackHostSessionId,
           memberCount,
-          quickJoinEnabled: sourceRoom.quickJoinEnabled !== false
+          quickJoinEnabled: sourceRoom.quickJoinEnabled !== false,
+          debugMode: sourceRoom.debugMode === true
         }
       ];
     });
+
+  return ensureDebugRoom(normalizedRooms, fallbackHostSessionId);
 }
 
 export function HasikApp() {
-  const [rooms, setRooms] = useState<LobbyRoom[]>(defaultRooms);
   const [currentUserId] = useState(getLobbyUserId);
+  const [rooms, setRooms] = useState<LobbyRoom[]>(() => ensureDebugRoom(defaultRooms, currentUserId));
+  const [hasLoadedRooms, setHasLoadedRooms] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [newRoomTitle, setNewRoomTitle] = useState("새 회식방");
   const [newRoomTableShape, setNewRoomTableShape] = useState<TableShape>("round");
@@ -161,20 +189,26 @@ export function HasikApp() {
         setRooms(normalizeRooms(JSON.parse(savedRooms), currentUserId));
       }
     } catch {
-      setRooms(defaultRooms);
+      setRooms(ensureDebugRoom(defaultRooms, currentUserId));
+    } finally {
+      setHasLoadedRooms(true);
     }
   }, [currentUserId]);
 
   useEffect(() => {
+    if (!hasLoadedRooms) {
+      return;
+    }
+
     localStorage.setItem(lobbyStorageKey, JSON.stringify(rooms));
-  }, [rooms]);
+  }, [hasLoadedRooms, rooms]);
 
   const selectedRoom = useMemo(
     () => rooms.find((room) => room.id === selectedRoomId) ?? null,
     [rooms, selectedRoomId]
   );
   const quickJoinRooms = useMemo(
-    () => rooms.filter((room) => room.quickJoinEnabled && room.memberCount > 0),
+    () => rooms.filter((room) => !room.debugMode && room.quickJoinEnabled && room.memberCount > 0),
     [rooms]
   );
 
@@ -182,7 +216,10 @@ export function HasikApp() {
     setRooms((current) =>
       current.map((currentRoom) =>
         currentRoom.id === room.id
-          ? { ...currentRoom, memberCount: currentRoom.memberCount + 1 }
+          ? {
+              ...currentRoom,
+              memberCount: currentRoom.debugMode ? 8 : currentRoom.memberCount + 1
+            }
           : currentRoom
       )
     );
@@ -234,6 +271,10 @@ export function HasikApp() {
           return room.memberCount > 0 ? [room] : [];
         }
 
+        if (room.debugMode) {
+          return [{ ...room, memberCount: 8 }];
+        }
+
         const nextMemberCount = room.memberCount - 1;
         return nextMemberCount > 0 ? [{ ...room, memberCount: nextMemberCount }] : [];
       })
@@ -274,6 +315,7 @@ export function HasikApp() {
         initialRoomVenue={selectedRoom.roomVenue}
         initialQuickJoinEnabled={selectedRoom.quickJoinEnabled}
         canManageRoomSettings={selectedRoom.hostSessionId === currentUserId}
+        debugMode={selectedRoom.debugMode}
         roomNameOverride={selectedRoom.id}
         onLeave={leaveRoom}
         onRoomTitleChange={(title) => updateRoomTitle(selectedRoom.id, title)}
@@ -334,7 +376,8 @@ export function HasikApp() {
                   <span>
                     <strong>{room.title}</strong>
                     <small>
-                      익명 전용 | {room.tableShape === "round" ? "원탁" : "직사각형"} | {room.memberCount}명 |{" "}
+                      {room.debugMode ? "테스트" : "익명 전용"} |{" "}
+                      {room.tableShape === "round" ? "원탁" : "직사각형"} | {room.memberCount}명 |{" "}
                       {room.quickJoinEnabled ? "빠른참가" : "직접참가"}
                     </small>
                   </span>

@@ -31,6 +31,7 @@ interface HasikRoomProps {
   initialRoomVenue?: RoomVenue;
   initialQuickJoinEnabled?: boolean;
   canManageRoomSettings?: boolean;
+  debugMode?: boolean;
   roomNameOverride?: string;
   onLeave?: () => void;
   onRoomTitleChange?: (title: string) => void;
@@ -128,6 +129,170 @@ const bubbleLifetimeMs = 10000;
 const clockMarks = Array.from({ length: 12 }, (_, index) => index * 30);
 const maxSeatCount = 8;
 const initialRenderTime = Date.UTC(2026, 0, 1, 12, 0);
+const koreanSurnames = Array.from(new Set([
+  "김",
+  "이",
+  "박",
+  "최",
+  "정",
+  "강",
+  "조",
+  "윤",
+  "장",
+  "임",
+  "한",
+  "오",
+  "서",
+  "신",
+  "권",
+  "황",
+  "안",
+  "송",
+  "류",
+  "전",
+  "홍",
+  "고",
+  "문",
+  "양",
+  "손",
+  "배",
+  "백",
+  "허",
+  "유",
+  "남",
+  "심",
+  "노",
+  "하",
+  "곽",
+  "성",
+  "차",
+  "주",
+  "우",
+  "구",
+  "민",
+  "진",
+  "지",
+  "엄",
+  "채",
+  "원",
+  "천",
+  "방",
+  "공",
+  "현",
+  "함",
+  "변",
+  "염",
+  "여",
+  "추",
+  "도",
+  "소",
+  "석",
+  "선",
+  "설",
+  "마",
+  "길",
+  "연",
+  "위",
+  "표",
+  "명",
+  "기",
+  "반",
+  "견",
+  "곡",
+  "궉",
+  "군",
+  "나",
+  "뇌",
+  "단",
+  "당",
+  "등",
+  "만",
+  "목",
+  "미",
+  "수",
+  "음",
+  "점",
+  "준",
+  "태",
+  "필",
+  "형",
+  "왕",
+  "금",
+  "옥",
+  "육",
+  "인",
+  "맹",
+  "제",
+  "탁",
+  "국",
+  "모",
+  "어",
+  "은",
+  "편",
+  "용",
+  "예",
+  "봉",
+  "사",
+  "부",
+  "빈",
+  "피",
+  "가",
+  "간",
+  "갈",
+  "감",
+  "경",
+  "계",
+  "궁",
+  "내",
+  "담",
+  "대",
+  "돈",
+  "동",
+  "두",
+  "라",
+  "매",
+  "묵",
+  "묘",
+  "범",
+  "복",
+  "빙",
+  "상",
+  "승",
+  "시",
+  "아",
+  "애",
+  "야",
+  "온",
+  "옹",
+  "완",
+  "운",
+  "자",
+  "종",
+  "좌",
+  "창",
+  "초",
+  "탄",
+  "판",
+  "팽",
+  "해",
+  "호",
+  "화"
+]));
+const debugRoster: Array<Pick<PresenceUser, "id" | "nickname" | "role" | "mood">> = [
+  { id: "debug-seat-1", nickname: "김익명214", role: "인턴", mood: "talk" },
+  { id: "debug-seat-2", nickname: "오익명381", role: "사원", mood: "afterwork" },
+  { id: "debug-seat-3", nickname: "박익명507", role: "대리", mood: "talk" },
+  { id: "debug-seat-4", nickname: "최익명672", role: "과장", mood: "quiet" },
+  { id: "debug-seat-5", nickname: "정익명745", role: "부장", mood: "afterwork" },
+  { id: "debug-seat-6", nickname: "강익명836", role: "사원", mood: "talk" },
+  { id: "debug-seat-7", nickname: "이익명923", role: "대리", mood: "afterwork" }
+];
+const debugChatBodies = [
+  "지금 말풍선 기본 길이 확인 중입니다.",
+  "평범한 길이의 회식방 채팅입니다. 이 정도면 보통 대화처럼 보여야 합니다.",
+  "조금 더 긴 문장을 보내서 옆자리 말풍선과 간격이 자연스럽게 유지되는지 확인하고 있습니다.",
+  "최대 글자수에 가까운 테스트 문장입니다. 말풍선이 가능한 한 길게 늘어나되 다른 사람 말풍선과 겹치지 않고 원탁에서는 두 줄만 보여야 합니다."
+];
 const seatPositions = [
   { x: 50, y: 88 },
   { x: 24, y: 76 },
@@ -195,7 +360,8 @@ function createId() {
 }
 
 function createAnonymousNickname() {
-  return `익명${Math.floor(100 + Math.random() * 900)}`;
+  const surname = koreanSurnames[Math.floor(Math.random() * koreanSurnames.length)];
+  return `${surname}익명${Math.floor(100 + Math.random() * 900)}`;
 }
 
 function formatClock(value: number) {
@@ -286,12 +452,26 @@ function mergeMessage(current: ChatMessage[], nextMessage: ChatMessage) {
     .slice(-80);
 }
 
+function createDebugMessage(member: PresenceUser, at: number, index: number): ChatMessage {
+  const body = debugChatBodies[index % debugChatBodies.length];
+
+  return {
+    id: `debug-message-${member.id}-${at}-${index}`,
+    nickname: member.nickname,
+    role: member.role,
+    body: body.slice(0, 120),
+    at,
+    kind: "normal"
+  };
+}
+
 export function HasikRoom({
   initialRoomTitle = "퇴근 후 익명 회식방",
   initialTableShape = "round",
   initialRoomVenue = "a",
   initialQuickJoinEnabled = true,
   canManageRoomSettings = false,
+  debugMode = false,
   roomNameOverride,
   onLeave,
   onRoomTitleChange,
@@ -339,7 +519,9 @@ export function HasikRoom({
   const level = getLevel(stayMinutes);
   const cooldownRemainingMs = Math.max(0, cooldownUntil - Date.now());
   const isCoolingDown = cooldownRemainingMs > 0;
-  const onlineCount = supabase
+  const onlineCount = debugMode
+    ? maxSeatCount
+    : supabase
     ? Math.max(presence.length, 1)
     : hasMounted
       ? 17 + (Math.floor(now / 1000) % 5)
@@ -392,7 +574,21 @@ export function HasikRoom({
     [nickname, startedAt]
   );
 
+  const debugMembers = useMemo<PresenceUser[]>(() => {
+    return [
+      user,
+      ...debugRoster.map((member, index) => ({
+        ...member,
+        joinedAt: startedAt - (index + 1) * 42000
+      }))
+    ].slice(0, maxSeatCount);
+  }, [startedAt, user]);
+
   const seatMembers = useMemo(() => {
+    if (debugMode) {
+      return Array.from({ length: maxSeatCount }, (_, index) => debugMembers[index] ?? null);
+    }
+
     const nextMembers: PresenceUser[] = [user];
     const seenMemberIds = new Set([user.id]);
 
@@ -406,7 +602,7 @@ export function HasikRoom({
     });
 
     return Array.from({ length: maxSeatCount }, (_, index) => nextMembers[index] ?? null);
-  }, [presence, user]);
+  }, [debugMembers, debugMode, presence, user]);
 
   const latestMessageByMember = useMemo(() => {
     const nextMessages = new Map<string, ChatMessage>();
@@ -507,6 +703,13 @@ export function HasikRoom({
         { id: "demo-1", nickname: "정사원", role: "사원", joinedAt: Date.now() - 200000, mood: "talk" },
         { id: "demo-2", nickname: "오부장", role: "부장", joinedAt: Date.now() - 500000, mood: "quiet" }
       ]);
+      return;
+    }
+
+    if (debugMode) {
+      setConnected(false);
+      setRealtimeMode("demo");
+      setPresence([]);
       return;
     }
 
@@ -706,7 +909,41 @@ export function HasikRoom({
       channelRef.current = null;
       void client.removeChannel(channel);
     };
-  }, [onQuickJoinChange, onRoomTitleChange, onRoomVenueChange, onTableShapeChange, roomName, supabase, user]);
+  }, [
+    debugMode,
+    onQuickJoinChange,
+    onRoomTitleChange,
+    onRoomVenueChange,
+    onTableShapeChange,
+    roomName,
+    supabase,
+    user
+  ]);
+
+  useEffect(() => {
+    if (!debugMode) {
+      return;
+    }
+
+    let messageIndex = 0;
+    setConnected(false);
+    setRealtimeMode("demo");
+    setPresence([]);
+    setMessages(
+      debugMembers.map((member, index) =>
+        createDebugMessage(member, Date.now() - (maxSeatCount - index) * 850, index)
+      )
+    );
+
+    const timer = window.setInterval(() => {
+      const member = debugMembers[messageIndex % debugMembers.length];
+      const nextMessage = createDebugMessage(member, Date.now(), messageIndex);
+      messageIndex += 1;
+      setMessages((current) => mergeMessage(current, nextMessage));
+    }, 1200);
+
+    return () => window.clearInterval(timer);
+  }, [debugMembers, debugMode]);
 
   const updateRoomTitle = useCallback((nextValue: string) => {
     if (!canManageRoomSettings) {
@@ -911,7 +1148,7 @@ export function HasikRoom({
       setCooldownTick((value) => value + 1);
       keepComposerFocus();
 
-      if (supabase && channelRef.current && connected) {
+      if (!debugMode && supabase && channelRef.current && connected) {
         setMessages((current) => mergeMessage(current, nextMessage));
         const { error } = await supabase
           .from("hasik_messages")
@@ -954,7 +1191,8 @@ export function HasikRoom({
       nickname,
       roomName,
       selectedRole,
-      supabase
+      supabase,
+      debugMode
     ]
   );
 
