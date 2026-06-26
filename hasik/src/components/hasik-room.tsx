@@ -1390,10 +1390,19 @@ export function HasikRoom({
                         return null;
                       }
 
+                      const bubbleStackLevel = Math.max(
+                        1,
+                        Math.min(
+                          bubbleLifetimeMs,
+                          Math.round(visibleSeatMessage.at - (now - bubbleLifetimeMs))
+                        )
+                      );
+
                       return (
                         <div
                           key={`bubble-${member?.id ?? index}`}
                           className={`seat-bubble-anchor slot-${index}`}
+                          style={{ zIndex: bubbleStackLevel }}
                         >
                           <button
                             type="button"
