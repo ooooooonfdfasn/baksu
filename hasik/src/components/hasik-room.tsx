@@ -279,13 +279,13 @@ const koreanSurnames = Array.from(new Set([
   "화"
 ]));
 const debugRoster: Array<Pick<PresenceUser, "id" | "nickname" | "role" | "mood">> = [
-  { id: "debug-seat-1", nickname: "김익명214", role: "인턴", mood: "talk" },
-  { id: "debug-seat-2", nickname: "오익명381", role: "사원", mood: "afterwork" },
-  { id: "debug-seat-3", nickname: "박익명507", role: "대리", mood: "talk" },
-  { id: "debug-seat-4", nickname: "최익명672", role: "과장", mood: "quiet" },
-  { id: "debug-seat-5", nickname: "정익명745", role: "부장", mood: "afterwork" },
-  { id: "debug-seat-6", nickname: "강익명836", role: "사원", mood: "talk" },
-  { id: "debug-seat-7", nickname: "이익명923", role: "대리", mood: "afterwork" }
+  { id: "debug-seat-1", nickname: "김인턴", role: "인턴", mood: "talk" },
+  { id: "debug-seat-2", nickname: "오사원", role: "사원", mood: "afterwork" },
+  { id: "debug-seat-3", nickname: "박대리", role: "대리", mood: "talk" },
+  { id: "debug-seat-4", nickname: "최과장", role: "과장", mood: "quiet" },
+  { id: "debug-seat-5", nickname: "정부장", role: "부장", mood: "afterwork" },
+  { id: "debug-seat-6", nickname: "강사원", role: "사원", mood: "talk" },
+  { id: "debug-seat-7", nickname: "이대리", role: "대리", mood: "afterwork" }
 ];
 const debugChatBodies = [
   "지금 말풍선 기본 길이 확인 중입니다.",
@@ -359,9 +359,9 @@ function createId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function createAnonymousNickname() {
+function createAnonymousNickname(role: Role) {
   const surname = koreanSurnames[Math.floor(Math.random() * koreanSurnames.length)];
-  return `${surname}익명${Math.floor(100 + Math.random() * 900)}`;
+  return `${surname}${role}`;
 }
 
 function formatClock(value: number) {
@@ -404,7 +404,8 @@ function getMemberKey(nickname: string, role: Role) {
 }
 
 function stripRoleSuffix(nickname: string, role: Role) {
-  return nickname.endsWith(role) ? nickname.slice(0, -role.length) || nickname : nickname;
+  const baseName = nickname.replace(/익명\d+$/, "");
+  return baseName.endsWith(role) ? baseName.slice(0, -role.length) || baseName : baseName;
 }
 
 function getRoleTone(role: Role) {
@@ -481,7 +482,7 @@ export function HasikRoom({
 }: HasikRoomProps = {}) {
   const selectedRole: Role = "대리";
   const mood: Mood = "afterwork";
-  const [nickname] = useState(createAnonymousNickname);
+  const [nickname] = useState(() => createAnonymousNickname(selectedRole));
   const [roomTitle, setRoomTitle] = useState(initialRoomTitle);
   const [tableShape, setTableShape] = useState<TableShape>(initialTableShape);
   const [roomVenue, setRoomVenue] = useState<RoomVenue>(initialRoomVenue);

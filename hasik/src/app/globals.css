@@ -859,42 +859,37 @@ input:focus {
 .seat-map.rectangle .slot-3 .seat-bubble::before,
 .seat-map.rectangle .slot-4 .seat-bubble::before,
 .seat-map.rectangle .slot-5 .seat-bubble::before {
-  top: -1px;
-  bottom: auto;
+  content: none;
 }
 
 .seat-map.rectangle .slot-3 .seat-bubble::after,
 .seat-map.rectangle .slot-4 .seat-bubble::after,
 .seat-map.rectangle .slot-5 .seat-bubble::after {
-  top: -7px;
+  top: -9px;
   bottom: auto;
-  transform: translateX(-50%) rotate(225deg);
+  border-top: 0;
+  border-bottom: 10px solid rgb(var(--bubble-bg-rgb) / 0.5);
+  transform: translateX(-50%);
 }
 
 .seat-bubble::before {
-  position: absolute;
-  bottom: -1px;
-  left: var(--bubble-tail-x, 50%);
-  z-index: 2;
-  width: 20px;
-  height: 9px;
-  background: rgb(var(--bubble-bg-rgb) / 0.5);
-  content: "";
-  transform: translateX(-50%);
+  content: none;
 }
 
 .seat-bubble::after {
   position: absolute;
-  bottom: -7px;
+  bottom: -9px;
   left: var(--bubble-tail-x, 50%);
   z-index: 1;
-  width: 12px;
-  height: 12px;
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  background: rgb(var(--bubble-bg-rgb) / 0.5);
+  width: 0;
+  height: 0;
+  border-top: 10px solid rgb(var(--bubble-bg-rgb) / 0.5);
+  border-right: 10px solid transparent;
+  border-bottom: 0;
+  border-left: 10px solid transparent;
+  background: transparent;
   content: "";
-  transform: translateX(-50%) rotate(45deg);
+  transform: translateX(-50%);
 }
 
 .seat-bubble span {
@@ -904,12 +899,8 @@ input:focus {
   overflow: hidden;
   text-align: center;
   word-break: keep-all;
-  -webkit-text-stroke: 0.7px var(--bubble-bg);
-  text-shadow:
-    0 1px 0 var(--bubble-bg),
-    1px 0 0 var(--bubble-bg),
-    -1px 0 0 var(--bubble-bg),
-    0 -1px 0 var(--bubble-bg);
+  -webkit-text-stroke: 0.3px var(--bubble-bg);
+  text-shadow: 0 0 1px var(--bubble-bg);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: var(--seat-bubble-line-clamp);
 }
@@ -952,6 +943,7 @@ input:focus {
 
 .seat-token .display-name {
   justify-content: center;
+  gap: 1px;
   width: 100%;
   font-size: 13px;
   font-weight: 900;
@@ -2831,7 +2823,7 @@ input:disabled {
 
 .seat-bubble::before,
 .seat-bubble::after {
-  background: rgb(var(--bubble-bg-rgb) / 0.5) !important;
+  background: transparent !important;
 }
 
 .menu-row.selected,
