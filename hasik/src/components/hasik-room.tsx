@@ -1357,15 +1357,6 @@ export function HasikRoom({
                           isMine ? "mine" : ""
                         ].join(" ")}
                       >
-                        {visibleSeatMessage ? (
-                          <button
-                            type="button"
-                            className={`seat-bubble ${visibleSeatMessage.kind ?? "normal"}`}
-                            onClick={() => setActiveProfile(visibleSeatMessage)}
-                          >
-                            <span>{visibleSeatMessage.body}</span>
-                          </button>
-                        ) : null}
                         <button
                           type="button"
                           className="seat-token"
@@ -1386,6 +1377,35 @@ export function HasikRoom({
                       </div>
                     );
                   })}
+
+                  <div className="seat-bubble-layer" aria-label="좌석 말풍선">
+                    {seatMembers.map((member, index) => {
+                      const seatMessage = member
+                        ? latestMessageByMember.get(getMemberKey(member.nickname, member.role))
+                        : null;
+                      const visibleSeatMessage =
+                        seatMessage && now - seatMessage.at <= bubbleLifetimeMs ? seatMessage : null;
+
+                      if (!visibleSeatMessage) {
+                        return null;
+                      }
+
+                      return (
+                        <div
+                          key={`bubble-${member?.id ?? index}`}
+                          className={`seat-bubble-anchor slot-${index}`}
+                        >
+                          <button
+                            type="button"
+                            className={`seat-bubble ${visibleSeatMessage.kind ?? "normal"}`}
+                            onClick={() => setActiveProfile(visibleSeatMessage)}
+                          >
+                            <span>{visibleSeatMessage.body}</span>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
                 <button
                   type="button"
