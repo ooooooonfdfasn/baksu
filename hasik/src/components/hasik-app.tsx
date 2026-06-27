@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { HasikRoom } from "@/components/hasik-room";
 import type { RoomVenue, TableShape } from "@/components/hasik-room";
+import { getSavedWalletState } from "@/lib/wallet";
 
 interface LobbyRoom {
   id: string;
@@ -52,6 +53,10 @@ function createId() {
   }
 
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function formatPrice(value: number) {
+  return `${new Intl.NumberFormat("ko-KR").format(value)}원`;
 }
 
 function getLobbyUserId() {
@@ -180,6 +185,7 @@ export function HasikApp() {
   const [newRoomVenue, setNewRoomVenue] = useState<RoomVenue>("a");
   const [newRoomQuickJoinEnabled, setNewRoomQuickJoinEnabled] = useState(true);
   const [isCreateRoomOpen, setCreateRoomOpen] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(() => getSavedWalletState().balance);
 
   useEffect(() => {
     try {
@@ -202,6 +208,25 @@ export function HasikApp() {
 
     localStorage.setItem(lobbyStorageKey, JSON.stringify(rooms));
   }, [hasLoadedRooms, rooms]);
+
+  useEffect(() => {
+    const syncWalletBalance = () => setWalletBalance(getSavedWalletState().balance);
+
+    syncWalletBalance();
+    const timer = window.setInterval(syncWalletBalance, 30000);
+    window.addEventListener("focus", syncWalletBalance);
+
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", syncWalletBalance);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedRoomId) {
+      setWalletBalance(getSavedWalletState().balance);
+    }
+  }, [selectedRoomId]);
 
   const selectedRoom = useMemo(
     () => rooms.find((room) => room.id === selectedRoomId) ?? null,
@@ -335,6 +360,7 @@ export function HasikApp() {
             <p>만들어진 회식방을 고르거나 새 방을 만드세요.</p>
           </div>
           <div className="lobby-actions">
+            <span className="money-pill lobby-money">내 돈 {formatPrice(walletBalance)}</span>
             <a className="lobby-guide-link" href="../articles/dinner-room-rules.html">
               이용안내
             </a>

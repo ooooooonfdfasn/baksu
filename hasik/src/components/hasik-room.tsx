@@ -7,7 +7,6 @@ import {
   CreditCard,
   Dices,
   Flag,
-  Gift,
   Megaphone,
   Pointer,
   Scissors,
@@ -17,6 +16,12 @@ import {
   UserRound
 } from "lucide-react";
 import { getHasikRoomName, getSupabaseBrowserClient } from "@/lib/supabase";
+import {
+  defaultWalletBalance,
+  getSavedWalletState,
+  getWalletResetAt,
+  saveWalletState
+} from "@/lib/wallet";
 
 type Role = "인턴" | "사원" | "대리" | "과장" | "부장";
 type Mood = "quiet" | "talk" | "afterwork";
@@ -110,8 +115,8 @@ interface PaymentParticipant {
 }
 
 const chatCooldownMs = 500;
-const defaultWalletBalance = 120000;
-const walletStorageKey = "hasik:wallet-balance";
+const megaphoneStorageKey = "hasik:megaphone-count";
+const megaphonePrice = 10000;
 const roles: Role[] = ["인턴", "사원", "대리", "과장", "부장"];
 const menuItems = [
   { id: "kimchi-jeon", name: "김치전", price: 16000, kind: "food", icon: "전" },
@@ -357,22 +362,22 @@ function getAssetPath(path: string) {
   return `${assetBasePath}${path}`;
 }
 
-function getSavedWalletBalance() {
+function getSavedMegaphoneCount() {
   if (typeof window === "undefined") {
-    return defaultWalletBalance;
+    return 0;
   }
 
   try {
-    const savedBalance = Number(localStorage.getItem(walletStorageKey));
+    const savedCount = Number(localStorage.getItem(megaphoneStorageKey));
 
-    if (Number.isFinite(savedBalance) && savedBalance >= 0) {
-      return Math.floor(savedBalance);
+    if (Number.isFinite(savedCount) && savedCount >= 0) {
+      return Math.floor(savedCount);
     }
   } catch {
-    return defaultWalletBalance;
+    return 0;
   }
 
-  return defaultWalletBalance;
+  return 0;
 }
 
 function isRoomVenue(value: unknown): value is RoomVenue {
@@ -525,7 +530,12 @@ export function HasikRoom({
   const [isMenuOpen, setMenuOpen] = useState(false);
   const [isOrderChoiceOpen, setOrderChoiceOpen] = useState(false);
   const [isPaymentOpen, setPaymentOpen] = useState(false);
-  const [walletBalance, setWalletBalance] = useState(getSavedWalletBalance);
+  const [walletBalance, setWalletBalance] = useState(() => getSavedWalletState().balance);
+  const [walletResetAt, setWalletResetAt] = useState(() => getSavedWalletState().resetAt);
+  const [isMegaphoneOpen, setMegaphoneOpen] = useState(false);
+  const [megaphoneInput, setMegaphoneInput] = useState("");
+  const [megaphoneCount, setMegaphoneCount] = useState(getSavedMegaphoneCount);
+  const [promotedBubbleId, setPromotedBubbleId] = useState<string | null>(null);
   const [menuSelections, setMenuSelections] = useState<Record<string, MenuSelection>>({});
   const [paymentVotes, setPaymentVotes] = useState<Record<string, PaymentVote>>({});
   const [paymentParticipants, setPaymentParticipants] = useState<Record<string, PaymentParticipant>>({});
@@ -694,12 +704,29 @@ export function HasikRoom({
   }, [supabase]);
 
   useEffect(() => {
+    saveWalletState(walletBalance, walletResetAt);
+  }, [walletBalance, walletResetAt]);
+
+  useEffect(() => {
+    if (!hasMounted) {
+      return;
+    }
+
+    const nextResetAt = getWalletResetAt(now);
+
+    if (nextResetAt !== walletResetAt) {
+      setWalletResetAt(nextResetAt);
+      setWalletBalance(defaultWalletBalance);
+    }
+  }, [hasMounted, now, walletResetAt]);
+
+  useEffect(() => {
     try {
-      localStorage.setItem(walletStorageKey, String(walletBalance));
+      localStorage.setItem(megaphoneStorageKey, String(megaphoneCount));
     } catch {
       return;
     }
-  }, [walletBalance]);
+  }, [megaphoneCount]);
 
   useEffect(() => {
     setQuickJoinEnabled(initialQuickJoinEnabled);
@@ -731,6 +758,16 @@ export function HasikRoom({
       feed.scrollTop = feed.scrollHeight;
     }
   }, [visibleMessages]);
+
+  useEffect(() => {
+    if (!promotedBubbleId) {
+      return;
+    }
+
+    if (!visibleMessages.some((message) => message.id === promotedBubbleId)) {
+      setPromotedBubbleId(null);
+    }
+  }, [promotedBubbleId, visibleMessages]);
 
   useEffect(() => {
     setReportStatus("");
@@ -1458,6 +1495,28 @@ export function HasikRoom({
     ]
   );
 
+  const buyMegaphone = useCallback(() => {
+    if (walletBalance < megaphonePrice) {
+      return;
+    }
+
+    setWalletBalance((current) => Math.max(0, current - megaphonePrice));
+    setMegaphoneCount((current) => current + 1);
+  }, [walletBalance]);
+
+  const sendMegaphoneMessage = useCallback(async () => {
+    const cleanBody = megaphoneInput.trim();
+
+    if (!cleanBody || megaphoneCount <= 0 || isCoolingDown) {
+      return;
+    }
+
+    setMegaphoneCount((current) => Math.max(0, current - 1));
+    setMegaphoneInput("");
+    setMegaphoneOpen(false);
+    await sendMessage(`[확성기] ${cleanBody}`, "system");
+  }, [isCoolingDown, megaphoneCount, megaphoneInput, sendMessage]);
+
   const reportProfile = useCallback(async () => {
     if (!activeProfile) {
       return;
@@ -1504,7 +1563,7 @@ export function HasikRoom({
             className="icon-action"
             title="확성기"
             onPointerDown={(event) => event.preventDefault()}
-            onClick={() => void sendMessage(`${nickname}님이 확성기를 켰습니다`, "system")}
+            onClick={() => setMegaphoneOpen(true)}
           >
             <Megaphone size={18} />
           </button>
@@ -1660,17 +1719,18 @@ export function HasikRoom({
                           Math.round(visibleSeatMessage.at - (now - bubbleLifetimeMs))
                         )
                       );
+                      const isPromotedBubble = promotedBubbleId === visibleSeatMessage.id;
 
                       return (
                         <div
                           key={`bubble-${member?.id ?? index}`}
                           className={`seat-bubble-anchor slot-${index}`}
-                          style={{ zIndex: bubbleStackLevel }}
+                          style={{ zIndex: isPromotedBubble ? bubbleLifetimeMs + 1 : bubbleStackLevel }}
                         >
                           <button
                             type="button"
                             className={`seat-bubble ${visibleSeatMessage.kind ?? "normal"}`}
-                            onClick={() => setActiveProfile(visibleSeatMessage)}
+                            onClick={() => setPromotedBubbleId(visibleSeatMessage.id)}
                           >
                             <span>{visibleSeatMessage.body}</span>
                           </button>
@@ -1710,17 +1770,6 @@ export function HasikRoom({
                   ))}
                 </div>
 
-                <div className="chat-header">
-                  <p>채팅</p>
-                  <button
-                    type="button"
-                    className="icon-action"
-                    title="골든벨"
-                    onClick={() => void sendMessage("제가 오늘 제로콜라 쏩니다", "bell")}
-                  >
-                    <Gift size={19} />
-                  </button>
-                </div>
               </section>
 
               {renderComposer("composer-shell docked-composer")}
@@ -1998,6 +2047,82 @@ export function HasikRoom({
           </section>
         </div>
       ) : null}
+      {isMegaphoneOpen ? (
+        <div
+          className="profile-backdrop centered-backdrop"
+          role="presentation"
+          onClick={() => setMegaphoneOpen(false)}
+        >
+          <section
+            className="megaphone-popover"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="megaphone-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="megaphone-head">
+              <div>
+                <p id="megaphone-title">확성기</p>
+                <span>확성기로 모든 회식방에 채팅을 보냅니다</span>
+              </div>
+              <button
+                type="button"
+                className="profile-close"
+                onClick={() => setMegaphoneOpen(false)}
+                aria-label="확성기 닫기"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="megaphone-body">
+              <div className="megaphone-status">
+                <span>보유 확성기</span>
+                <strong>{megaphoneCount}개</strong>
+              </div>
+              <button
+                type="button"
+                className="megaphone-buy-button"
+                onClick={buyMegaphone}
+                disabled={walletBalance < megaphonePrice}
+              >
+                확성기 구매 {formatPrice(megaphonePrice)}
+              </button>
+              <form
+                className="megaphone-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void sendMegaphoneMessage();
+                }}
+              >
+                <input
+                  aria-label="확성기 메시지"
+                  maxLength={120}
+                  placeholder="모든 회식방에 보낼 메시지"
+                  value={megaphoneInput}
+                  onChange={(event) => setMegaphoneInput(event.target.value)}
+                />
+                <div className="megaphone-actions">
+                  <button
+                    type="button"
+                    className="megaphone-cancel-button"
+                    onClick={() => setMegaphoneOpen(false)}
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="submit"
+                    className="megaphone-send-button"
+                    disabled={megaphoneCount <= 0 || isCoolingDown || !megaphoneInput.trim()}
+                  >
+                    전송
+                  </button>
+                </div>
+              </form>
+            </div>
+          </section>
+        </div>
+      ) : null}
       {isSettingsOpen ? (
         <div
           className="profile-backdrop"
@@ -2027,7 +2152,6 @@ export function HasikRoom({
             </div>
 
             <div className="settings-section">
-              <span>회식방 이름</span>
               <input
                 aria-label="회식방 이름"
                 maxLength={28}
@@ -2037,7 +2161,6 @@ export function HasikRoom({
             </div>
 
             <div className="settings-section">
-              <span>테이블</span>
               <div className="table-shape-list settings-options">
                 <button
                   type="button"
@@ -2057,7 +2180,6 @@ export function HasikRoom({
             </div>
 
             <div className="settings-section">
-              <span>장소</span>
               <div className="venue-list settings-options">
                 {roomVenues.map((venue) => (
                   <button
@@ -2073,7 +2195,6 @@ export function HasikRoom({
             </div>
 
             <div className="settings-section">
-              <span>빠른입장</span>
               <label className="settings-checkbox">
                 <input
                   type="checkbox"

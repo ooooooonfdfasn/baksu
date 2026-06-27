@@ -218,11 +218,13 @@ h1 {
 .icon-action,
 .send-button,
 .settings-button,
-.seat-bubble,
 .seat-token,
 .toggle-button,
 .menu-row,
 .order-button,
+.megaphone-buy-button,
+.megaphone-send-button,
+.megaphone-cancel-button,
 .payment-option,
 .profile-trigger,
 .profile-close,
@@ -249,11 +251,13 @@ h1 {
 .icon-action:hover,
 .send-button:hover,
 .settings-button:hover,
-.seat-bubble:hover,
 .seat-token:not(:disabled):hover,
 .toggle-button:hover,
 .menu-row:hover,
 .order-button:hover,
+.megaphone-buy-button:hover,
+.megaphone-send-button:hover,
+.megaphone-cancel-button:hover,
 .payment-option:hover,
 .profile-trigger:hover,
 .profile-close:hover,
@@ -959,6 +963,10 @@ input:focus {
   color: #fff0ca;
 }
 
+.seat-slot.mine .seat-token small {
+  color: #1d130f;
+}
+
 .seat-slot.mine .role-label {
   color: #fff7da;
   -webkit-text-stroke: 0.75px rgba(60, 29, 14, 0.96);
@@ -1023,7 +1031,7 @@ input:focus {
 
 .chat-panel {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
   height: clamp(540px, calc(100vh - 170px), 690px);
   min-height: 0;
   overflow: hidden;
@@ -1185,7 +1193,9 @@ input:focus {
 
 .send-button:disabled,
 .toggle-button:disabled,
-.report-button:disabled {
+.report-button:disabled,
+.megaphone-buy-button:disabled,
+.megaphone-send-button:disabled {
   cursor: not-allowed;
   opacity: 0.58;
   transform: none;
@@ -1243,7 +1253,8 @@ input:focus {
 }
 
 .menu-popover,
-.payment-popover {
+.payment-popover,
+.megaphone-popover {
   width: min(420px, 100%);
   border: 1px solid var(--line);
   background: var(--panel);
@@ -1256,6 +1267,10 @@ input:focus {
   overscroll-behavior: contain;
 }
 
+.megaphone-popover {
+  overflow: hidden;
+}
+
 .menu-head {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -1263,6 +1278,90 @@ input:focus {
   align-items: center;
   padding: 14px 16px;
   border-bottom: 1px solid var(--line);
+}
+
+.megaphone-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.megaphone-head p {
+  margin: 0;
+  font-weight: 950;
+}
+
+.megaphone-head span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.megaphone-body {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.megaphone-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  font-size: 13px;
+}
+
+.megaphone-status strong {
+  color: var(--amber);
+  font-weight: 950;
+}
+
+.megaphone-buy-button,
+.megaphone-send-button,
+.megaphone-cancel-button {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  color: var(--text);
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.megaphone-buy-button,
+.megaphone-send-button {
+  background: var(--amber);
+  color: var(--ink);
+  border-color: transparent;
+}
+
+.megaphone-buy-button:disabled,
+.megaphone-send-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.megaphone-form {
+  display: grid;
+  gap: 10px;
+}
+
+.megaphone-form input {
+  width: 100%;
+}
+
+.megaphone-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .menu-head p {
@@ -2362,7 +2461,7 @@ input:focus {
 
   .chat-panel {
     order: 0;
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr);
     height: auto;
     min-height: 0;
   }
@@ -2546,6 +2645,7 @@ main {
 .chat-panel,
 .chat-header,
 .menu-head,
+.megaphone-head,
 .settings-head,
 .settings-section + .settings-section,
 .profile-head {
@@ -2568,6 +2668,7 @@ h1 {
 .settings-popover,
 .menu-popover,
 .payment-popover,
+.megaphone-popover,
 .lobby-modal,
 .lobby-panel,
 .menu-item,
@@ -2587,6 +2688,9 @@ h1 {
 .secret-pay-button,
 .order-button,
 .order-choice-button,
+.megaphone-buy-button,
+.megaphone-send-button,
+.megaphone-cancel-button,
 .payment-option,
 .money-pill,
 .profile-close,
@@ -2607,6 +2711,7 @@ input {
 .settings-popover,
 .menu-popover,
 .payment-popover,
+.megaphone-popover,
 .lobby-modal,
 .lobby-panel {
   background:
@@ -2616,13 +2721,15 @@ input {
 .chat-panel,
 .menu-popover,
 .payment-popover,
+.megaphone-popover,
 .lobby-modal {
   border-radius: 28px !important;
 }
 
 .composer-shell,
 .profile-popover,
-.settings-popover {
+.settings-popover,
+.megaphone-popover {
   border-radius: 24px !important;
 }
 
@@ -2641,6 +2748,7 @@ input {
 .settings-popover,
 .menu-popover,
 .payment-popover,
+.megaphone-popover,
 .composer-shell,
 .lobby-modal,
 .lobby-panel {
@@ -2666,6 +2774,9 @@ input {
 .secret-pay-button:hover,
 .order-button:hover,
 .order-choice-button:hover,
+.megaphone-buy-button:hover,
+.megaphone-send-button:hover,
+.megaphone-cancel-button:hover,
 .payment-option:hover,
 .create-room-options button:hover,
 .create-room-button:hover,
@@ -2685,6 +2796,8 @@ input {
 .secret-claim-button,
 .secret-pay-button,
 .order-choice-button,
+.megaphone-buy-button,
+.megaphone-send-button,
 .order-button,
 .toggle-button[aria-pressed="true"] {
   border-color: var(--bhc-brown) !important;
@@ -2710,7 +2823,10 @@ input {
 .secret-claim-button,
 .secret-pay-button,
 .order-choice-button,
-.order-button {
+.order-button,
+.megaphone-buy-button,
+.megaphone-send-button,
+.megaphone-cancel-button {
   font-weight: 950;
 }
 
