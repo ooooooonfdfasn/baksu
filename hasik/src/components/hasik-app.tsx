@@ -14,6 +14,7 @@ interface LobbyRoom {
   hostName: string;
   hostSessionId: string;
   memberCount: number;
+  totalPaymentAmount: number;
   quickJoinEnabled: boolean;
   debugMode?: boolean;
 }
@@ -32,6 +33,7 @@ const defaultRooms: LobbyRoom[] = [
     hostName: "시스템",
     hostSessionId: "system-host",
     memberCount: 3,
+    totalPaymentAmount: 0,
     quickJoinEnabled: true
   },
   {
@@ -43,6 +45,7 @@ const defaultRooms: LobbyRoom[] = [
     hostName: "익명",
     hostSessionId: "anonymous-host",
     memberCount: 2,
+    totalPaymentAmount: 0,
     quickJoinEnabled: true
   }
 ];
@@ -57,6 +60,22 @@ function createId() {
 
 function formatPrice(value: number) {
   return `${new Intl.NumberFormat("ko-KR").format(value)}원`;
+}
+
+function formatDuration(totalMinutes: number) {
+  const minutes = Math.max(0, Math.floor(totalMinutes));
+  const hours = Math.floor(minutes / 60);
+  const restMinutes = minutes % 60;
+
+  if (hours > 0 && restMinutes > 0) {
+    return `${hours}시간 ${restMinutes}분`;
+  }
+
+  if (hours > 0) {
+    return `${hours}시간`;
+  }
+
+  return `${Math.max(minutes, 1)}분`;
 }
 
 function getLobbyUserId() {
@@ -109,6 +128,7 @@ function createDebugRoom(fallbackHostSessionId: string): LobbyRoom {
     hostName: "테스트",
     hostSessionId: fallbackHostSessionId,
     memberCount: 8,
+    totalPaymentAmount: 0,
     quickJoinEnabled: false,
     debugMode: true
   };
@@ -145,6 +165,10 @@ function normalizeRooms(value: unknown, fallbackHostSessionId: string): LobbyRoo
           ? sourceRoom.createdAt
           : Date.now();
       const memberCount = normalizeMemberCount(sourceRoom.memberCount);
+      const totalPaymentAmount =
+        typeof sourceRoom.totalPaymentAmount === "number" && Number.isFinite(sourceRoom.totalPaymentAmount)
+          ? Math.max(0, Math.floor(sourceRoom.totalPaymentAmount))
+          : 0;
 
       if (!id || memberCount < 1) {
         return [];
@@ -166,6 +190,7 @@ function normalizeRooms(value: unknown, fallbackHostSessionId: string): LobbyRoo
               ? sourceRoom.hostSessionId
               : fallbackHostSessionId,
           memberCount,
+          totalPaymentAmount,
           quickJoinEnabled: sourceRoom.quickJoinEnabled !== false,
           debugMode: sourceRoom.debugMode === true
         }
@@ -186,6 +211,7 @@ export function HasikApp() {
   const [newRoomQuickJoinEnabled, setNewRoomQuickJoinEnabled] = useState(true);
   const [isCreateRoomOpen, setCreateRoomOpen] = useState(false);
   const [walletBalance, setWalletBalance] = useState(() => getSavedWalletState().balance);
+  const [lobbyNow, setLobbyNow] = useState(() => Date.now());
 
   useEffect(() => {
     try {
@@ -220,6 +246,11 @@ export function HasikApp() {
       window.clearInterval(timer);
       window.removeEventListener("focus", syncWalletBalance);
     };
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setLobbyNow(Date.now()), 30000);
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -272,6 +303,7 @@ export function HasikApp() {
       hostName: "익명",
       hostSessionId: currentUserId,
       memberCount: 1,
+      totalPaymentAmount: 0,
       quickJoinEnabled: newRoomQuickJoinEnabled
     };
 
@@ -331,11 +363,23 @@ export function HasikApp() {
     );
   }
 
+  function addRoomPayment(roomId: string, amount: number) {
+    setRooms((current) =>
+      current.map((room) =>
+        room.id === roomId
+          ? { ...room, totalPaymentAmount: room.totalPaymentAmount + Math.max(0, Math.floor(amount)) }
+          : room
+      )
+    );
+  }
+
   if (selectedRoom) {
     return (
       <HasikRoom
         key={selectedRoom.id}
         initialRoomTitle={selectedRoom.title}
+        initialRoomCreatedAt={selectedRoom.createdAt}
+        initialTotalPaymentAmount={selectedRoom.totalPaymentAmount}
         initialTableShape={selectedRoom.tableShape}
         initialRoomVenue={selectedRoom.roomVenue}
         initialQuickJoinEnabled={selectedRoom.quickJoinEnabled}
@@ -347,6 +391,7 @@ export function HasikApp() {
         onTableShapeChange={(tableShape) => updateRoomTableShape(selectedRoom.id, tableShape)}
         onRoomVenueChange={(roomVenue) => updateRoomVenue(selectedRoom.id, roomVenue)}
         onQuickJoinChange={(quickJoinEnabled) => updateRoomQuickJoin(selectedRoom.id, quickJoinEnabled)}
+        onOrderCompleted={(amount) => addRoomPayment(selectedRoom.id, amount)}
       />
     );
   }
@@ -387,10 +432,6 @@ export function HasikApp() {
 
         <div className="lobby-grid">
           <section className="lobby-panel room-list-panel" aria-label="회식방 목록">
-            <div className="lobby-panel-head">
-              <strong>회식방 목록</strong>
-              <span>{rooms.length}</span>
-            </div>
             <div className="room-list">
               {rooms.length > 0 ? rooms.map((room) => (
                 <button
@@ -401,10 +442,10 @@ export function HasikApp() {
                 >
                   <span>
                     <strong>{room.title}</strong>
-                    <small>
-                      {room.debugMode ? "테스트" : "익명 전용"} |{" "}
-                      {room.tableShape === "round" ? "원탁" : "직사각형"} | {room.memberCount}명 |{" "}
-                      {room.quickJoinEnabled ? "빠른참가" : "직접참가"}
+                    <small className="room-list-meta">
+                      <span>{room.memberCount}명</span>
+                      <span>유지 {formatDuration(Math.floor((lobbyNow - room.createdAt) / 60000))}</span>
+                      <span>누적 결제 {formatPrice(room.totalPaymentAmount)}</span>
                     </small>
                   </span>
                   <em>참가</em>

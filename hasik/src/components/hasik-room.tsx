@@ -32,6 +32,8 @@ export type RoomVenue = "a" | "b" | "c";
 
 interface HasikRoomProps {
   initialRoomTitle?: string;
+  initialRoomCreatedAt?: number;
+  initialTotalPaymentAmount?: number;
   initialTableShape?: TableShape;
   initialRoomVenue?: RoomVenue;
   initialQuickJoinEnabled?: boolean;
@@ -43,6 +45,7 @@ interface HasikRoomProps {
   onTableShapeChange?: (shape: TableShape) => void;
   onRoomVenueChange?: (venue: RoomVenue) => void;
   onQuickJoinChange?: (enabled: boolean) => void;
+  onOrderCompleted?: (amount: number) => void;
 }
 
 interface ChatMessage {
@@ -412,24 +415,24 @@ function formatPrice(value: number) {
   return `${new Intl.NumberFormat("ko-KR").format(value)}원`;
 }
 
-function clampPercent(value: number) {
-  return Math.min(100, Math.max(0, value));
+function formatDuration(totalMinutes: number) {
+  const minutes = Math.max(0, Math.floor(totalMinutes));
+  const hours = Math.floor(minutes / 60);
+  const restMinutes = minutes % 60;
+
+  if (hours > 0 && restMinutes > 0) {
+    return `${hours}시간 ${restMinutes}분`;
+  }
+
+  if (hours > 0) {
+    return `${hours}시간`;
+  }
+
+  return `${Math.max(minutes, 1)}분`;
 }
 
-function getLevel(minutes: number) {
-  if (minutes >= 40) {
-    return { title: "팀장석", progress: 100, next: "오늘의 골든벨" };
-  }
-
-  if (minutes >= 20) {
-    return { title: "과장석", progress: 72, next: "팀장석까지 20분" };
-  }
-
-  if (minutes >= 8) {
-    return { title: "대리석", progress: 42, next: "과장석까지 12분" };
-  }
-
-  return { title: "인턴석", progress: 18, next: "대리석까지 8분" };
+function clampPercent(value: number) {
+  return Math.min(100, Math.max(0, value));
 }
 
 function getMemberKey(nickname: string, role: Role) {
@@ -501,6 +504,8 @@ function createDebugMessage(member: PresenceUser, at: number, index: number): Ch
 
 export function HasikRoom({
   initialRoomTitle = "퇴근 후 익명 회식방",
+  initialRoomCreatedAt = Date.now(),
+  initialTotalPaymentAmount = 0,
   initialTableShape = "round",
   initialRoomVenue = "a",
   initialQuickJoinEnabled = true,
@@ -511,12 +516,14 @@ export function HasikRoom({
   onRoomTitleChange,
   onTableShapeChange,
   onRoomVenueChange,
-  onQuickJoinChange
+  onQuickJoinChange,
+  onOrderCompleted
 }: HasikRoomProps = {}) {
   const selectedRole: Role = "대리";
   const mood: Mood = "afterwork";
   const [nickname] = useState(() => createAnonymousNickname(selectedRole));
   const [roomTitle, setRoomTitle] = useState(initialRoomTitle);
+  const [roomCreatedAt] = useState(initialRoomCreatedAt);
   const [tableShape, setTableShape] = useState<TableShape>(initialTableShape);
   const [roomVenue, setRoomVenue] = useState<RoomVenue>(initialRoomVenue);
   const [quickJoinEnabled, setQuickJoinEnabled] = useState(initialQuickJoinEnabled);
@@ -545,6 +552,7 @@ export function HasikRoom({
   const [secretCheckout, setSecretCheckout] = useState<SecretCheckout | null>(null);
   const [secretAmount, setSecretAmount] = useState("");
   const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null);
+  const [totalPaymentAmount, setTotalPaymentAmount] = useState(initialTotalPaymentAmount);
   const [reportStatus, setReportStatus] = useState("");
   const [isReporting, setIsReporting] = useState(false);
   const [cooldownUntil, setCooldownUntil] = useState(0);
@@ -557,11 +565,11 @@ export function HasikRoom({
   const chatFeedRef = useRef<HTMLDivElement | null>(null);
   const menuListRef = useRef<HTMLDivElement | null>(null);
   const activeComposerInputRef = useRef<HTMLInputElement | null>(null);
+  const completedOrderIdsRef = useRef(new Set<string>());
 
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const roomName = useMemo(() => roomNameOverride ?? getHasikRoomName(), [roomNameOverride]);
-  const stayMinutes = Math.floor((now - startedAt) / 60000);
-  const level = getLevel(stayMinutes);
+  const roomElapsedMinutes = Math.max(1, Math.floor((now - roomCreatedAt) / 60000));
   const cooldownRemainingMs = Math.max(0, cooldownUntil - Date.now());
   const isCoolingDown = cooldownRemainingMs > 0;
   const onlineCount = debugMode
@@ -688,6 +696,16 @@ export function HasikRoom({
 
     inputElement.focus({ preventScroll: true });
   }, []);
+
+  const registerCompletedPayment = useCallback((order: CompletedOrder) => {
+    if (completedOrderIdsRef.current.has(order.id)) {
+      return;
+    }
+
+    completedOrderIdsRef.current.add(order.id);
+    setTotalPaymentAmount((current) => current + order.amount);
+    onOrderCompleted?.(order.amount);
+  }, [onOrderCompleted]);
 
   useEffect(() => {
     const mountedAt = Date.now();
@@ -1061,14 +1079,17 @@ export function HasikRoom({
           return;
         }
 
-        setCompletedOrder({
+        const nextCompletedOrder = {
           id: payload.id,
           payerNickname: payload.payerNickname,
           payerRole: payload.payerRole as Role,
           amount: payload.amount,
           at: payload.at,
           label: typeof payload?.label === "string" ? payload.label : undefined
-        });
+        };
+
+        setCompletedOrder(nextCompletedOrder);
+        registerCompletedPayment(nextCompletedOrder);
         setSecretCheckout(null);
         setPaymentVotes({});
         setPaymentParticipants({});
@@ -1101,6 +1122,7 @@ export function HasikRoom({
   }, [
     debugMode,
     onQuickJoinChange,
+    registerCompletedPayment,
     onRoomTitleChange,
     onRoomVenueChange,
     onTableShapeChange,
@@ -1217,6 +1239,7 @@ export function HasikRoom({
 
     setWalletBalance((current) => Math.max(0, current - orderTotal));
     setCompletedOrder(nextCompletedOrder);
+    registerCompletedPayment(nextCompletedOrder);
     resetPaymentSession();
     setOrderChoiceOpen(false);
     setMenuOpen(false);
@@ -1226,7 +1249,7 @@ export function HasikRoom({
       event: "order_completed",
       payload: nextCompletedOrder
     });
-  }, [nickname, orderTotal, resetPaymentSession, selectedRole, walletBalance]);
+  }, [nickname, orderTotal, registerCompletedPayment, resetPaymentSession, selectedRole, walletBalance]);
 
   const startTogetherOrder = useCallback(() => {
     if (orderTotal <= 0) {
@@ -1407,6 +1430,7 @@ export function HasikRoom({
 
     setWalletBalance((current) => Math.max(0, current - secretCheckoutAmount));
     setCompletedOrder(nextCompletedOrder);
+    registerCompletedPayment(nextCompletedOrder);
     setPaymentVotes({});
     setPaymentParticipants({});
     setPaymentVoteEndsAt(null);
@@ -1418,7 +1442,14 @@ export function HasikRoom({
       event: "order_completed",
       payload: nextCompletedOrder
     });
-  }, [isSecretCheckoutMine, nickname, secretCheckoutAmount, selectedRole, walletBalance]);
+  }, [
+    isSecretCheckoutMine,
+    nickname,
+    registerCompletedPayment,
+    secretCheckoutAmount,
+    selectedRole,
+    walletBalance
+  ]);
 
   const sendMessage = useCallback(
     async (body: string, kind: ChatMessage["kind"] = "normal") => {
@@ -1602,15 +1633,18 @@ export function HasikRoom({
         <section className="hero-room" aria-label="회식방">
           <div className="topbar">
             <div>
-              <h1>{roomTitle || "이름 없는 회식방"}</h1>
+              <h1>
+                {onLeave ? (
+                  <button type="button" className="room-home-title-button" onClick={onLeave}>
+                    회식
+                  </button>
+                ) : (
+                  "회식"
+                )}
+              </h1>
             </div>
             <div className="topbar-actions">
               <span className="money-pill topbar-money">내 돈 {formatPrice(walletBalance)}</span>
-              {onLeave ? (
-                <button type="button" className="leave-room-button" onClick={onLeave}>
-                  메인 메뉴
-                </button>
-              ) : null}
               <button
                 type="button"
                 className="room-settings-icon-button"
@@ -1634,11 +1668,19 @@ export function HasikRoom({
                 <div className="room-venue-backdrop" style={venueBackdropStyle} aria-hidden="true" />
                 <div className="scene-toolbar">
                   <div className="scene-stats">
+                    <strong className="scene-room-title">{roomTitle || "이름 없는 회식방"}</strong>
+                    <span className="stat-separator" aria-hidden="true">
+                      |
+                    </span>
                     <span>접속 {onlineCount}명</span>
                     <span className="stat-separator" aria-hidden="true">
                       |
                     </span>
-                    <span>누적 착석 {Math.max(stayMinutes, 1)}분</span>
+                    <span>누적 회식 시간 {formatDuration(roomElapsedMinutes)}</span>
+                    <span className="stat-separator" aria-hidden="true">
+                      |
+                    </span>
+                    <span>누적 결제 {formatPrice(totalPaymentAmount)}</span>
                   </div>
                   <div className="scene-actions">
                     <div className="analog-time" aria-label={`현재 ${formatClock(now)}`}>
@@ -1694,7 +1736,11 @@ export function HasikRoom({
                           ) : (
                             <span>빈자리</span>
                           )}
-                          <small>{member ? (isMine ? "내 자리" : "착석 중") : "착석 가능"}</small>
+                          <small>
+                            {member
+                              ? formatDuration(Math.floor((now - member.joinedAt) / 60000))
+                              : "착석 가능"}
+                          </small>
                         </button>
                       </div>
                     );

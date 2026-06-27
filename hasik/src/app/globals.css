@@ -99,6 +99,20 @@ button {
   min-width: 0;
 }
 
+.room-home-title-button {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  color: inherit;
+  cursor: pointer;
+}
+
+.room-home-title-button:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 5px;
+}
+
 .eyebrow {
   margin: 0 0 2px;
   color: var(--amber);
@@ -473,7 +487,19 @@ input:focus {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   pointer-events: auto;
+  white-space: nowrap;
+}
+
+.scene-room-title {
+  display: inline-block;
+  max-width: min(220px, 30vw);
+  overflow: hidden;
+  color: #fff4d5;
+  font-size: 13px;
+  font-weight: 950;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -2109,7 +2135,7 @@ input:focus {
   border-bottom: 0;
 }
 
-.room-list-item span {
+.room-list-item > span {
   display: grid;
   gap: 4px;
   min-width: 0;
@@ -2124,6 +2150,18 @@ input:focus {
 .room-list-item small {
   color: var(--muted);
   font-weight: 800;
+}
+
+.room-list-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 9px;
+}
+
+.room-list-meta span {
+  display: inline-flex;
+  align-items: center;
 }
 
 .room-list-item em {
@@ -2256,6 +2294,17 @@ input:focus {
   .scene-stats {
     gap: 5px;
     max-width: calc(100% - 88px);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .scene-stats::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scene-room-title {
+    max-width: 118px;
+    font-size: 12px;
   }
 
   .scene-stats span {
