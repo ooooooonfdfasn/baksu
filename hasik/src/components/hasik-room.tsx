@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
-  CreditCard,
   Dices,
   Flag,
   Megaphone,
@@ -26,7 +25,8 @@ import {
 type Role = "인턴" | "사원" | "대리" | "과장" | "부장";
 type Mood = "quiet" | "talk" | "afterwork";
 type RealtimeMode = "demo" | "setup" | "live";
-type PaymentMethod = "split" | "single" | "roulette" | "rps";
+type PaymentMethod = "split" | "roulette" | "rps";
+type RpsChoice = "scissors" | "rock" | "paper";
 export type TableShape = "round" | "rectangle";
 export type RoomVenue = "a" | "b" | "c";
 
@@ -100,6 +100,9 @@ interface CompletedOrder {
   amount: number;
   at: number;
   label?: string;
+  summary?: string;
+  detail?: string;
+  method?: PaymentMethod;
 }
 
 interface PaymentVote {
@@ -115,6 +118,19 @@ interface PaymentParticipant {
   nickname: string;
   role: Role;
   at: number;
+}
+
+interface RpsPlayer {
+  userId: string;
+  nickname: string;
+  role: Role;
+  choice: RpsChoice;
+  score: number;
+}
+
+interface RpsRound {
+  players: RpsPlayer[];
+  loserUserId: string;
 }
 
 const chatCooldownMs = 500;
@@ -138,9 +154,14 @@ const paymentOptions: Array<{
   icon: typeof Users;
 }> = [
   { id: "split", label: "더치페이", description: "각자 주문한 만큼 나누기", icon: Users },
-  { id: "single", label: "한 명이 계산", description: "오늘의 결제 담당 한 명 지정", icon: CreditCard },
   { id: "roulette", label: "룰렛", description: "운에 맡겨 결제 담당 뽑기", icon: Dices },
   { id: "rps", label: "가위바위보", description: "짧게 승부 보고 정하기", icon: Scissors }
+];
+
+const rpsChoices: Array<{ id: RpsChoice; label: string }> = [
+  { id: "scissors", label: "가위" },
+  { id: "rock", label: "바위" },
+  { id: "paper", label: "보" }
 ];
 
 const bubbleLifetimeMs = 10000;
@@ -415,6 +436,47 @@ function formatPrice(value: number) {
   return `${new Intl.NumberFormat("ko-KR").format(value)}원`;
 }
 
+function getRpsLabel(choice: RpsChoice) {
+  return rpsChoices.find((item) => item.id === choice)?.label ?? choice;
+}
+
+function compareRps(left: RpsChoice, right: RpsChoice) {
+  if (left === right) {
+    return 0;
+  }
+
+  if (
+    (left === "scissors" && right === "paper") ||
+    (left === "rock" && right === "scissors") ||
+    (left === "paper" && right === "rock")
+  ) {
+    return 1;
+  }
+
+  return -1;
+}
+
+function createPaymentParticipant(member: PresenceUser): PaymentParticipant {
+  return {
+    userId: member.id,
+    nickname: member.nickname,
+    role: member.role,
+    at: Date.now()
+  };
+}
+
+function createPaymentVote(member: PresenceUser | PaymentParticipant, method: PaymentMethod): PaymentVote {
+  const userId = "id" in member ? member.id : member.userId;
+
+  return {
+    userId,
+    nickname: member.nickname,
+    role: member.role,
+    method,
+    at: Date.now()
+  };
+}
+
 function formatDuration(totalMinutes: number) {
   const minutes = Math.max(0, Math.floor(totalMinutes));
   const hours = Math.floor(minutes / 60);
@@ -549,6 +611,7 @@ export function HasikRoom({
   const [paymentVoteEndsAt, setPaymentVoteEndsAt] = useState<number | null>(null);
   const [paymentVoteClosedAt, setPaymentVoteClosedAt] = useState<number | null>(null);
   const [finalPaymentMethod, setFinalPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [rpsRound, setRpsRound] = useState<RpsRound | null>(null);
   const [secretCheckout, setSecretCheckout] = useState<SecretCheckout | null>(null);
   const [secretAmount, setSecretAmount] = useState("");
   const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null);
@@ -812,6 +875,18 @@ export function HasikRoom({
       return;
     }
 
+    if (debugMode) {
+      const debugParticipants = Object.fromEntries(
+        debugMembers.map((member) => [member.id, createPaymentParticipant(member)])
+      );
+
+      setPaymentParticipants(debugParticipants);
+
+      return () => {
+        setPaymentParticipants({});
+      };
+    }
+
     const participant: PaymentParticipant = {
       userId: sessionIdRef.current,
       nickname,
@@ -840,7 +915,7 @@ export function HasikRoom({
         payload: { userId: participant.userId }
       });
     };
-  }, [completedOrder, isPaymentOpen, nickname, selectedRole]);
+  }, [completedOrder, debugMembers, debugMode, isPaymentOpen, nickname, selectedRole]);
 
   useEffect(() => {
     if (!supabase) {
@@ -1140,6 +1215,25 @@ export function HasikRoom({
     setConnected(false);
     setRealtimeMode("demo");
     setPresence([]);
+    setMenuSelections(
+      Object.fromEntries(
+        debugMembers.slice(0, 4).map((member, index) => {
+          const item = menuItems[index % menuItems.length];
+          const selection: MenuSelection = {
+            id: `debug-menu-${member.id}-${item.id}`,
+            userId: member.id,
+            nickname: member.nickname,
+            role: member.role,
+            itemId: item.id,
+            x: 44 + index * 12,
+            y: 22 + index * 14,
+            at: Date.now() - index * 800
+          };
+
+          return [selection.id, selection];
+        })
+      )
+    );
     setMessages(
       debugMembers.map((member, index) =>
         createDebugMessage(member, Date.now() - (maxSeatCount - index) * 850, index)
@@ -1219,6 +1313,7 @@ export function HasikRoom({
     setPaymentVoteEndsAt(null);
     setPaymentVoteClosedAt(null);
     setFinalPaymentMethod(null);
+    setRpsRound(null);
     setSecretCheckout(null);
     setSecretAmount("");
   }, []);
@@ -1291,7 +1386,7 @@ export function HasikRoom({
       return;
     }
 
-    const endsAt = Date.now() + bubbleLifetimeMs;
+    const endsAt = Date.now() + (debugMode ? 3000 : bubbleLifetimeMs);
     setPaymentVoteEndsAt(endsAt);
     void channelRef.current?.send({
       type: "broadcast",
@@ -1300,6 +1395,7 @@ export function HasikRoom({
     });
   }, [
     completedOrder,
+    debugMode,
     isPaymentOpen,
     paymentParticipantCount,
     paymentRequiredVoteCount,
@@ -1372,13 +1468,22 @@ export function HasikRoom({
         return;
       }
 
-      const nextVote: PaymentVote = {
-        userId: sessionIdRef.current,
-        nickname,
-        role: selectedRole,
-        method,
-        at: Date.now()
-      };
+      const nextVote = createPaymentVote(user, method);
+
+      if (debugMode) {
+        const debugVotes = Object.fromEntries(
+          debugMembers.map((member) => {
+            const vote = createPaymentVote(member, method);
+            return [vote.userId, vote];
+          })
+        );
+
+        setPaymentVotes((current) => ({
+          ...current,
+          ...debugVotes
+        }));
+        return;
+      }
 
       setPaymentVotes((current) => ({
         ...current,
@@ -1390,8 +1495,116 @@ export function HasikRoom({
         payload: nextVote
       });
     },
-    [completedOrder, nickname, paymentVoteClosedAt, selectedRole]
+    [completedOrder, debugMembers, debugMode, paymentVoteClosedAt, user]
   );
+
+  const completeResolvedPayment = useCallback((
+    nextCompletedOrder: CompletedOrder,
+    walletChargeAmount = 0
+  ) => {
+    if (orderTotal <= 0) {
+      return;
+    }
+
+    if (walletChargeAmount > 0 && walletBalance < walletChargeAmount) {
+      return;
+    }
+
+    if (walletChargeAmount > 0) {
+      setWalletBalance((current) => Math.max(0, current - walletChargeAmount));
+    }
+
+    setCompletedOrder(nextCompletedOrder);
+    registerCompletedPayment(nextCompletedOrder);
+    setSecretCheckout(null);
+    setSecretAmount("");
+    setPaymentVoteEndsAt(null);
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "order_completed",
+      payload: nextCompletedOrder
+    });
+  }, [orderTotal, registerCompletedPayment, walletBalance]);
+
+  const completePaymentByMethod = useCallback((method: PaymentMethod) => {
+    const participants =
+      paymentParticipantList.length > 0 ? paymentParticipantList : [createPaymentParticipant(user)];
+    const participantCount = Math.max(1, participants.length);
+
+    if (method === "split") {
+      const shareAmount = Math.ceil(orderTotal / participantCount);
+
+      completeResolvedPayment({
+        id: createId(),
+        payerNickname: nickname,
+        payerRole: selectedRole,
+        amount: orderTotal,
+        at: Date.now(),
+        label: "더치페이 완료",
+        summary: "더치페이 결제 완료",
+        detail: `${participantCount}명이 ${formatPrice(shareAmount)}씩 나눴습니다.`,
+        method
+      }, shareAmount);
+      return;
+    }
+
+    if (method === "roulette") {
+      const payer = participants[Math.floor(Math.random() * participants.length)] ?? participants[0];
+      const isMine = payer.userId === sessionIdRef.current;
+
+      completeResolvedPayment({
+        id: createId(),
+        payerNickname: payer.nickname,
+        payerRole: payer.role,
+        amount: orderTotal,
+        at: Date.now(),
+        label: "룰렛 계산 완료",
+        summary: "룰렛 결제 완료",
+        detail: `${payer.nickname}${payer.role} 당첨`,
+        method
+      }, isMine ? orderTotal : 0);
+    }
+  }, [completeResolvedPayment, nickname, orderTotal, paymentParticipantList, selectedRole, user]);
+
+  const playRpsRound = useCallback((myChoice: RpsChoice) => {
+    const participants =
+      paymentParticipantList.length > 0 ? paymentParticipantList : [createPaymentParticipant(user)];
+    const playerChoices = participants.map((participant, index) => ({
+      userId: participant.userId,
+      nickname: participant.nickname,
+      role: participant.role,
+      choice:
+        participant.userId === sessionIdRef.current
+          ? myChoice
+          : rpsChoices[(index + Math.floor(Date.now() / 1000)) % rpsChoices.length].id,
+      score: 0
+    }));
+    const scoredPlayers = playerChoices.map((player) => ({
+      ...player,
+      score: playerChoices.reduce(
+        (score, opponent) => score + compareRps(player.choice, opponent.choice),
+        0
+      )
+    }));
+    const lowestScore = Math.min(...scoredPlayers.map((player) => player.score));
+    const loser = scoredPlayers.find((player) => player.score === lowestScore) ?? scoredPlayers[0];
+
+    setRpsRound({
+      players: scoredPlayers,
+      loserUserId: loser.userId
+    });
+    completeResolvedPayment({
+      id: createId(),
+      payerNickname: loser.nickname,
+      payerRole: loser.role,
+      amount: orderTotal,
+      at: Date.now(),
+      label: "패자 계산",
+      summary: "가위바위보 결제 완료",
+      detail: `${loser.nickname}${loser.role} 패배`,
+      method: "rps"
+    }, loser.userId === sessionIdRef.current ? orderTotal : 0);
+  }, [completeResolvedPayment, orderTotal, paymentParticipantList, user]);
 
   const claimSecretCheckout = useCallback(() => {
     if (completedOrder) {
@@ -2018,15 +2231,71 @@ export function HasikRoom({
             </div>
 
             {completedOrder ? (
-              <div className="order-complete">
+              <div className="order-complete payment-complete-card">
+                <div className="payment-complete-badge" aria-hidden="true">
+                  완료
+                </div>
                 <strong>
-                  <NameWithRole
-                    nickname={completedOrder.payerNickname}
-                    role={completedOrder.payerRole}
-                  />{" "}
-                  {completedOrder.label ?? "계산 완료"}
+                  {completedOrder.summary ? (
+                    completedOrder.summary
+                  ) : (
+                    <>
+                      <NameWithRole
+                        nickname={completedOrder.payerNickname}
+                        role={completedOrder.payerRole}
+                      />{" "}
+                      {completedOrder.label ?? "계산 완료"}
+                    </>
+                  )}
                 </strong>
                 <span>{formatPrice(completedOrder.amount)}</span>
+                {completedOrder.detail ? <small>{completedOrder.detail}</small> : null}
+                {rpsRound ? (
+                  <div className="rps-result-list">
+                    {rpsRound.players.map((player) => (
+                      <div
+                        key={player.userId}
+                        className={player.userId === rpsRound.loserUserId ? "loser" : ""}
+                      >
+                        <span>
+                          <NameWithRole nickname={player.nickname} role={player.role} />
+                        </span>
+                        <strong>{getRpsLabel(player.choice)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : paymentVoteClosedAt && finalPaymentMethod && finalPaymentOption ? (
+              <div className="payment-resolution">
+                <strong>{finalPaymentOption.label} 확정</strong>
+                <small>
+                  {finalPaymentMethod === "rps"
+                    ? "가위바위보를 내면 AI들도 동시에 냅니다."
+                    : "결제 완료 버튼을 누르면 결과 팝업이 표시됩니다."}
+                </small>
+                {finalPaymentMethod === "rps" ? (
+                  <div className="rps-choice-list">
+                    {rpsChoices.map((choice) => (
+                      <button
+                        key={choice.id}
+                        type="button"
+                        className="rps-choice-button"
+                        onClick={() => playRpsRound(choice.id)}
+                      >
+                        {choice.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="payment-complete-button"
+                    onClick={() => completePaymentByMethod(finalPaymentMethod)}
+                  >
+                    결제 완료
+                  </button>
+                )}
               </div>
             ) : (
               <>

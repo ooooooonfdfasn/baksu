@@ -25,6 +25,7 @@ interface LobbyRoom {
 const lobbyStorageKey = "hasik:lobby-rooms";
 const lobbyUserStorageKey = "hasik:lobby-user-id";
 const debugRoomId = "debug-full-seats-room";
+const paymentDebugRoomId = "debug-payment-room";
 
 const defaultRooms: LobbyRoom[] = [
   {
@@ -143,16 +144,35 @@ function createDebugRoom(fallbackHostSessionId: string): LobbyRoom {
   };
 }
 
-function ensureDebugRoom(rooms: LobbyRoom[], fallbackHostSessionId: string) {
+function createPaymentDebugRoom(fallbackHostSessionId: string): LobbyRoom {
+  return {
+    id: paymentDebugRoomId,
+    title: "결제 디버그 방",
+    tableShape: "rectangle",
+    roomVenue: "c",
+    createdAt: Date.now() - 1000 * 60 * 7,
+    hostName: "테스트",
+    hostSessionId: fallbackHostSessionId,
+    memberCount: 8,
+    totalPaymentAmount: 0,
+    quickJoinEnabled: false,
+    isPrivate: false,
+    password: "",
+    debugMode: true
+  };
+}
+
+function ensureDebugRooms(rooms: LobbyRoom[], fallbackHostSessionId: string) {
   return [
+    createPaymentDebugRoom(fallbackHostSessionId),
     createDebugRoom(fallbackHostSessionId),
-    ...rooms.filter((room) => room.id !== debugRoomId)
+    ...rooms.filter((room) => room.id !== debugRoomId && room.id !== paymentDebugRoomId)
   ];
 }
 
 function normalizeRooms(value: unknown, fallbackHostSessionId: string): LobbyRoom[] {
   if (!Array.isArray(value)) {
-    return ensureDebugRoom(defaultRooms, fallbackHostSessionId);
+    return ensureDebugRooms(defaultRooms, fallbackHostSessionId);
   }
 
   const normalizedRooms = value
@@ -213,12 +233,12 @@ function normalizeRooms(value: unknown, fallbackHostSessionId: string): LobbyRoo
       ];
     });
 
-  return ensureDebugRoom(normalizedRooms, fallbackHostSessionId);
+  return ensureDebugRooms(normalizedRooms, fallbackHostSessionId);
 }
 
 export function HasikApp() {
   const [currentUserId] = useState(getLobbyUserId);
-  const [rooms, setRooms] = useState<LobbyRoom[]>(() => ensureDebugRoom(defaultRooms, currentUserId));
+  const [rooms, setRooms] = useState<LobbyRoom[]>(() => ensureDebugRooms(defaultRooms, currentUserId));
   const [hasLoadedRooms, setHasLoadedRooms] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [newRoomTitle, setNewRoomTitle] = useState("새 회식방");
@@ -242,7 +262,7 @@ export function HasikApp() {
         setRooms(normalizeRooms(JSON.parse(savedRooms), currentUserId));
       }
     } catch {
-      setRooms(ensureDebugRoom(defaultRooms, currentUserId));
+      setRooms(ensureDebugRooms(defaultRooms, currentUserId));
     } finally {
       setHasLoadedRooms(true);
     }

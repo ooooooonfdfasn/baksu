@@ -1652,6 +1652,41 @@ input:focus {
   font-weight: 950;
 }
 
+.payment-resolution {
+  display: grid;
+  gap: 10px;
+  margin: 14px 16px 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+}
+
+.payment-resolution strong {
+  font-weight: 950;
+}
+
+.payment-resolution small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.payment-complete-button,
+.rps-choice-button {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  background: var(--amber);
+  color: var(--ink);
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.rps-choice-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .payment-status-row {
   display: flex;
   align-items: center;
@@ -1703,16 +1738,91 @@ input:focus {
 
 .order-complete {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   margin: 14px 16px 16px;
   padding: 14px;
   border: 1px solid var(--line);
   background: var(--panel-strong);
 }
 
+.payment-complete-card {
+  position: relative;
+  overflow: hidden;
+  animation: payment-pop 420ms cubic-bezier(0.2, 1.4, 0.28, 1) both;
+}
+
+.payment-complete-card::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  content: "";
+  transform: translateX(-120%);
+  animation: payment-shine 1100ms ease 160ms both;
+}
+
+.payment-complete-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 54px;
+  min-height: 54px;
+  border: 3px solid var(--amber);
+  border-radius: 50%;
+  color: var(--amber);
+  font-size: 14px;
+  font-weight: 950;
+  transform: rotate(-10deg);
+}
+
 .order-complete span {
   color: var(--blue);
   font-weight: 950;
+}
+
+.order-complete small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.rps-result-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.rps-result-list div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 8px;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 232, 194, 0.14);
+  background: rgba(255, 248, 236, 0.05);
+}
+
+.rps-result-list .loser {
+  border-color: rgba(255, 198, 45, 0.62);
+  background: rgba(255, 198, 45, 0.12);
+}
+
+@keyframes payment-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes payment-shine {
+  100% {
+    transform: translateX(120%);
+  }
 }
 
 .settings-head {
