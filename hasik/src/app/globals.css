@@ -2105,6 +2105,11 @@ input:focus {
   color: #ffffff;
 }
 
+.create-room-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .room-list-panel {
   gap: 0;
   width: min(760px, 100%);
@@ -2141,10 +2146,22 @@ input:focus {
   min-width: 0;
 }
 
-.room-list-item strong {
+.room-list-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.room-list-title span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.room-lock-icon {
+  flex: 0 0 auto;
+  color: var(--amber);
 }
 
 .room-list-item small {
@@ -2162,6 +2179,13 @@ input:focus {
 .room-list-meta span {
   display: inline-flex;
   align-items: center;
+}
+
+.private-room-error {
+  margin: -4px 0 0;
+  color: var(--bhc-yellow);
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .room-list-item em {

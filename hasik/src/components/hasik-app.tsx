@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { LockKeyhole } from "lucide-react";
 import { HasikRoom } from "@/components/hasik-room";
 import type { RoomVenue, TableShape } from "@/components/hasik-room";
 import { getSavedWalletState } from "@/lib/wallet";
@@ -16,6 +17,8 @@ interface LobbyRoom {
   memberCount: number;
   totalPaymentAmount: number;
   quickJoinEnabled: boolean;
+  isPrivate: boolean;
+  password: string;
   debugMode?: boolean;
 }
 
@@ -34,7 +37,9 @@ const defaultRooms: LobbyRoom[] = [
     hostSessionId: "system-host",
     memberCount: 3,
     totalPaymentAmount: 0,
-    quickJoinEnabled: true
+    quickJoinEnabled: true,
+    isPrivate: false,
+    password: ""
   },
   {
     id: "team-dinner-room",
@@ -46,7 +51,9 @@ const defaultRooms: LobbyRoom[] = [
     hostSessionId: "anonymous-host",
     memberCount: 2,
     totalPaymentAmount: 0,
-    quickJoinEnabled: true
+    quickJoinEnabled: true,
+    isPrivate: false,
+    password: ""
   }
 ];
 
@@ -130,6 +137,8 @@ function createDebugRoom(fallbackHostSessionId: string): LobbyRoom {
     memberCount: 8,
     totalPaymentAmount: 0,
     quickJoinEnabled: false,
+    isPrivate: false,
+    password: "",
     debugMode: true
   };
 }
@@ -169,6 +178,11 @@ function normalizeRooms(value: unknown, fallbackHostSessionId: string): LobbyRoo
         typeof sourceRoom.totalPaymentAmount === "number" && Number.isFinite(sourceRoom.totalPaymentAmount)
           ? Math.max(0, Math.floor(sourceRoom.totalPaymentAmount))
           : 0;
+      const password =
+        typeof sourceRoom.password === "string" && sourceRoom.password.trim()
+          ? sourceRoom.password
+          : "";
+      const isPrivate = sourceRoom.isPrivate === true && Boolean(password);
 
       if (!id || memberCount < 1) {
         return [];
@@ -192,6 +206,8 @@ function normalizeRooms(value: unknown, fallbackHostSessionId: string): LobbyRoo
           memberCount,
           totalPaymentAmount,
           quickJoinEnabled: sourceRoom.quickJoinEnabled !== false,
+          isPrivate,
+          password: isPrivate ? password : "",
           debugMode: sourceRoom.debugMode === true
         }
       ];
@@ -209,7 +225,12 @@ export function HasikApp() {
   const [newRoomTableShape, setNewRoomTableShape] = useState<TableShape>("round");
   const [newRoomVenue, setNewRoomVenue] = useState<RoomVenue>("a");
   const [newRoomQuickJoinEnabled, setNewRoomQuickJoinEnabled] = useState(true);
+  const [newRoomIsPrivate, setNewRoomPrivate] = useState(false);
+  const [newRoomPassword, setNewRoomPassword] = useState("");
   const [isCreateRoomOpen, setCreateRoomOpen] = useState(false);
+  const [pendingPrivateRoom, setPendingPrivateRoom] = useState<LobbyRoom | null>(null);
+  const [privateRoomPassword, setPrivateRoomPassword] = useState("");
+  const [privateRoomError, setPrivateRoomError] = useState("");
   const [walletBalance, setWalletBalance] = useState(() => getSavedWalletState().balance);
   const [lobbyNow, setLobbyNow] = useState(() => Date.now());
 
@@ -264,9 +285,10 @@ export function HasikApp() {
     [rooms, selectedRoomId]
   );
   const quickJoinRooms = useMemo(
-    () => rooms.filter((room) => !room.debugMode && room.quickJoinEnabled && room.memberCount > 0),
+    () => rooms.filter((room) => !room.debugMode && !room.isPrivate && room.quickJoinEnabled && room.memberCount > 0),
     [rooms]
   );
+  const canCreateRoom = !newRoomIsPrivate || Boolean(newRoomPassword.trim());
 
   function enterRoom(room: LobbyRoom) {
     setRooms((current) =>
@@ -282,6 +304,38 @@ export function HasikApp() {
     setSelectedRoomId(room.id);
   }
 
+  function requestEnterRoom(room: LobbyRoom) {
+    if (!room.isPrivate) {
+      enterRoom(room);
+      return;
+    }
+
+    setPendingPrivateRoom(room);
+    setPrivateRoomPassword("");
+    setPrivateRoomError("");
+  }
+
+  function closePrivateRoomPrompt() {
+    setPendingPrivateRoom(null);
+    setPrivateRoomPassword("");
+    setPrivateRoomError("");
+  }
+
+  function submitPrivateRoomPassword() {
+    if (!pendingPrivateRoom) {
+      return;
+    }
+
+    if (privateRoomPassword.trim() !== pendingPrivateRoom.password) {
+      setPrivateRoomError("비밀번호가 맞지 않습니다.");
+      return;
+    }
+
+    const nextRoom = pendingPrivateRoom;
+    closePrivateRoomPrompt();
+    enterRoom(nextRoom);
+  }
+
   function quickJoinRoom() {
     if (quickJoinRooms.length === 0) {
       return;
@@ -293,6 +347,11 @@ export function HasikApp() {
 
   function createRoom() {
     const title = newRoomTitle.trim() || "이름 없는 회식방";
+    const password = newRoomIsPrivate ? newRoomPassword.trim() : "";
+
+    if (newRoomIsPrivate && !password) {
+      return;
+    }
 
     const nextRoom: LobbyRoom = {
       id: `room-${createId()}`,
@@ -304,7 +363,9 @@ export function HasikApp() {
       hostSessionId: currentUserId,
       memberCount: 1,
       totalPaymentAmount: 0,
-      quickJoinEnabled: newRoomQuickJoinEnabled
+      quickJoinEnabled: newRoomQuickJoinEnabled,
+      isPrivate: newRoomIsPrivate,
+      password
     };
 
     setRooms((current) => [nextRoom, ...current]);
@@ -312,6 +373,8 @@ export function HasikApp() {
     setNewRoomTableShape("round");
     setNewRoomVenue("a");
     setNewRoomQuickJoinEnabled(true);
+    setNewRoomPrivate(false);
+    setNewRoomPassword("");
     setCreateRoomOpen(false);
     setSelectedRoomId(nextRoom.id);
   }
@@ -438,10 +501,13 @@ export function HasikApp() {
                   key={room.id}
                   type="button"
                   className="room-list-item"
-                  onClick={() => enterRoom(room)}
+                  onClick={() => requestEnterRoom(room)}
                 >
                   <span>
-                    <strong>{room.title}</strong>
+                    <strong className="room-list-title">
+                      {room.isPrivate ? <LockKeyhole className="room-lock-icon" size={15} aria-hidden="true" /> : null}
+                      <span>{room.title}</span>
+                    </strong>
                     <small className="room-list-meta">
                       <span>{room.memberCount}명</span>
                       <span>유지 {formatDuration(Math.floor((lobbyNow - room.createdAt) / 60000))}</span>
@@ -543,10 +609,84 @@ export function HasikApp() {
                 />
                 <span>빠른참가 허용</span>
               </label>
-              <button type="button" className="create-room-button" onClick={createRoom}>
+              <label className="lobby-checkbox">
+                <input
+                  type="checkbox"
+                  checked={newRoomIsPrivate}
+                  onChange={(event) => {
+                    setNewRoomPrivate(event.target.checked);
+
+                    if (!event.target.checked) {
+                      setNewRoomPassword("");
+                    }
+                  }}
+                />
+                <span>비밀방</span>
+              </label>
+              <input
+                type="password"
+                aria-label="비밀방 비밀번호"
+                placeholder="비밀번호"
+                value={newRoomPassword}
+                disabled={!newRoomIsPrivate}
+                onChange={(event) => setNewRoomPassword(event.target.value)}
+              />
+              <button type="button" className="create-room-button" onClick={createRoom} disabled={!canCreateRoom}>
                 방 만들기
               </button>
             </div>
+          </section>
+        </div>
+      ) : null}
+      {pendingPrivateRoom ? (
+        <div
+          className="profile-backdrop centered-backdrop"
+          role="presentation"
+          onClick={closePrivateRoomPrompt}
+        >
+          <section
+            className="lobby-modal private-room-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="private-room-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="lobby-modal-head">
+              <div>
+                <p id="private-room-title">비밀방 입장</p>
+                <span>{pendingPrivateRoom.title}</span>
+              </div>
+              <button
+                type="button"
+                className="profile-close"
+                onClick={closePrivateRoomPrompt}
+                aria-label="비밀방 입장 닫기"
+              >
+                ×
+              </button>
+            </div>
+            <form
+              className="lobby-modal-body"
+              onSubmit={(event) => {
+                event.preventDefault();
+                submitPrivateRoomPassword();
+              }}
+            >
+              <input
+                type="password"
+                aria-label="비밀방 입장 비밀번호"
+                placeholder="비밀번호"
+                value={privateRoomPassword}
+                onChange={(event) => {
+                  setPrivateRoomPassword(event.target.value);
+                  setPrivateRoomError("");
+                }}
+              />
+              {privateRoomError ? <p className="private-room-error">{privateRoomError}</p> : null}
+              <button type="submit" className="create-room-button">
+                입장
+              </button>
+            </form>
           </section>
         </div>
       ) : null}
