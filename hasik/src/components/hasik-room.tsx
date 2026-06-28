@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
-  Dices,
   Flag,
   Hand,
   HandFist,
@@ -14,7 +13,6 @@ import {
   Scissors,
   Send,
   Settings2,
-  Users,
   UserRound
 } from "lucide-react";
 import { getHasikRoomName, getSupabaseBrowserClient } from "@/lib/supabase";
@@ -28,7 +26,7 @@ import {
 type Role = "인턴" | "사원" | "대리" | "과장" | "부장";
 type Mood = "quiet" | "talk" | "afterwork";
 type RealtimeMode = "demo" | "setup" | "live";
-type PaymentMethod = "split" | "roulette" | "rps";
+type PaymentMethod = "rps";
 type RpsChoice = "scissors" | "rock" | "paper";
 export type TableShape = "round" | "rectangle";
 export type RoomVenue = "a" | "b" | "c";
@@ -89,13 +87,6 @@ interface MenuSelection {
   at: number;
 }
 
-interface SecretCheckout {
-  userId: string;
-  nickname: string;
-  role: Role;
-  at: number;
-}
-
 interface CompletedOrder {
   id: string;
   payerNickname: string;
@@ -141,12 +132,6 @@ interface RpsRound {
   needsReplay: boolean;
 }
 
-interface RouletteWheelState {
-  rotation: number;
-  isSpinning: boolean;
-  winnerId: string | null;
-}
-
 const chatCooldownMs = 500;
 const megaphoneStorageKey = "hasik:megaphone-count";
 const megaphonePrice = 10000;
@@ -165,10 +150,8 @@ const paymentOptions: Array<{
   id: PaymentMethod;
   label: string;
   description: string;
-  icon: typeof Users;
+  icon: typeof Scissors;
 }> = [
-  { id: "split", label: "더치페이", description: "각자 주문한 만큼 나누기", icon: Users },
-  { id: "roulette", label: "룰렛", description: "운에 맡겨 결제 담당 뽑기", icon: Dices },
   { id: "rps", label: "가위바위보", description: "짧게 승부 보고 정하기", icon: Scissors }
 ];
 
@@ -177,7 +160,6 @@ const rpsChoices: Array<{ id: RpsChoice; label: string; icon: typeof Hand }> = [
   { id: "rock", label: "바위", icon: HandFist },
   { id: "paper", label: "보", icon: Hand }
 ];
-const rouletteColors = ["#ffc62d", "#f7a928", "#fff0bf", "#e79620", "#ffdb72", "#d88919"];
 
 const bubbleLifetimeMs = 10000;
 const clockMarks = Array.from({ length: 12 }, (_, index) => index * 30);
@@ -623,13 +605,6 @@ export function HasikRoom({
   const [paymentVoteClosedAt, setPaymentVoteClosedAt] = useState<number | null>(null);
   const [finalPaymentMethod, setFinalPaymentMethod] = useState<PaymentMethod | null>(null);
   const [rpsRound, setRpsRound] = useState<RpsRound | null>(null);
-  const [rouletteWheel, setRouletteWheel] = useState<RouletteWheelState>({
-    rotation: 0,
-    isSpinning: false,
-    winnerId: null
-  });
-  const [secretCheckout, setSecretCheckout] = useState<SecretCheckout | null>(null);
-  const [secretAmount, setSecretAmount] = useState("");
   const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null);
   const [totalPaymentAmount, setTotalPaymentAmount] = useState(initialTotalPaymentAmount);
   const [reportStatus, setReportStatus] = useState("");
@@ -702,8 +677,6 @@ export function HasikRoom({
   const paymentVoteRemainingSeconds = paymentVoteEndsAt
     ? Math.max(0, Math.ceil((paymentVoteEndsAt - now) / 1000))
     : null;
-  const isSecretCheckoutMine = secretCheckout?.userId === sessionIdRef.current;
-  const secretCheckoutAmount = Number(secretAmount.replace(/[^\d]/g, ""));
   const selectedVenue = roomVenues.find((venue) => venue.id === roomVenue) ?? roomVenues[0];
   const venueBackdropStyle = {
     "--room-venue-image": `url("${getAssetPath(selectedVenue.image)}")`
@@ -725,14 +698,6 @@ export function HasikRoom({
     () => (paymentParticipantList.length > 0 ? paymentParticipantList : [fallbackPaymentParticipant]),
     [fallbackPaymentParticipant, paymentParticipantList]
   );
-  const rouletteSegmentAngle = 360 / Math.max(1, paymentPlayerList.length);
-  const rouletteGradient = paymentPlayerList
-    .map((_, index) => {
-      const startAngle = index * rouletteSegmentAngle;
-      const endAngle = (index + 1) * rouletteSegmentAngle;
-      return `${rouletteColors[index % rouletteColors.length]} ${startAngle}deg ${endAngle}deg`;
-    })
-    .join(", ");
 
   const debugMembers = useMemo<PresenceUser[]>(() => {
     return [
@@ -1153,24 +1118,6 @@ export function HasikRoom({
         );
         setPaymentVoteEndsAt(null);
       })
-      .on("broadcast", { event: "secret_checkout" }, ({ payload }) => {
-        if (
-          typeof payload?.userId !== "string" ||
-          typeof payload?.nickname !== "string" ||
-          typeof payload?.role !== "string" ||
-          typeof payload?.at !== "number" ||
-          !roles.includes(payload.role as Role)
-        ) {
-          return;
-        }
-
-        setSecretCheckout({
-          userId: payload.userId,
-          nickname: payload.nickname,
-          role: payload.role as Role,
-          at: payload.at
-        });
-      })
       .on("broadcast", { event: "order_completed" }, ({ payload }) => {
         if (
           typeof payload?.id !== "string" ||
@@ -1201,7 +1148,6 @@ export function HasikRoom({
 
         setCompletedOrder(nextCompletedOrder);
         registerCompletedPayment(nextCompletedOrder);
-        setSecretCheckout(null);
         setPaymentVotes({});
         setPaymentParticipants({});
         setPaymentVoteEndsAt(null);
@@ -1210,11 +1156,6 @@ export function HasikRoom({
         if (nextCompletedOrder.method !== "rps") {
           setRpsRound(null);
         }
-        setRouletteWheel((current) => ({
-          ...current,
-          isSpinning: false,
-          winnerId: null
-        }));
       })
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState<PresenceUser>();
@@ -1358,13 +1299,6 @@ export function HasikRoom({
     setPaymentVoteClosedAt(null);
     setFinalPaymentMethod(null);
     setRpsRound(null);
-    setRouletteWheel((current) => ({
-      ...current,
-      isSpinning: false,
-      winnerId: null
-    }));
-    setSecretCheckout(null);
-    setSecretAmount("");
   }, []);
 
   const completeSoloOrder = useCallback(() => {
@@ -1565,8 +1499,6 @@ export function HasikRoom({
 
     setCompletedOrder(nextCompletedOrder);
     registerCompletedPayment(nextCompletedOrder);
-    setSecretCheckout(null);
-    setSecretAmount("");
     setPaymentVoteEndsAt(null);
     void channelRef.current?.send({
       type: "broadcast",
@@ -1574,75 +1506,6 @@ export function HasikRoom({
       payload: nextCompletedOrder
     });
   }, [orderTotal, registerCompletedPayment, walletBalance]);
-
-  const completePaymentByMethod = useCallback((method: PaymentMethod) => {
-    const participantCount = Math.max(1, paymentPlayerList.length);
-
-    if (method === "split") {
-      const shareAmount = Math.ceil(orderTotal / participantCount);
-
-      completeResolvedPayment({
-        id: createId(),
-        payerNickname: nickname,
-        payerRole: selectedRole,
-        amount: orderTotal,
-        at: Date.now(),
-        label: "더치페이 완료",
-        summary: "더치페이 결제 완료",
-        detail: `${participantCount}명이 ${formatPrice(shareAmount)}씩 나눴습니다.`,
-        method
-      }, shareAmount);
-      return;
-    }
-  }, [completeResolvedPayment, nickname, orderTotal, paymentPlayerList.length, selectedRole]);
-
-  const spinRoulette = useCallback(() => {
-    if (rouletteWheel.isSpinning || orderTotal <= 0 || paymentPlayerList.length <= 0) {
-      return;
-    }
-
-    const winnerIndex = Math.floor(Math.random() * paymentPlayerList.length);
-    const payer = paymentPlayerList[winnerIndex] ?? paymentPlayerList[0];
-    const segmentAngle = 360 / Math.max(1, paymentPlayerList.length);
-    const stopAngle = 360 - (winnerIndex * segmentAngle + segmentAngle / 2);
-    const currentAngle = ((rouletteWheel.rotation % 360) + 360) % 360;
-    const extraAngle = (stopAngle - currentAngle + 360) % 360;
-    const nextRotation = rouletteWheel.rotation + 360 * 7 + extraAngle;
-
-    setRouletteWheel({
-      rotation: nextRotation,
-      isSpinning: true,
-      winnerId: payer.userId
-    });
-
-    window.setTimeout(() => {
-      const isMine = payer.userId === sessionIdRef.current;
-
-      setRouletteWheel((current) => ({
-        ...current,
-        isSpinning: false,
-        winnerId: payer.userId
-      }));
-
-      completeResolvedPayment({
-        id: createId(),
-        payerNickname: payer.nickname,
-        payerRole: payer.role,
-        amount: orderTotal,
-        at: Date.now(),
-        label: "룰렛 계산 완료",
-        summary: "룰렛 결제 완료",
-        detail: `${payer.nickname}${payer.role} 당첨`,
-        method: "roulette"
-      }, isMine ? orderTotal : 0);
-    }, 3900);
-  }, [
-    completeResolvedPayment,
-    orderTotal,
-    paymentPlayerList,
-    rouletteWheel.isSpinning,
-    rouletteWheel.rotation
-  ]);
 
   const playRpsRound = useCallback((myChoice: RpsChoice) => {
     if (orderTotal <= 0 || paymentPlayerList.length <= 0) {
@@ -1785,70 +1648,6 @@ export function HasikRoom({
       method: "rps"
     }, payer.userId === sessionIdRef.current ? orderTotal : 0);
   }, [completeResolvedPayment, orderTotal, paymentPlayerList, rpsRound]);
-
-  const claimSecretCheckout = useCallback(() => {
-    if (completedOrder) {
-      return;
-    }
-
-    const nextCheckout: SecretCheckout = {
-      userId: sessionIdRef.current,
-      nickname,
-      role: selectedRole,
-      at: Date.now()
-    };
-
-    setSecretAmount("");
-    setSecretCheckout(nextCheckout);
-    void channelRef.current?.send({
-      type: "broadcast",
-      event: "secret_checkout",
-      payload: nextCheckout
-    });
-  }, [completedOrder, nickname, selectedRole]);
-
-  const completeSecretCheckout = useCallback(() => {
-    if (!isSecretCheckoutMine || secretCheckoutAmount <= 0 || secretCheckoutAmount > walletBalance) {
-      return;
-    }
-
-    const nextCompletedOrder: CompletedOrder = {
-      id: createId(),
-      payerNickname: nickname,
-      payerRole: selectedRole,
-      amount: secretCheckoutAmount,
-      at: Date.now(),
-      label: "몰래 계산 완료"
-    };
-
-    setWalletBalance((current) => Math.max(0, current - secretCheckoutAmount));
-    setCompletedOrder(nextCompletedOrder);
-    registerCompletedPayment(nextCompletedOrder);
-    setPaymentVotes({});
-    setPaymentParticipants({});
-    setPaymentVoteEndsAt(null);
-    setPaymentVoteClosedAt(null);
-    setFinalPaymentMethod(null);
-    setRpsRound(null);
-    setRouletteWheel((current) => ({
-      ...current,
-      isSpinning: false,
-      winnerId: null
-    }));
-    setSecretCheckout(null);
-    void channelRef.current?.send({
-      type: "broadcast",
-      event: "order_completed",
-      payload: nextCompletedOrder
-    });
-  }, [
-    isSecretCheckoutMine,
-    nickname,
-    registerCompletedPayment,
-    secretCheckoutAmount,
-    selectedRole,
-    walletBalance
-  ]);
 
   const sendMessage = useCallback(
     async (body: string, kind: ChatMessage["kind"] = "normal") => {
@@ -2485,149 +2284,51 @@ export function HasikRoom({
               <div className="payment-resolution">
                 <strong>{finalPaymentOption.label} 확정</strong>
                 <small>
-                  {finalPaymentMethod === "rps"
-                    ? rpsRound?.message ?? "가위바위보를 내면 AI들도 동시에 냅니다."
-                    : finalPaymentMethod === "roulette"
-                      ? "이름이 적힌 돌림판이 멈추면 결제자가 정해집니다."
-                      : "더치페이를 완료하면 결과 팝업이 표시됩니다."}
+                  {rpsRound?.message ?? "가위바위보를 내면 AI들도 동시에 냅니다."}
                 </small>
-                {finalPaymentMethod === "rps" ? (
-                  <>
-                    {rpsRound ? renderRpsCircle(rpsRound) : null}
-                    <div className="rps-choice-list">
-                      {rpsChoices.map((choice) => {
-                        const ChoiceIcon = choice.icon;
-
-                        return (
-                          <button
-                            key={choice.id}
-                            type="button"
-                            className="rps-choice-button"
-                            onClick={() => playRpsRound(choice.id)}
-                          >
-                            <ChoiceIcon size={20} strokeWidth={2.4} />
-                            {choice.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                ) : finalPaymentMethod === "roulette" ? (
-                  <div className="roulette-game">
-                    <div className="roulette-wheel-shell" aria-label="룰렛 돌림판">
-                      <div className="roulette-pointer" aria-hidden="true" />
-                      <div
-                        className={rouletteWheel.isSpinning ? "roulette-wheel spinning" : "roulette-wheel"}
-                        style={{
-                          "--roulette-rotation": `${rouletteWheel.rotation}deg`,
-                          background: `conic-gradient(${rouletteGradient || rouletteColors[0]})`
-                        } as CSSProperties}
-                      >
-                        {paymentPlayerList.map((participant, index) => {
-                          const labelAngle = index * rouletteSegmentAngle + rouletteSegmentAngle / 2;
-
-                          return (
-                            <span
-                              key={participant.userId}
-                              className={
-                                participant.userId === rouletteWheel.winnerId
-                                  ? "roulette-slice-label winner"
-                                  : "roulette-slice-label"
-                              }
-                              style={{
-                                "--slice-angle": `${labelAngle}deg`,
-                                "--label-angle": `${-labelAngle}deg`
-                              } as CSSProperties}
-                            >
-                              {participant.nickname}
-                            </span>
-                          );
-                        })}
-                      </div>
-                      <div className="roulette-center" aria-hidden="true">
-                        PAY
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="payment-complete-button"
-                      disabled={rouletteWheel.isSpinning}
-                      onClick={spinRoulette}
-                    >
-                      {rouletteWheel.isSpinning ? "돌아가는 중" : "룰렛 돌리기"}
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    className="payment-complete-button"
-                    onClick={() => completePaymentByMethod(finalPaymentMethod)}
-                  >
-                    결제 완료
-                  </button>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="payment-options">
-                  {paymentVoteCounts.map((option) => {
-                    const Icon = option.icon;
-                    const isSelected = paymentVotes[sessionIdRef.current]?.method === option.id;
+                {rpsRound ? renderRpsCircle(rpsRound) : null}
+                <div className="rps-choice-list">
+                  {rpsChoices.map((choice) => {
+                    const ChoiceIcon = choice.icon;
 
                     return (
                       <button
-                        key={option.id}
+                        key={choice.id}
                         type="button"
-                        className={isSelected ? "payment-option selected" : "payment-option"}
-                        disabled={Boolean(paymentVoteClosedAt)}
-                        onClick={() => votePaymentMethod(option.id)}
+                        className="rps-choice-button"
+                        onClick={() => playRpsRound(choice.id)}
                       >
-                        <Icon size={19} />
-                        <span>
-                          <strong>{option.label}</strong>
-                          <small>{option.description}</small>
-                        </span>
-                        <em>{option.count}</em>
+                        <ChoiceIcon size={20} strokeWidth={2.4} />
+                        {choice.label}
                       </button>
                     );
                   })}
                 </div>
+              </div>
+            ) : (
+              <div className="payment-options">
+                {paymentVoteCounts.map((option) => {
+                  const Icon = option.icon;
+                  const isSelected = paymentVotes[sessionIdRef.current]?.method === option.id;
 
-                <div className="secret-checkout">
-                  {isSecretCheckoutMine ? (
-                    <form
-                      className="secret-form"
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        completeSecretCheckout();
-                      }}
-                    >
-                      <input
-                        inputMode="numeric"
-                        aria-label="몰래 계산 금액"
-                        placeholder="합계 금액"
-                        value={secretAmount}
-                        onChange={(event) => setSecretAmount(event.target.value)}
-                      />
-                      <button
-                        type="submit"
-                        className="secret-pay-button"
-                        disabled={secretCheckoutAmount <= 0 || secretCheckoutAmount > walletBalance}
-                      >
-                        결제
-                      </button>
-                    </form>
-                  ) : (
+                  return (
                     <button
+                      key={option.id}
                       type="button"
-                      className="secret-claim-button"
-                      onClick={claimSecretCheckout}
+                      className={isSelected ? "payment-option selected" : "payment-option"}
+                      disabled={Boolean(paymentVoteClosedAt)}
+                      onClick={() => votePaymentMethod(option.id)}
                     >
-                      {secretCheckout ? "막고 내가 계산" : "몰래 계산"}
+                      <Icon size={19} />
+                      <span>
+                        <strong>{option.label}</strong>
+                        <small>{option.description}</small>
+                      </span>
+                      <em>{option.count}</em>
                     </button>
-                  )}
-                </div>
-              </>
+                  );
+                })}
+              </div>
             )}
           </section>
         </div>
