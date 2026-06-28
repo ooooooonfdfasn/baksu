@@ -10,7 +10,6 @@ import {
   HandMetal,
   Megaphone,
   Pointer,
-  Scissors,
   Send,
   Settings2,
   UserRound
@@ -26,7 +25,6 @@ import {
 type Role = "인턴" | "사원" | "대리" | "과장" | "부장";
 type Mood = "quiet" | "talk" | "afterwork";
 type RealtimeMode = "demo" | "setup" | "live";
-type PaymentMethod = "rps";
 type RpsChoice = "scissors" | "rock" | "paper";
 export type TableShape = "round" | "rectangle";
 export type RoomVenue = "a" | "b" | "c";
@@ -96,15 +94,7 @@ interface CompletedOrder {
   label?: string;
   summary?: string;
   detail?: string;
-  method?: PaymentMethod;
-}
-
-interface PaymentVote {
-  userId: string;
-  nickname: string;
-  role: Role;
-  method: PaymentMethod;
-  at: number;
+  method?: "rps";
 }
 
 interface PaymentParticipant {
@@ -145,15 +135,6 @@ const menuItems = [
   { id: "zero-cola", name: "제로콜라", price: 3000, kind: "drink", icon: "콜라" },
   { id: "corn-tea", name: "옥수수차", price: 4000, kind: "drink", icon: "차" }
 ] as const;
-
-const paymentOptions: Array<{
-  id: PaymentMethod;
-  label: string;
-  description: string;
-  icon: typeof Scissors;
-}> = [
-  { id: "rps", label: "가위바위보", description: "짧게 승부 보고 정하기", icon: Scissors }
-];
 
 const rpsChoices: Array<{ id: RpsChoice; label: string; icon: typeof Hand }> = [
   { id: "scissors", label: "가위", icon: HandMetal },
@@ -458,18 +439,6 @@ function createPaymentParticipant(member: PresenceUser): PaymentParticipant {
   };
 }
 
-function createPaymentVote(member: PresenceUser | PaymentParticipant, method: PaymentMethod): PaymentVote {
-  const userId = "id" in member ? member.id : member.userId;
-
-  return {
-    userId,
-    nickname: member.nickname,
-    role: member.role,
-    method,
-    at: Date.now()
-  };
-}
-
 function formatDuration(totalMinutes: number) {
   const minutes = Math.max(0, Math.floor(totalMinutes));
   const hours = Math.floor(minutes / 60);
@@ -599,11 +568,7 @@ export function HasikRoom({
   const [megaphoneCount, setMegaphoneCount] = useState(getSavedMegaphoneCount);
   const [promotedBubbleId, setPromotedBubbleId] = useState<string | null>(null);
   const [menuSelections, setMenuSelections] = useState<Record<string, MenuSelection>>({});
-  const [paymentVotes, setPaymentVotes] = useState<Record<string, PaymentVote>>({});
   const [paymentParticipants, setPaymentParticipants] = useState<Record<string, PaymentParticipant>>({});
-  const [paymentVoteEndsAt, setPaymentVoteEndsAt] = useState<number | null>(null);
-  const [paymentVoteClosedAt, setPaymentVoteClosedAt] = useState<number | null>(null);
-  const [finalPaymentMethod, setFinalPaymentMethod] = useState<PaymentMethod | null>(null);
   const [rpsRound, setRpsRound] = useState<RpsRound | null>(null);
   const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null);
   const [totalPaymentAmount, setTotalPaymentAmount] = useState(initialTotalPaymentAmount);
@@ -651,32 +616,11 @@ export function HasikRoom({
       .filter((item) => item.count > 0);
   }, [menuSelectionList]);
   const orderTotal = orderedMenuItems.reduce((total, item) => total + item.price * item.count, 0);
-  const paymentVoteList = useMemo(() => Object.values(paymentVotes), [paymentVotes]);
-  const paymentVoteCounts = useMemo(() => {
-    return paymentOptions.map((option) => ({
-      ...option,
-      count: paymentVoteList.filter((vote) => vote.method === option.id).length
-    }));
-  }, [paymentVoteList]);
   const paymentParticipantList = useMemo(
     () => Object.values(paymentParticipants),
     [paymentParticipants]
   );
   const paymentParticipantCount = paymentParticipantList.length;
-  const paymentRequiredVoteCount =
-    paymentParticipantCount > 0 ? Math.floor(paymentParticipantCount / 2) + 1 : 1;
-  const selectedPaymentVoteCount = paymentVoteList.filter(
-    (vote) => paymentParticipants[vote.userId]
-  ).length;
-  const winningPaymentMethod = paymentVoteCounts.reduce(
-    (winner, option) => (option.count > winner.count ? option : winner),
-    paymentVoteCounts[0]
-  );
-  const finalPaymentOption =
-    paymentOptions.find((option) => option.id === finalPaymentMethod) ?? null;
-  const paymentVoteRemainingSeconds = paymentVoteEndsAt
-    ? Math.max(0, Math.ceil((paymentVoteEndsAt - now) / 1000))
-    : null;
   const selectedVenue = roomVenues.find((venue) => venue.id === roomVenue) ?? roomVenues[0];
   const venueBackdropStyle = {
     "--room-venue-image": `url("${getAssetPath(selectedVenue.image)}")`
@@ -1038,32 +982,6 @@ export function HasikRoom({
           return nextSelections;
         });
       })
-      .on("broadcast", { event: "payment_vote" }, ({ payload }) => {
-        if (
-          typeof payload?.userId !== "string" ||
-          typeof payload?.nickname !== "string" ||
-          typeof payload?.role !== "string" ||
-          typeof payload?.method !== "string" ||
-          typeof payload?.at !== "number" ||
-          !roles.includes(payload.role as Role) ||
-          !paymentOptions.some((option) => option.id === payload.method)
-        ) {
-          return;
-        }
-
-        const nextVote: PaymentVote = {
-          userId: payload.userId,
-          nickname: payload.nickname,
-          role: payload.role as Role,
-          method: payload.method as PaymentMethod,
-          at: payload.at
-        };
-
-        setPaymentVotes((current) => ({
-          ...current,
-          [nextVote.userId]: nextVote
-        }));
-      })
       .on("broadcast", { event: "payment_participant_join" }, ({ payload }) => {
         if (
           typeof payload?.userId !== "string" ||
@@ -1097,27 +1015,6 @@ export function HasikRoom({
           return nextParticipants;
         });
       })
-      .on("broadcast", { event: "payment_vote_countdown" }, ({ payload }) => {
-        if (typeof payload?.endsAt !== "number" || !Number.isFinite(payload.endsAt)) {
-          return;
-        }
-
-        setPaymentVoteEndsAt(payload.endsAt);
-      })
-      .on("broadcast", { event: "payment_vote_closed" }, ({ payload }) => {
-        if (
-          typeof payload?.method !== "string" ||
-          !paymentOptions.some((option) => option.id === payload.method)
-        ) {
-          return;
-        }
-
-        setFinalPaymentMethod(payload.method as PaymentMethod);
-        setPaymentVoteClosedAt(
-          typeof payload?.at === "number" && Number.isFinite(payload.at) ? payload.at : Date.now()
-        );
-        setPaymentVoteEndsAt(null);
-      })
       .on("broadcast", { event: "order_completed" }, ({ payload }) => {
         if (
           typeof payload?.id !== "string" ||
@@ -1139,20 +1036,12 @@ export function HasikRoom({
           label: typeof payload?.label === "string" ? payload.label : undefined,
           summary: typeof payload?.summary === "string" ? payload.summary : undefined,
           detail: typeof payload?.detail === "string" ? payload.detail : undefined,
-          method:
-            typeof payload?.method === "string" &&
-            paymentOptions.some((option) => option.id === payload.method)
-              ? (payload.method as PaymentMethod)
-              : undefined
+          method: payload?.method === "rps" ? "rps" as const : undefined
         };
 
         setCompletedOrder(nextCompletedOrder);
         registerCompletedPayment(nextCompletedOrder);
-        setPaymentVotes({});
         setPaymentParticipants({});
-        setPaymentVoteEndsAt(null);
-        setPaymentVoteClosedAt(null);
-        setFinalPaymentMethod(null);
         if (nextCompletedOrder.method !== "rps") {
           setRpsRound(null);
         }
@@ -1293,11 +1182,7 @@ export function HasikRoom({
   }, [canManageRoomSettings, onQuickJoinChange]);
 
   const resetPaymentSession = useCallback(() => {
-    setPaymentVotes({});
     setPaymentParticipants({});
-    setPaymentVoteEndsAt(null);
-    setPaymentVoteClosedAt(null);
-    setFinalPaymentMethod(null);
     setRpsRound(null);
   }, []);
 
@@ -1340,60 +1225,6 @@ export function HasikRoom({
     setMenuOpen(false);
     setPaymentOpen(true);
   }, [orderTotal, resetPaymentSession]);
-
-  const closePaymentVote = useCallback((method: PaymentMethod = winningPaymentMethod.id) => {
-    if (paymentVoteClosedAt) {
-      return;
-    }
-
-    const closedAt = Date.now();
-    setFinalPaymentMethod(method);
-    setPaymentVoteClosedAt(closedAt);
-    setPaymentVoteEndsAt(null);
-    void channelRef.current?.send({
-      type: "broadcast",
-      event: "payment_vote_closed",
-      payload: { method, at: closedAt }
-    });
-  }, [paymentVoteClosedAt, winningPaymentMethod.id]);
-
-  useEffect(() => {
-    if (
-      !isPaymentOpen ||
-      completedOrder ||
-      paymentVoteClosedAt ||
-      paymentVoteEndsAt ||
-      paymentParticipantCount <= 0 ||
-      selectedPaymentVoteCount < paymentRequiredVoteCount
-    ) {
-      return;
-    }
-
-    const endsAt = Date.now() + (debugMode ? 3000 : bubbleLifetimeMs);
-    setPaymentVoteEndsAt(endsAt);
-    void channelRef.current?.send({
-      type: "broadcast",
-      event: "payment_vote_countdown",
-      payload: { endsAt }
-    });
-  }, [
-    completedOrder,
-    debugMode,
-    isPaymentOpen,
-    paymentParticipantCount,
-    paymentRequiredVoteCount,
-    paymentVoteClosedAt,
-    paymentVoteEndsAt,
-    selectedPaymentVoteCount
-  ]);
-
-  useEffect(() => {
-    if (!paymentVoteEndsAt || paymentVoteClosedAt || now < paymentVoteEndsAt) {
-      return;
-    }
-
-    closePaymentVote();
-  }, [closePaymentVote, now, paymentVoteClosedAt, paymentVoteEndsAt]);
 
   const selectMenuItem = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>, itemId: string) => {
@@ -1445,42 +1276,6 @@ export function HasikRoom({
     });
   }, []);
 
-  const votePaymentMethod = useCallback(
-    (method: PaymentMethod) => {
-      if (completedOrder || paymentVoteClosedAt) {
-        return;
-      }
-
-      const nextVote = createPaymentVote(user, method);
-
-      if (debugMode) {
-        const debugVotes = Object.fromEntries(
-          debugMembers.map((member) => {
-            const vote = createPaymentVote(member, method);
-            return [vote.userId, vote];
-          })
-        );
-
-        setPaymentVotes((current) => ({
-          ...current,
-          ...debugVotes
-        }));
-        return;
-      }
-
-      setPaymentVotes((current) => ({
-        ...current,
-        [nextVote.userId]: nextVote
-      }));
-      void channelRef.current?.send({
-        type: "broadcast",
-        event: "payment_vote",
-        payload: nextVote
-      });
-    },
-    [completedOrder, debugMembers, debugMode, paymentVoteClosedAt, user]
-  );
-
   const completeResolvedPayment = useCallback((
     nextCompletedOrder: CompletedOrder,
     walletChargeAmount = 0
@@ -1499,7 +1294,6 @@ export function HasikRoom({
 
     setCompletedOrder(nextCompletedOrder);
     registerCompletedPayment(nextCompletedOrder);
-    setPaymentVoteEndsAt(null);
     void channelRef.current?.send({
       type: "broadcast",
       event: "order_completed",
@@ -1548,8 +1342,6 @@ export function HasikRoom({
         amount: orderTotal,
         at: Date.now(),
         label: "패자 계산",
-        summary: "가위바위보 결제 완료",
-        detail: `${payer.nickname}${payer.role} 최종 패배`,
         method: "rps"
       }, payer.userId === sessionIdRef.current ? orderTotal : 0);
       return;
@@ -1643,8 +1435,6 @@ export function HasikRoom({
       amount: orderTotal,
       at: Date.now(),
       label: "패자 계산",
-      summary: "가위바위보 결제 완료",
-      detail: `${payer.nickname}${payer.role} 최종 패배`,
       method: "rps"
     }, payer.userId === sessionIdRef.current ? orderTotal : 0);
   }, [completeResolvedPayment, orderTotal, paymentPlayerList, rpsRound]);
@@ -1782,10 +1572,6 @@ export function HasikRoom({
 
     return (
       <div className="rps-result-circle" aria-label="가위바위보 결과">
-        <div className="rps-center-note">
-          <strong>{round.roundNumber}R</strong>
-          <span>{round.needsReplay ? "재승부" : "결정"}</span>
-        </div>
         {players.map((player, index) => {
           const angle = players.length > 1 ? (index / players.length) * 360 : 0;
           const angleRadians = (angle * Math.PI) / 180;
@@ -1807,12 +1593,11 @@ export function HasikRoom({
               } as CSSProperties}
             >
               <span className="rps-hand-icon" aria-hidden="true">
-                {ChoiceIcon ? <ChoiceIcon size={22} strokeWidth={2.4} /> : "?"}
+                {ChoiceIcon ? <ChoiceIcon size={44} strokeWidth={2.4} /> : "?"}
               </span>
-              <span>
+              <span className="rps-result-name">
                 <NameWithRole nickname={player.nickname} role={player.role} />
               </span>
-              <strong>{choice ? choice.label : "대기"}</strong>
             </div>
           );
         })}
@@ -2219,16 +2004,13 @@ export function HasikRoom({
           >
             <div className="menu-head">
               <div>
-                <p id="payment-title">결제 수단 투표</p>
-                <span>
-                  현재 1위 {winningPaymentMethod.label} · {winningPaymentMethod.count}표
-                </span>
+                <p id="payment-title">가위바위보</p>
               </div>
               <button
                 type="button"
                 className="profile-close"
                 onClick={() => setPaymentOpen(false)}
-                aria-label="결제 투표 닫기"
+                aria-label="결제 닫기"
               >
                 ×
               </button>
@@ -2249,13 +2031,7 @@ export function HasikRoom({
 
             <div className="payment-status-row">
               <span className="money-pill">내 돈 {formatPrice(walletBalance)}</span>
-              <span className="payment-status-text">
-                {paymentVoteClosedAt && finalPaymentOption
-                  ? `투표 종료 · ${finalPaymentOption.label}`
-                  : paymentVoteRemainingSeconds !== null
-                    ? `${paymentVoteRemainingSeconds}초 뒤 자동 종료`
-                    : `${paymentParticipantCount}명 중 ${selectedPaymentVoteCount}명 선택 · 과반 ${paymentRequiredVoteCount}명`}
-              </span>
+              <span className="payment-status-text">{paymentParticipantCount}명 참가 중</span>
             </div>
 
             {completedOrder ? (
@@ -2264,7 +2040,12 @@ export function HasikRoom({
                   완료
                 </div>
                 <strong>
-                  {completedOrder.summary ? (
+                  {completedOrder.method === "rps" ? (
+                    <NameWithRole
+                      nickname={completedOrder.payerNickname}
+                      role={completedOrder.payerRole}
+                    />
+                  ) : completedOrder.summary ? (
                     completedOrder.summary
                   ) : (
                     <>
@@ -2280,12 +2061,9 @@ export function HasikRoom({
                 {completedOrder.detail ? <small>{completedOrder.detail}</small> : null}
                 {completedOrder.method === "rps" && rpsRound ? renderRpsCircle(rpsRound) : null}
               </div>
-            ) : paymentVoteClosedAt && finalPaymentMethod && finalPaymentOption ? (
+            ) : (
               <div className="payment-resolution">
-                <strong>{finalPaymentOption.label} 확정</strong>
-                <small>
-                  {rpsRound?.message ?? "가위바위보를 내면 AI들도 동시에 냅니다."}
-                </small>
+                <strong>가위바위보 확정</strong>
                 {rpsRound ? renderRpsCircle(rpsRound) : null}
                 <div className="rps-choice-list">
                   {rpsChoices.map((choice) => {
@@ -2296,38 +2074,15 @@ export function HasikRoom({
                         key={choice.id}
                         type="button"
                         className="rps-choice-button"
+                        aria-label={choice.label}
+                        title={choice.label}
                         onClick={() => playRpsRound(choice.id)}
                       >
-                        <ChoiceIcon size={20} strokeWidth={2.4} />
-                        {choice.label}
+                        <ChoiceIcon size={38} strokeWidth={2.3} />
                       </button>
                     );
                   })}
                 </div>
-              </div>
-            ) : (
-              <div className="payment-options">
-                {paymentVoteCounts.map((option) => {
-                  const Icon = option.icon;
-                  const isSelected = paymentVotes[sessionIdRef.current]?.method === option.id;
-
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      className={isSelected ? "payment-option selected" : "payment-option"}
-                      disabled={Boolean(paymentVoteClosedAt)}
-                      onClick={() => votePaymentMethod(option.id)}
-                    >
-                      <Icon size={19} />
-                      <span>
-                        <strong>{option.label}</strong>
-                        <small>{option.description}</small>
-                      </span>
-                      <em>{option.count}</em>
-                    </button>
-                  );
-                })}
               </div>
             )}
           </section>

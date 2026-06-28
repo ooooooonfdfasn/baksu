@@ -239,7 +239,6 @@ h1 {
 .megaphone-buy-button,
 .megaphone-send-button,
 .megaphone-cancel-button,
-.payment-option,
 .profile-trigger,
 .profile-close,
 .report-button {
@@ -272,7 +271,6 @@ h1 {
 .megaphone-buy-button:hover,
 .megaphone-send-button:hover,
 .megaphone-cancel-button:hover,
-.payment-option:hover,
 .profile-trigger:hover,
 .profile-close:hover,
 .report-button:hover {
@@ -1602,59 +1600,9 @@ input:focus {
   gap: 12px;
 }
 
-.payment-options {
-  display: grid;
-  gap: 8px;
-  padding: 12px 16px 16px;
-}
-
-.payment-option {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 10px;
-  align-items: center;
-  min-height: 58px;
-  padding: 9px 10px;
-  border: 1px solid var(--line);
-  background: var(--panel);
-  color: var(--text);
-  cursor: pointer;
-  text-align: left;
-}
-
-.payment-option:disabled {
-  cursor: default;
-  opacity: 0.66;
-}
-
-.payment-option.selected {
-  border-color: var(--blue);
-  background: var(--panel-strong);
-}
-
-.payment-option span {
-  display: grid;
-  gap: 2px;
-}
-
-.payment-option small {
-  color: var(--muted);
-}
-
-.payment-option em {
-  display: grid;
-  place-items: center;
-  min-width: 28px;
-  min-height: 28px;
-  border: 1px solid var(--line);
-  color: var(--blue);
-  font-style: normal;
-  font-weight: 950;
-}
-
 .payment-resolution {
   display: grid;
-  gap: 10px;
+  gap: 16px;
   margin: 14px 16px 16px;
   padding: 14px;
   border: 1px solid var(--line);
@@ -1665,39 +1613,31 @@ input:focus {
   font-weight: 950;
 }
 
-.payment-resolution small {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 850;
-}
-
-.payment-complete-button,
 .rps-choice-button {
-  min-height: 42px;
-  border: 1px solid var(--line);
-  background: var(--amber);
-  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 78px !important;
+  height: 78px !important;
+  min-height: 78px;
+  border: 2px solid var(--line) !important;
+  border-radius: 50% !important;
+  background: var(--amber) !important;
+  color: var(--ink) !important;
   font-weight: 950;
   cursor: pointer;
+  box-shadow: 0 10px 0 rgba(255, 198, 45, 0.14) !important;
 }
 
-.payment-complete-button:disabled,
 .rps-choice-button:disabled {
   cursor: default;
   opacity: 0.62;
 }
 
-.rps-choice-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
 .rps-choice-list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
 }
 
 .payment-status-row {
@@ -1771,52 +1711,25 @@ input:focus {
   overflow: visible;
 }
 
-.rps-center-note {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  display: grid;
-  place-items: center;
-  min-width: 64px;
-  min-height: 54px;
-  padding: 7px 10px;
-  border: 1px solid rgba(255, 198, 45, 0.45);
-  background: rgba(30, 13, 6, 0.88);
-  color: var(--cream);
-  transform: translate(-50%, -50%);
-}
-
-.rps-center-note strong {
-  color: var(--amber);
-  font-size: 18px;
-}
-
-.rps-center-note span {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 950;
-}
-
 .rps-result-player {
   position: absolute;
   top: var(--player-y, 50%);
   left: var(--player-x, 50%);
   display: grid;
-  gap: 3px;
+  gap: 6px;
   place-items: center;
-  width: 88px;
-  min-height: 86px;
-  padding: 8px 6px;
-  border: 2px solid rgba(255, 232, 194, 0.22);
-  background: rgba(255, 248, 236, 0.08);
+  width: 116px;
+  min-height: 104px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--cream);
   text-align: center;
   transform: translate(-50%, -50%);
 }
 
 .rps-result-player.active {
-  border-color: rgba(255, 198, 45, 0.72);
-  background: rgba(255, 198, 45, 0.13);
+  color: var(--cream);
 }
 
 .rps-result-player.eliminated {
@@ -1824,32 +1737,27 @@ input:focus {
 }
 
 .rps-result-player.payer {
-  border-color: var(--amber);
-  background: var(--amber);
-  color: var(--ink);
+  color: var(--amber);
 }
 
 .rps-hand-icon {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: rgba(255, 248, 236, 0.16);
+  width: 64px;
+  height: 64px;
+  background: transparent;
+  color: inherit !important;
 }
 
-.rps-result-player.payer .rps-hand-icon {
-  background: rgba(53, 23, 7, 0.14);
-}
-
-.rps-result-player span {
+.rps-result-name {
+  color: inherit !important;
   font-size: 12px;
   font-weight: 950;
 }
 
-.rps-result-player strong {
-  font-size: 13px;
-  font-weight: 950;
+.rps-result-name .display-name,
+.rps-result-name .display-name span {
+  color: inherit !important;
 }
 
 @keyframes payment-pop {
@@ -2917,7 +2825,6 @@ h1 {
 .megaphone-buy-button,
 .megaphone-send-button,
 .megaphone-cancel-button,
-.payment-option,
 .money-pill,
 .profile-close,
 .report-button,
@@ -3001,7 +2908,6 @@ input {
 .megaphone-buy-button:hover,
 .megaphone-send-button:hover,
 .megaphone-cancel-button:hover,
-.payment-option:hover,
 .create-room-options button:hover,
 .create-room-button:hover,
 .room-list-item:hover,
@@ -3144,7 +3050,6 @@ input:disabled {
 .settings-section > span,
 .menu-head span,
 .menu-order-summary,
-.payment-option small,
 .profile-head span,
 .profile-body span,
 .profile-body time,
@@ -3225,8 +3130,7 @@ input:disabled {
   background: transparent !important;
 }
 
-.menu-row.selected,
-.payment-option.selected {
+.menu-row.selected {
   border-color: var(--bhc-orange) !important;
   background: var(--panel-strong) !important;
 }
@@ -3309,7 +3213,6 @@ input:disabled {
 .message-time,
 .menu-price,
 .menu-count,
-.payment-option em,
 .room-list-item em,
 .menu-order-bar span {
   color: var(--bhc-orange);
