@@ -150,6 +150,8 @@ const chatCooldownMs = 500;
 const megaphoneStorageKey = "hasik:megaphone-count";
 const megaphonePrice = 10000;
 const rpsRoundDurationMs = 15000;
+const rpsResultHoldMs = 4000;
+const rpsWinnerFadeMs = 1250;
 const roles: Role[] = ["인턴", "사원", "대리", "과장", "부장"];
 const menuItems = [
   { id: "kimchi-jeon", name: "김치전", price: 16000, kind: "food", icon: "전" },
@@ -1603,7 +1605,7 @@ export function HasikRoom({
 
     nextRpsRoundTimerRef.current = window.setTimeout(() => {
       startRpsRound(nextActiveUserIds, rpsRoundNumber + 1);
-    }, 1450);
+    }, rpsResultHoldMs + rpsWinnerFadeMs + 180);
   }, [paymentPlayerList, pendingPayer, rpsActiveUserIds, rpsRoundNumber, startRpsRound]);
 
   const submitRpsChoice = useCallback((choice: RpsChoice) => {
