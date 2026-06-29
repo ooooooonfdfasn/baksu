@@ -479,8 +479,8 @@
 
       .menu-candidate-item {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) calc(var(--col-w) * 2);
-        min-height: calc(var(--row-h) * 2);
+        grid-template-columns: minmax(0, 1fr) var(--col-w);
+        min-height: var(--row-h);
         border-bottom: 1px solid var(--grid);
         background: var(--panel-bg);
       }
@@ -501,13 +501,18 @@
       }
 
       .menu-candidate-body {
+        display: flex;
+        align-items: center;
         min-width: 0;
-        padding: 4px 6px;
+        height: var(--row-h);
+        padding: 0 6px;
         overflow: hidden;
         color: var(--ink);
         font-size: 13px;
         font-weight: 700;
-        line-height: 1.25;
+        line-height: var(--row-h);
+        white-space: nowrap;
+        text-overflow: ellipsis;
       }
 
       .vote-box,
@@ -522,7 +527,7 @@
       }
 
       .menu-count-box {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
       }
 
       .vote-button {
@@ -563,19 +568,19 @@
         align-items: center;
         justify-content: center;
         min-width: 0;
-        min-height: calc(var(--row-h) * 2);
+        min-height: var(--row-h);
         padding: 0 4px;
         border: 0;
-        border-right: 1px solid var(--grid);
         border-radius: 0;
         background: var(--panel-bg);
         color: var(--ink);
         font-size: 12px;
         font-weight: 800;
+        line-height: var(--row-h);
+        white-space: nowrap;
       }
 
-      .vote-button:last-child,
-      .menu-count-value:last-child {
+      .vote-button:last-child {
         border-right: 0;
       }
 
@@ -592,12 +597,29 @@
         border-top: 1px solid var(--strong);
       }
 
+      .menu-random-row {
+        position: relative;
+      }
+
+      .menu-random-row::after {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 1;
+        height: 1px;
+        background: var(--accent-dark);
+        content: "";
+        pointer-events: none;
+      }
+
       .pagination-row {
         grid-template-columns: var(--col-w) var(--col-w) minmax(0, 1fr) var(--col-w);
       }
 
       .menu-random-row {
         grid-template-columns: var(--col-w) minmax(0, 1fr) var(--col-w) var(--col-w);
+        border-bottom: 1px solid var(--strong);
       }
 
       .page-indicator,
@@ -1120,7 +1142,7 @@
 
           <section class="content-page-panel menu-content-page" id="menuCandidatePanel" aria-label="메뉴 후보 페이지" hidden>
             <div class="menu-random-row">
-              <button type="button" class="sheet-button content-page-tool" id="menuRandomButton">랜덤</button>
+              <button type="button" class="sheet-button content-page-tool" id="menuRandomButton">랜덤추천</button>
               <span class="random-result" id="menuRandomResult">랜덤 메뉴 대기</span>
               <button type="button" class="sheet-button content-page-tool" id="menuSortButton">많은순</button>
               <button type="button" class="sheet-button content-page-tool" id="menuReverseButton">적은순</button>
@@ -1565,12 +1587,21 @@
           article.innerHTML = `
             <div class="menu-candidate-body">${escapeHtml(item.text)}</div>
             <div class="menu-count-box">
-              <span class="menu-count-value">${rank}위</span>
-              <span class="menu-count-value">${item.count}번</span>
+              <span class="menu-count-value">${rank}위 / ${item.count}</span>
             </div>
           `;
           menuCandidateList.appendChild(article);
         });
+      }
+
+      function showRandomMenu() {
+        const uniqueMenus = getMenuStats().map((item) => item.text);
+        if (uniqueMenus.length <= 0) {
+          menuRandomResult.textContent = "등록된 메뉴가 없습니다.";
+          return;
+        }
+        const selected = uniqueMenus[Math.floor(Math.random() * uniqueMenus.length)];
+        menuRandomResult.textContent = selected;
       }
 
       function renderContentPanels() {
@@ -1756,6 +1787,7 @@
 
       openMenuButton.addEventListener("click", () => {
         setContentView("menu");
+        showRandomMenu();
       });
 
       menuSubmitForm.addEventListener("submit", (event) => {
@@ -1836,13 +1868,7 @@
       });
 
       menuRandomButton.addEventListener("click", () => {
-        const uniqueMenus = getMenuStats().map((item) => item.text);
-        if (uniqueMenus.length <= 0) {
-          menuRandomResult.textContent = "등록된 메뉴가 없습니다.";
-          return;
-        }
-        const selected = uniqueMenus[Math.floor(Math.random() * uniqueMenus.length)];
-        menuRandomResult.textContent = selected;
+        showRandomMenu();
       });
 
       chatForm.addEventListener("submit", (event) => {
