@@ -492,7 +492,7 @@
 
       .menu-candidate-item {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) var(--col-w);
+        grid-template-columns: var(--col-w) minmax(0, 1fr);
         min-height: var(--row-h);
         border-bottom: 1px solid var(--grid);
         background: var(--panel-bg);
@@ -541,13 +541,16 @@
 
       .menu-count-box {
         grid-template-columns: 1fr;
+        border-right: 1px solid var(--strong);
+        border-left: 0;
       }
 
       .vote-button {
+        position: relative;
         display: inline-flex;
         align-items: center;
-        justify-content: flex-start;
-        gap: 4px;
+        justify-content: center;
+        gap: 0;
         min-width: 0;
         min-height: var(--row-h);
         padding: 0 5px;
@@ -574,6 +577,15 @@
         width: 15px;
         height: 15px;
         object-fit: contain;
+      }
+
+      .vote-count {
+        position: absolute;
+        right: 7px;
+        color: currentColor;
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1;
       }
 
       .menu-count-value {
@@ -1100,7 +1112,7 @@
           </section>
 
           <button type="button" class="sheet-button content-return-button" id="contentReturnButton" hidden>
-            메인으로 돌아가기
+            메인으로<br />돌아가기
           </button>
 
           <section class="option-panel" aria-label="옵션">
@@ -1344,17 +1356,36 @@
         return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
       }
 
+      function createAnonymousName() {
+        return `익명${Math.floor(1000 + Math.random() * 9000)}`;
+      }
+
+      function getFallbackAnonymousName(index) {
+        return `익명${1000 + ((index * 137 + 431) % 9000)}`;
+      }
+
+      function normalizeAnonymousName(name, index) {
+        const text = normalizeText(String(name || ""), 12);
+        return /^익명\d{4}$/.test(text) ? text : getFallbackAnonymousName(index);
+      }
+
       function loadContentState() {
         const now = Date.now();
         const fallback = {
           sentences: defaultSentences.map((item, index) => ({
             id: `default-sentence-${index + 1}`,
+            name: getFallbackAnonymousName(index),
             text: item.text,
             up: item.up,
             down: item.down,
             at: now - (defaultSentences.length - index) * 60000
           })),
-          menus: [...defaultMenus]
+          menus: defaultMenus.map((text, index) => ({
+            id: `default-menu-${index + 1}`,
+            name: getFallbackAnonymousName(defaultSentences.length + index),
+            text,
+            at: now - (defaultMenus.length - index) * 45000
+          }))
         };
 
         try {
@@ -1364,6 +1395,7 @@
                 .filter((item) => item && typeof item.text === "string")
                 .map((item, index) => ({
                   id: typeof item.id === "string" ? item.id : `saved-sentence-${index + 1}`,
+                  name: normalizeAnonymousName(item.name, index),
                   text: normalizeText(item.text, 80),
                   up: Math.max(0, Number(item.up) || 0),
                   down: Math.max(0, Number(item.down) || 0),
@@ -1373,8 +1405,17 @@
             : [];
           const savedMenus = Array.isArray(saved.menus)
             ? saved.menus
-                .map((item) => normalizeText(String(item || ""), 40))
-                .filter(Boolean)
+                .map((item, index) => {
+                  const isObject = item && typeof item === "object";
+                  const text = normalizeText(String(isObject ? item.text || "" : item || ""), 40);
+                  return {
+                    id: isObject && typeof item.id === "string" ? item.id : `saved-menu-${index + 1}`,
+                    name: normalizeAnonymousName(isObject ? item.name : "", defaultSentences.length + index),
+                    text,
+                    at: isObject && Number.isFinite(Number(item.at)) ? Number(item.at) : now
+                  };
+                })
+                .filter((item) => item.text)
             : [];
 
           return {
@@ -1490,15 +1531,20 @@
       function getMenuStats() {
         const counts = new Map();
         menuEntries.forEach((entry) => {
-          const text = normalizeText(entry, 40);
+          const text = normalizeText(entry.text || "", 40);
           if (!text) {
             return;
           }
-          counts.set(text, (counts.get(text) || 0) + 1);
+          const existing = counts.get(text) || {
+            text,
+            name: entry.name || getFallbackAnonymousName(counts.size),
+            count: 0
+          };
+          existing.count += 1;
+          counts.set(text, existing);
         });
 
-        return [...counts.entries()]
-          .map(([text, count]) => ({ text, count }))
+        return [...counts.values()]
           .sort((left, right) => {
             if (right.count !== left.count) {
               return right.count - left.count;
@@ -1567,15 +1613,15 @@
             const article = document.createElement("article");
             article.className = "thread-item";
             article.innerHTML = `
-              <div class="thread-body">${escapeHtml(item.text)}</div>
+              <div class="thread-body">${escapeHtml(`${item.name}: ${item.text}`)}</div>
               <div class="vote-box">
                 <button type="button" class="vote-button" data-vote="up" data-id="${item.id}" aria-label="추천 ${item.up}">
                   <img class="vote-icon" src="../assets/lunch-vote-arrow-up.svg" alt="" aria-hidden="true" />
-                  ${item.up}
+                  <span class="vote-count">${item.up}</span>
                 </button>
                 <button type="button" class="vote-button" data-vote="down" data-id="${item.id}" aria-label="비추천 ${item.down}">
                   <img class="vote-icon" src="../assets/lunch-vote-arrow-down.svg" alt="" aria-hidden="true" />
-                  ${item.down}
+                  <span class="vote-count">${item.down}</span>
                 </button>
               </div>
             `;
@@ -1610,10 +1656,10 @@
           const article = document.createElement("article");
           article.className = `menu-candidate-item rank-${Math.min(rank || index + 1, 4)}`;
           article.innerHTML = `
-            <div class="menu-candidate-body">${escapeHtml(item.text)}</div>
             <div class="menu-count-box">
               <span class="menu-count-value">${rank}위 / ${item.count}</span>
             </div>
+            <div class="menu-candidate-body">${escapeHtml(`${item.name}: ${item.text}`)}</div>
           `;
           menuCandidateList.appendChild(article);
         });
@@ -1826,7 +1872,12 @@
         if (!text) {
           return;
         }
-        menuEntries.push(text);
+        menuEntries.push({
+          id: createId("menu"),
+          name: createAnonymousName(),
+          text,
+          at: Date.now()
+        });
         menuInput.value = "";
         saveContentState();
         renderContentPanels();
@@ -1841,6 +1892,7 @@
         }
         sentenceThreads.unshift({
           id: createId("sentence"),
+          name: createAnonymousName(),
           text,
           up: 0,
           down: 0,
