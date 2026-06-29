@@ -276,6 +276,19 @@
         text-align: center;
       }
 
+      .content-return-button {
+        z-index: 4;
+        grid-column: 4 / 5;
+        grid-row: 7 / 9;
+        line-height: 1.15;
+        white-space: normal;
+        word-break: keep-all;
+      }
+
+      .content-return-button[hidden] {
+        display: none;
+      }
+
       .quote-panel {
         z-index: 3;
         grid-column: 1 / -1;
@@ -962,6 +975,13 @@
           grid-row: 6 / 8;
         }
 
+        .content-return-button {
+          grid-column: 1 / 2;
+          grid-row: 6 / 8;
+          padding: 0 3px;
+          font-size: 10px;
+        }
+
         .option-panel {
           grid-column: 5 / 6;
           grid-row: 8 / 9;
@@ -1078,6 +1098,10 @@
           <section class="time-panel" aria-label="현재 시간">
             <div class="clock" id="clock">9:31</div>
           </section>
+
+          <button type="button" class="sheet-button content-return-button" id="contentReturnButton" hidden>
+            메인으로 돌아가기
+          </button>
 
           <section class="option-panel" aria-label="옵션">
             <button
@@ -1237,6 +1261,7 @@
       const timeModeToggle = document.querySelector("#timeModeToggle");
       const sponsorButton = document.querySelector("#sponsorButton");
       const titleHomeButton = document.querySelector("#titleHomeButton");
+      const contentReturnButton = document.querySelector("#contentReturnButton");
       const chatPanel = document.querySelector("#chatPanel");
       const chatInput = document.querySelector("#chatInput");
       const chatForm = document.querySelector("#chatForm");
@@ -1485,7 +1510,7 @@
       function renderMainContent() {
         const topSentence = getTopSentence();
         todaySentenceText.textContent = topSentence
-          ? `${topSentence.text} 추천 ${topSentence.up}`
+          ? topSentence.text
           : "아직 등록된 문장이 없습니다.";
 
         const topMenus = getMenuStats().slice(0, 5);
@@ -1544,13 +1569,13 @@
             article.innerHTML = `
               <div class="thread-body">${escapeHtml(item.text)}</div>
               <div class="vote-box">
-                <button type="button" class="vote-button" data-vote="up" data-id="${item.id}">
+                <button type="button" class="vote-button" data-vote="up" data-id="${item.id}" aria-label="추천 ${item.up}">
                   <img class="vote-icon" src="../assets/lunch-vote-arrow-up.svg" alt="" aria-hidden="true" />
-                  추천 ${item.up}
+                  ${item.up}
                 </button>
-                <button type="button" class="vote-button" data-vote="down" data-id="${item.id}">
+                <button type="button" class="vote-button" data-vote="down" data-id="${item.id}" aria-label="비추천 ${item.down}">
                   <img class="vote-icon" src="../assets/lunch-vote-arrow-down.svg" alt="" aria-hidden="true" />
-                  비추천 ${item.down}
+                  ${item.down}
                 </button>
               </div>
             `;
@@ -1611,6 +1636,7 @@
         mainLunchPanel.hidden = contentView !== "main";
         sentenceBoardPanel.hidden = contentView !== "board";
         menuCandidatePanel.hidden = contentView !== "menu";
+        contentReturnButton.hidden = contentView === "main";
       }
 
       function setContentView(nextView) {
@@ -1779,6 +1805,10 @@
       titleHomeButton.addEventListener("click", () => {
         setContentView("main");
         openMainPage();
+      });
+
+      contentReturnButton.addEventListener("click", () => {
+        setContentView("main");
       });
 
       openBoardButton.addEventListener("click", () => {
