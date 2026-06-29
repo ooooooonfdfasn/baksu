@@ -1158,6 +1158,19 @@ input:focus {
   background: var(--panel-strong);
 }
 
+.chat-message.rps {
+  background: rgba(255, 198, 45, 0.14);
+  color: var(--amber);
+}
+
+.chat-message.rps .chat-name,
+.chat-message.rps .display-name,
+.chat-message.rps .role-label,
+.chat-message.rps p,
+.chat-message.rps .message-time {
+  color: inherit !important;
+}
+
 .message-meta {
   display: flex;
   align-items: center;
@@ -3379,6 +3392,20 @@ input:disabled {
   border-color: rgba(255, 198, 45, 0.5);
   background: var(--panel-strong);
   color: var(--text);
+}
+
+.chat-message.rps {
+  border-bottom-color: rgba(255, 198, 45, 0.45);
+  background: rgba(255, 198, 45, 0.18);
+  color: var(--bhc-yellow) !important;
+}
+
+.chat-message.rps .chat-name,
+.chat-message.rps .display-name,
+.chat-message.rps .role-label,
+.chat-message.rps p,
+.chat-message.rps .message-time {
+  color: inherit !important;
 }
 
 .centered-backdrop {

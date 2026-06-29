@@ -54,7 +54,7 @@ interface ChatMessage {
   role: Role;
   body: string;
   at: number;
-  kind?: "normal" | "system" | "bell";
+  kind?: "normal" | "system" | "bell" | "rps";
 }
 
 interface PresenceUser {
@@ -152,6 +152,7 @@ const megaphonePrice = 10000;
 const rpsRoundDurationMs = 15000;
 const rpsResultHoldMs = 4000;
 const rpsWinnerFadeMs = 1250;
+const rpsPostFadeWaitMs = 3000;
 const roles: Role[] = ["인턴", "사원", "대리", "과장", "부장"];
 const menuItems = [
   { id: "kimchi-jeon", name: "김치전", price: 16000, kind: "food", icon: "전" },
@@ -512,6 +513,10 @@ function stripRoleSuffix(nickname: string, role: Role) {
   return baseName.endsWith(role) ? baseName.slice(0, -role.length) || baseName : baseName;
 }
 
+function formatMemberName(nickname: string, role: Role) {
+  return `${stripRoleSuffix(nickname, role)}${role}`;
+}
+
 function getRoleTone(role: Role) {
   switch (role) {
     case "인턴":
@@ -642,6 +647,7 @@ export function HasikRoom({
   const completedOrderIdsRef = useRef(new Set<string>());
   const approvedReceiptIdsRef = useRef(new Set<string>());
   const nextRpsRoundTimerRef = useRef<number | null>(null);
+  const rpsProgressMessageIdsRef = useRef(new Set<string>());
 
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const roomName = useMemo(() => roomNameOverride ?? getHasikRoomName(), [roomNameOverride]);
@@ -1112,6 +1118,27 @@ export function HasikRoom({
           return nextParticipants;
         });
       })
+      .on("broadcast", { event: "rps_progress" }, ({ payload }) => {
+        if (
+          typeof payload?.id !== "string" ||
+          typeof payload?.body !== "string" ||
+          typeof payload?.at !== "number"
+        ) {
+          return;
+        }
+
+        const nextMessage: ChatMessage = {
+          id: payload.id,
+          nickname: "가위바위보",
+          role: "부장",
+          body: payload.body.slice(0, 120),
+          at: payload.at,
+          kind: "rps"
+        };
+
+        rpsProgressMessageIdsRef.current.add(nextMessage.id);
+        setMessages((current) => mergeMessage(current, nextMessage));
+      })
       .on("broadcast", { event: "rps_choice" }, ({ payload }) => {
         if (
           typeof payload?.userId !== "string" ||
@@ -1476,6 +1503,36 @@ export function HasikRoom({
     });
   }, [orderTotal, registerCompletedPayment, walletBalance]);
 
+  const postRpsProgressMessage = useCallback((id: string, body: string) => {
+    if (rpsProgressMessageIdsRef.current.has(id)) {
+      return;
+    }
+
+    rpsProgressMessageIdsRef.current.add(id);
+    const nextMessage: ChatMessage = {
+      id,
+      nickname: "가위바위보",
+      role: "부장",
+      body: body.slice(0, 120),
+      at: Date.now(),
+      kind: "rps"
+    };
+
+    setMessages((current) => mergeMessage(current, nextMessage));
+
+    if (!debugMode && connected && channelRef.current) {
+      void channelRef.current.send({
+        type: "broadcast",
+        event: "rps_progress",
+        payload: {
+          id: nextMessage.id,
+          body: nextMessage.body,
+          at: nextMessage.at
+        }
+      });
+    }
+  }, [connected, debugMode]);
+
   const startRpsRound = useCallback((activeUserIds: string[], roundNumber: number) => {
     if (activeUserIds.length <= 0) {
       return;
@@ -1491,7 +1548,11 @@ export function HasikRoom({
     setRpsRoundEndsAt(Date.now() + rpsRoundDurationMs);
     setRpsSelections({});
     setRpsRound(null);
-  }, []);
+    postRpsProgressMessage(
+      `rps:${roomName}:${roundNumber}:start:${activeUserIds.join("-")}`,
+      `${roundNumber}라운드 시작. ${activeUserIds.length}명 참가 중, 15초 안에 선택하세요.`
+    );
+  }, [postRpsProgressMessage, roomName]);
 
   const resolveRpsRound = useCallback((currentSelections: Record<string, RpsChoice>) => {
     if (rpsActiveUserIds.length <= 0 || paymentPlayerList.length <= 0 || pendingPayer) {
@@ -1513,6 +1574,7 @@ export function HasikRoom({
 
     if (safeActiveParticipants.length === 1) {
       const payer = safeActiveParticipants[0];
+      const payerName = formatMemberName(payer.nickname, payer.role);
 
       setRpsRound({
         players: safeActiveParticipants.map((participant) => ({
@@ -1525,12 +1587,16 @@ export function HasikRoom({
         })),
         activeUserIds: [payer.userId],
         roundNumber: rpsRoundNumber,
-        message: `${payer.nickname}${payer.role} 최종 결제`,
+        message: `${payerName} 최종 결제`,
         payerUserId: payer.userId,
         needsReplay: false
       });
       setRpsRoundEndsAt(null);
       setPendingPayer(payer);
+      postRpsProgressMessage(
+        `rps:${roomName}:${rpsRoundNumber}:solo-payer:${payer.userId}`,
+        `${rpsRoundNumber}라운드 결과. ${payerName} 결제자로 확정됐습니다.`
+      );
       return;
     }
 
@@ -1566,7 +1632,7 @@ export function HasikRoom({
       if (losingPlayers.length === 1) {
         payer = losingPlayers[0];
         nextActiveUserIds = [payer.userId];
-        message = `${payer.nickname}${payer.role} 최종 결제`;
+        message = `${formatMemberName(payer.nickname, payer.role)} 최종 결제`;
         needsReplay = false;
       } else if (losingPlayers.length < scoredPlayers.length) {
         nextActiveUserIds = losingPlayers.map((player) => player.userId);
@@ -1600,13 +1666,38 @@ export function HasikRoom({
       const payerParticipant =
         paymentPlayerList.find((participant) => participant.userId === payer?.userId) ?? null;
       setPendingPayer(payerParticipant);
+      postRpsProgressMessage(
+        `rps:${roomName}:${rpsRoundNumber}:final:${payer.userId}`,
+        `${rpsRoundNumber}라운드 결과. ${formatMemberName(payer.nickname, payer.role)} 결제자로 확정됐습니다.`
+      );
       return;
     }
 
+    const fadingWinners = nextPlayers.filter((player) => player.status === "winner");
+    const resultBody = fadingWinners.length > 0
+      ? `${rpsRoundNumber}라운드 결과. ${fadingWinners.map((player) =>
+        formatMemberName(player.nickname, player.role)
+      ).join(", ")} 통과. ${nextActiveUserIds.length}명 결제 후보 남음.`
+      : `${rpsRoundNumber}라운드 결과. 무승부입니다. 전원 다시 선택합니다.`;
+    const nextRoundDelay =
+      rpsResultHoldMs +
+      (fadingWinners.length > 0 ? rpsWinnerFadeMs + rpsPostFadeWaitMs : 0) +
+      180;
+
+    postRpsProgressMessage(`rps:${roomName}:${rpsRoundNumber}:result`, resultBody);
+
     nextRpsRoundTimerRef.current = window.setTimeout(() => {
       startRpsRound(nextActiveUserIds, rpsRoundNumber + 1);
-    }, rpsResultHoldMs + rpsWinnerFadeMs + 180);
-  }, [paymentPlayerList, pendingPayer, rpsActiveUserIds, rpsRoundNumber, startRpsRound]);
+    }, nextRoundDelay);
+  }, [
+    paymentPlayerList,
+    pendingPayer,
+    postRpsProgressMessage,
+    roomName,
+    rpsActiveUserIds,
+    rpsRoundNumber,
+    startRpsRound
+  ]);
 
   const submitRpsChoice = useCallback((choice: RpsChoice) => {
     if (!rpsRoundEndsAt || !rpsActiveUserIds.includes(sessionIdRef.current) || pendingPayer) {
@@ -1675,13 +1766,22 @@ export function HasikRoom({
     const allSelected = rpsActiveUserIds.every((userId) => Boolean(rpsSelections[userId]));
 
     if (allSelected || now >= rpsRoundEndsAt) {
+      postRpsProgressMessage(
+        `rps:${roomName}:${rpsRoundNumber}:${allSelected ? "locked" : "timeout"}`,
+        allSelected
+          ? `${rpsRoundNumber}라운드 전원 선택 완료. 결과 확인 중입니다.`
+          : `${rpsRoundNumber}라운드 시간이 종료되어 미선택 인원은 자동 선택됐습니다.`
+      );
       resolveRpsRound(rpsSelections);
     }
   }, [
     now,
     pendingPayer,
+    postRpsProgressMessage,
     resolveRpsRound,
+    roomName,
     rpsActiveUserIds,
+    rpsRoundNumber,
     rpsRoundEndsAt,
     rpsSelections
   ]);
