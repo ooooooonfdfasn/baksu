@@ -688,6 +688,14 @@ export function HasikRoom({
       })),
     [orderedMenuItems]
   );
+  const visibleSignatureStrokes = useMemo(
+    () => [
+      ...signatureStrokes,
+      ...(currentSignatureStroke && currentSignatureStroke.length > 0 ? [currentSignatureStroke] : [])
+    ],
+    [currentSignatureStroke, signatureStrokes]
+  );
+  const hasSignatureStroke = visibleSignatureStrokes.length > 0;
   const paymentParticipantList = useMemo(
     () => Object.values(paymentParticipants),
     [paymentParticipants]
@@ -1916,15 +1924,12 @@ export function HasikRoom({
   }, []);
 
   const approveSignedPayment = useCallback(() => {
-    if (!pendingPayer || orderTotal <= 0 || signatureStrokes.length <= 0) {
+    if (!pendingPayer || orderTotal <= 0 || visibleSignatureStrokes.length <= 0) {
       return;
     }
 
     const isMine = pendingPayer.userId === sessionIdRef.current;
-
-    if (isMine && walletBalance < orderTotal) {
-      return;
-    }
+    const walletChargeAmount = isMine ? Math.min(orderTotal, walletBalance) : 0;
 
     const receipt: ApprovedReceipt = {
       id: createId(),
@@ -1933,9 +1938,11 @@ export function HasikRoom({
       amount: orderTotal,
       at: Date.now(),
       items: receiptLines,
-      signatureStrokes
+      signatureStrokes: visibleSignatureStrokes
     };
 
+    setSignatureOpen(false);
+    setPaymentOpen(false);
     registerApprovedReceipt(receipt);
     completeResolvedPayment({
       id: receipt.id,
@@ -1945,24 +1952,21 @@ export function HasikRoom({
       at: receipt.at,
       label: "결제 승인",
       method: "rps"
-    }, isMine ? orderTotal : 0);
+    }, walletChargeAmount);
     void channelRef.current?.send({
       type: "broadcast",
       event: "receipt_approved",
       payload: receipt
     });
-    setSignatureOpen(false);
-    setPaymentOpen(false);
-    setPendingPayer(null);
-    setSignatureStrokes([]);
-    setCurrentSignatureStroke(null);
+    resetPaymentSession();
   }, [
     completeResolvedPayment,
     orderTotal,
     pendingPayer,
     receiptLines,
     registerApprovedReceipt,
-    signatureStrokes,
+    resetPaymentSession,
+    visibleSignatureStrokes,
     walletBalance
   ]);
 
@@ -2539,7 +2543,7 @@ export function HasikRoom({
                     onPointerLeave={finishSignatureStroke}
                   >
                     <rect width="320" height="160" rx="8" />
-                    {[...signatureStrokes, ...(currentSignatureStroke ? [currentSignatureStroke] : [])].map((stroke, index) => (
+                    {visibleSignatureStrokes.map((stroke, index) => (
                       <path
                         key={`${index}-${stroke.length}`}
                         d={createSignaturePath(stroke)}
@@ -2567,7 +2571,7 @@ export function HasikRoom({
                   <button
                     type="button"
                     className="signature-pay-button"
-                    disabled={signatureStrokes.length <= 0}
+                    disabled={!hasSignatureStroke}
                     onClick={approveSignedPayment}
                   >
                     결제 승인
