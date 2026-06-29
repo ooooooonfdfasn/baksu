@@ -10,6 +10,7 @@ import {
   HandMetal,
   Megaphone,
   Pointer,
+  ReceiptText,
   Send,
   Settings2,
   UserRound
@@ -110,7 +111,7 @@ interface RpsPlayer {
   role: Role;
   choice: RpsChoice | null;
   score: number;
-  status: "active" | "eliminated" | "payer";
+  status: "active" | "winner" | "payer";
 }
 
 interface RpsRound {
@@ -122,9 +123,33 @@ interface RpsRound {
   needsReplay: boolean;
 }
 
+interface SignaturePoint {
+  x: number;
+  y: number;
+}
+
+type SignatureStroke = SignaturePoint[];
+
+interface ReceiptLine {
+  name: string;
+  count: number;
+  amount: number;
+}
+
+interface ApprovedReceipt {
+  id: string;
+  payerNickname: string;
+  payerRole: Role;
+  amount: number;
+  at: number;
+  items: ReceiptLine[];
+  signatureStrokes: SignatureStroke[];
+}
+
 const chatCooldownMs = 500;
 const megaphoneStorageKey = "hasik:megaphone-count";
 const megaphonePrice = 10000;
+const rpsRoundDurationMs = 15000;
 const roles: Role[] = ["인턴", "사원", "대리", "과장", "부장"];
 const menuItems = [
   { id: "kimchi-jeon", name: "김치전", price: 16000, kind: "food", icon: "전" },
@@ -430,6 +455,23 @@ function compareRps(left: RpsChoice, right: RpsChoice) {
   return -1;
 }
 
+function createSeededChoice(userId: string, roundNumber: number): RpsChoice {
+  const seed = `${userId}:${roundNumber}`;
+  let hash = 0;
+
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
+  }
+
+  return rpsChoices[hash % rpsChoices.length].id;
+}
+
+function createSignaturePath(points: SignatureStroke) {
+  return points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
+    .join(" ");
+}
+
 function createPaymentParticipant(member: PresenceUser): PaymentParticipant {
   return {
     userId: member.id,
@@ -569,7 +611,18 @@ export function HasikRoom({
   const [promotedBubbleId, setPromotedBubbleId] = useState<string | null>(null);
   const [menuSelections, setMenuSelections] = useState<Record<string, MenuSelection>>({});
   const [paymentParticipants, setPaymentParticipants] = useState<Record<string, PaymentParticipant>>({});
+  const [rpsActiveUserIds, setRpsActiveUserIds] = useState<string[]>([]);
+  const [rpsRoundNumber, setRpsRoundNumber] = useState(1);
+  const [rpsRoundEndsAt, setRpsRoundEndsAt] = useState<number | null>(null);
+  const [rpsSelections, setRpsSelections] = useState<Record<string, RpsChoice>>({});
   const [rpsRound, setRpsRound] = useState<RpsRound | null>(null);
+  const [pendingPayer, setPendingPayer] = useState<PaymentParticipant | null>(null);
+  const [isSignatureOpen, setSignatureOpen] = useState(false);
+  const [signatureStrokes, setSignatureStrokes] = useState<SignatureStroke[]>([]);
+  const [currentSignatureStroke, setCurrentSignatureStroke] = useState<SignatureStroke | null>(null);
+  const [approvedReceipts, setApprovedReceipts] = useState<ApprovedReceipt[]>([]);
+  const [isReceiptListOpen, setReceiptListOpen] = useState(false);
+  const [latestReceipt, setLatestReceipt] = useState<ApprovedReceipt | null>(null);
   const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null);
   const [totalPaymentAmount, setTotalPaymentAmount] = useState(initialTotalPaymentAmount);
   const [reportStatus, setReportStatus] = useState("");
@@ -585,6 +638,8 @@ export function HasikRoom({
   const menuListRef = useRef<HTMLDivElement | null>(null);
   const activeComposerInputRef = useRef<HTMLInputElement | null>(null);
   const completedOrderIdsRef = useRef(new Set<string>());
+  const approvedReceiptIdsRef = useRef(new Set<string>());
+  const nextRpsRoundTimerRef = useRef<number | null>(null);
 
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const roomName = useMemo(() => roomNameOverride ?? getHasikRoomName(), [roomNameOverride]);
@@ -616,11 +671,24 @@ export function HasikRoom({
       .filter((item) => item.count > 0);
   }, [menuSelectionList]);
   const orderTotal = orderedMenuItems.reduce((total, item) => total + item.price * item.count, 0);
+  const receiptLines = useMemo<ReceiptLine[]>(
+    () =>
+      orderedMenuItems.map((item) => ({
+        name: item.name,
+        count: item.count,
+        amount: item.price * item.count
+      })),
+    [orderedMenuItems]
+  );
   const paymentParticipantList = useMemo(
     () => Object.values(paymentParticipants),
     [paymentParticipants]
   );
   const paymentParticipantCount = paymentParticipantList.length;
+  const rpsRemainingSeconds = rpsRoundEndsAt
+    ? Math.max(0, Math.ceil((rpsRoundEndsAt - now) / 1000))
+    : null;
+  const selectedRpsChoice = rpsSelections[sessionIdRef.current] ?? null;
   const selectedVenue = roomVenues.find((venue) => venue.id === roomVenue) ?? roomVenues[0];
   const venueBackdropStyle = {
     "--room-venue-image": `url("${getAssetPath(selectedVenue.image)}")`
@@ -708,6 +776,16 @@ export function HasikRoom({
     onOrderCompleted?.(order.amount);
   }, [onOrderCompleted]);
 
+  const registerApprovedReceipt = useCallback((receipt: ApprovedReceipt) => {
+    if (approvedReceiptIdsRef.current.has(receipt.id)) {
+      return;
+    }
+
+    approvedReceiptIdsRef.current.add(receipt.id);
+    setApprovedReceipts((current) => [receipt, ...current].slice(0, 30));
+    setLatestReceipt(receipt);
+  }, []);
+
   useEffect(() => {
     const mountedAt = Date.now();
     setHasMounted(true);
@@ -721,6 +799,15 @@ export function HasikRoom({
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, [supabase]);
+
+  useEffect(() => {
+    if (!latestReceipt) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setLatestReceipt(null), 5200);
+    return () => window.clearTimeout(timer);
+  }, [latestReceipt]);
 
   useEffect(() => {
     saveWalletState(walletBalance, walletResetAt);
@@ -854,6 +941,14 @@ export function HasikRoom({
       });
     };
   }, [completedOrder, debugMembers, debugMode, isPaymentOpen, nickname, selectedRole]);
+
+  useEffect(() => {
+    return () => {
+      if (nextRpsRoundTimerRef.current) {
+        window.clearTimeout(nextRpsRoundTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!supabase) {
@@ -1015,6 +1110,70 @@ export function HasikRoom({
           return nextParticipants;
         });
       })
+      .on("broadcast", { event: "rps_choice" }, ({ payload }) => {
+        if (
+          typeof payload?.userId !== "string" ||
+          typeof payload?.choice !== "string" ||
+          typeof payload?.roundNumber !== "number" ||
+          payload.roundNumber !== rpsRoundNumber ||
+          !rpsChoices.some((choice) => choice.id === payload.choice)
+        ) {
+          return;
+        }
+
+        setRpsSelections((current) => ({
+          ...current,
+          [payload.userId]: payload.choice as RpsChoice
+        }));
+      })
+      .on("broadcast", { event: "receipt_approved" }, ({ payload }) => {
+        if (
+          typeof payload?.id !== "string" ||
+          typeof payload?.payerNickname !== "string" ||
+          typeof payload?.payerRole !== "string" ||
+          typeof payload?.amount !== "number" ||
+          typeof payload?.at !== "number" ||
+          !roles.includes(payload.payerRole as Role)
+        ) {
+          return;
+        }
+
+        const rawItems = Array.isArray(payload.items)
+          ? payload.items as Array<Record<string, unknown>>
+          : [];
+        const items: ReceiptLine[] = rawItems
+          .filter((item) =>
+            typeof item.name === "string" &&
+            typeof item.count === "number" &&
+            typeof item.amount === "number"
+          )
+          .map((item) => ({
+            name: item.name as string,
+            count: item.count as number,
+            amount: item.amount as number
+          }));
+        const rawStrokes = Array.isArray(payload.signatureStrokes)
+          ? payload.signatureStrokes as unknown[]
+          : [];
+        const signatureStrokes: SignatureStroke[] = rawStrokes
+          .filter((stroke): stroke is Array<Record<string, unknown>> => Array.isArray(stroke))
+          .map((stroke) =>
+            stroke
+              .filter((point) => typeof point.x === "number" && typeof point.y === "number")
+              .map((point) => ({ x: point.x as number, y: point.y as number }))
+          )
+          .filter((stroke) => stroke.length > 0);
+
+        registerApprovedReceipt({
+          id: payload.id,
+          payerNickname: payload.payerNickname,
+          payerRole: payload.payerRole as Role,
+          amount: payload.amount,
+          at: payload.at,
+          items,
+          signatureStrokes
+        });
+      })
       .on("broadcast", { event: "order_completed" }, ({ payload }) => {
         if (
           typeof payload?.id !== "string" ||
@@ -1071,11 +1230,13 @@ export function HasikRoom({
   }, [
     debugMode,
     onQuickJoinChange,
+    registerApprovedReceipt,
     registerCompletedPayment,
     onRoomTitleChange,
     onRoomVenueChange,
     onTableShapeChange,
     roomName,
+    rpsRoundNumber,
     supabase,
     user
   ]);
@@ -1183,7 +1344,19 @@ export function HasikRoom({
 
   const resetPaymentSession = useCallback(() => {
     setPaymentParticipants({});
+    setRpsActiveUserIds([]);
+    setRpsRoundNumber(1);
+    setRpsRoundEndsAt(null);
+    setRpsSelections({});
     setRpsRound(null);
+    setPendingPayer(null);
+    setSignatureOpen(false);
+    setSignatureStrokes([]);
+    setCurrentSignatureStroke(null);
+    if (nextRpsRoundTimerRef.current) {
+      window.clearTimeout(nextRpsRoundTimerRef.current);
+      nextRpsRoundTimerRef.current = null;
+    }
   }, []);
 
   const completeSoloOrder = useCallback(() => {
@@ -1301,62 +1474,69 @@ export function HasikRoom({
     });
   }, [orderTotal, registerCompletedPayment, walletBalance]);
 
-  const playRpsRound = useCallback((myChoice: RpsChoice) => {
-    if (orderTotal <= 0 || paymentPlayerList.length <= 0) {
+  const startRpsRound = useCallback((activeUserIds: string[], roundNumber: number) => {
+    if (activeUserIds.length <= 0) {
       return;
     }
 
-    const previousActiveUserIds =
-      rpsRound && rpsRound.needsReplay && !rpsRound.payerUserId
-        ? rpsRound.activeUserIds
-        : paymentPlayerList.map((participant) => participant.userId);
-    const activeUserIdSet = new Set(previousActiveUserIds);
+    if (nextRpsRoundTimerRef.current) {
+      window.clearTimeout(nextRpsRoundTimerRef.current);
+      nextRpsRoundTimerRef.current = null;
+    }
+
+    setRpsActiveUserIds(activeUserIds);
+    setRpsRoundNumber(roundNumber);
+    setRpsRoundEndsAt(Date.now() + rpsRoundDurationMs);
+    setRpsSelections({});
+    setRpsRound(null);
+  }, []);
+
+  const resolveRpsRound = useCallback((currentSelections: Record<string, RpsChoice>) => {
+    if (rpsActiveUserIds.length <= 0 || paymentPlayerList.length <= 0 || pendingPayer) {
+      return;
+    }
+
+    if (nextRpsRoundTimerRef.current) {
+      window.clearTimeout(nextRpsRoundTimerRef.current);
+      nextRpsRoundTimerRef.current = null;
+    }
+
+    const activeUserIdSet = new Set(rpsActiveUserIds);
     const activeParticipants = paymentPlayerList.filter((participant) =>
       activeUserIdSet.has(participant.userId)
     );
     const safeActiveParticipants =
       activeParticipants.length > 0 ? activeParticipants : paymentPlayerList;
+    const roundSelections = { ...currentSelections };
 
     if (safeActiveParticipants.length === 1) {
       const payer = safeActiveParticipants[0];
 
       setRpsRound({
-        players: paymentPlayerList.map((participant) => ({
+        players: safeActiveParticipants.map((participant) => ({
           userId: participant.userId,
           nickname: participant.nickname,
           role: participant.role,
-          choice: null,
+          choice: roundSelections[participant.userId] ?? createSeededChoice(participant.userId, rpsRoundNumber),
           score: 0,
-          status: participant.userId === payer.userId ? "payer" : "eliminated"
+          status: "payer"
         })),
         activeUserIds: [payer.userId],
-        roundNumber: rpsRound ? rpsRound.roundNumber + 1 : 1,
+        roundNumber: rpsRoundNumber,
         message: `${payer.nickname}${payer.role} 최종 결제`,
         payerUserId: payer.userId,
         needsReplay: false
       });
-      completeResolvedPayment({
-        id: createId(),
-        payerNickname: payer.nickname,
-        payerRole: payer.role,
-        amount: orderTotal,
-        at: Date.now(),
-        label: "패자 계산",
-        method: "rps"
-      }, payer.userId === sessionIdRef.current ? orderTotal : 0);
+      setRpsRoundEndsAt(null);
+      setPendingPayer(payer);
       return;
     }
 
-    const roundNumber =
-      rpsRound && rpsRound.needsReplay && !rpsRound.payerUserId ? rpsRound.roundNumber + 1 : 1;
     const playerChoices = safeActiveParticipants.map((participant) => ({
       userId: participant.userId,
       nickname: participant.nickname,
       role: participant.role,
-      choice:
-        participant.userId === sessionIdRef.current
-          ? myChoice
-          : rpsChoices[Math.floor(Math.random() * rpsChoices.length)].id,
+      choice: roundSelections[participant.userId] ?? createSeededChoice(participant.userId, rpsRoundNumber),
       score: 0,
       status: "active" as const
     }));
@@ -1370,12 +1550,16 @@ export function HasikRoom({
     const scoreSet = new Set(scoredPlayers.map((player) => player.score));
     let nextActiveUserIds = scoredPlayers.map((player) => player.userId);
     let payer: RpsPlayer | null = null;
+    const winnerUserIds = new Set<string>();
     let message = "무승부입니다. 다시 가위바위보하세요.";
     let needsReplay = true;
 
     if (scoreSet.size > 1) {
       const lowestScore = Math.min(...scoredPlayers.map((player) => player.score));
       const losingPlayers = scoredPlayers.filter((player) => player.score === lowestScore);
+      scoredPlayers
+        .filter((player) => player.score > lowestScore)
+        .forEach((player) => winnerUserIds.add(player.userId));
 
       if (losingPlayers.length === 1) {
         payer = losingPlayers[0];
@@ -1387,57 +1571,118 @@ export function HasikRoom({
         message = `${losingPlayers.length}명이 결제 후보로 남았습니다. 다시 가위바위보하세요.`;
       }
     }
-    const scoredPlayerMap = new Map(scoredPlayers.map((player) => [player.userId, player]));
     const nextActiveUserIdSet = new Set(nextActiveUserIds);
-    const nextPlayers: RpsPlayer[] = paymentPlayerList.map((participant) => {
-      const scoredPlayer = scoredPlayerMap.get(participant.userId);
-
-      if (scoredPlayer) {
-        return {
-          ...scoredPlayer,
-          status: payer
-            ? payer.userId === participant.userId
-              ? "payer"
-              : "eliminated"
-            : nextActiveUserIdSet.has(participant.userId)
-              ? "active"
-              : "eliminated"
-        };
-      }
-
-      return {
-        userId: participant.userId,
-        nickname: participant.nickname,
-        role: participant.role,
-        choice: null,
-        score: 0,
-        status: nextActiveUserIdSet.has(participant.userId) ? "active" : "eliminated"
-      };
-    });
+    const nextPlayers: RpsPlayer[] = scoredPlayers.map((player) => ({
+      ...player,
+      status: payer?.userId === player.userId
+        ? "payer"
+        : winnerUserIds.has(player.userId)
+          ? "winner"
+          : nextActiveUserIdSet.has(player.userId)
+            ? "active"
+            : "winner"
+    }));
 
     setRpsRound({
       players: nextPlayers,
       activeUserIds: nextActiveUserIds,
-      roundNumber,
+      roundNumber: rpsRoundNumber,
       message,
       payerUserId: payer?.userId,
       needsReplay
     });
+    setRpsRoundEndsAt(null);
+    setRpsSelections(roundSelections);
 
-    if (!payer) {
+    if (payer) {
+      const payerParticipant =
+        paymentPlayerList.find((participant) => participant.userId === payer?.userId) ?? null;
+      setPendingPayer(payerParticipant);
       return;
     }
 
-    completeResolvedPayment({
-      id: createId(),
-      payerNickname: payer.nickname,
-      payerRole: payer.role,
-      amount: orderTotal,
-      at: Date.now(),
-      label: "패자 계산",
-      method: "rps"
-    }, payer.userId === sessionIdRef.current ? orderTotal : 0);
-  }, [completeResolvedPayment, orderTotal, paymentPlayerList, rpsRound]);
+    nextRpsRoundTimerRef.current = window.setTimeout(() => {
+      startRpsRound(nextActiveUserIds, rpsRoundNumber + 1);
+    }, 1450);
+  }, [paymentPlayerList, pendingPayer, rpsActiveUserIds, rpsRoundNumber, startRpsRound]);
+
+  const submitRpsChoice = useCallback((choice: RpsChoice) => {
+    if (!rpsRoundEndsAt || !rpsActiveUserIds.includes(sessionIdRef.current) || pendingPayer) {
+      return;
+    }
+
+    const nextSelections: Record<string, RpsChoice> = {
+      [sessionIdRef.current]: choice
+    };
+
+    if (debugMode) {
+      rpsActiveUserIds.forEach((userId) => {
+        if (userId !== sessionIdRef.current) {
+          nextSelections[userId] = createSeededChoice(userId, rpsRoundNumber);
+        }
+      });
+    }
+
+    setRpsSelections((current) => ({
+      ...current,
+      ...nextSelections
+    }));
+
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "rps_choice",
+      payload: {
+        userId: sessionIdRef.current,
+        choice,
+        roundNumber: rpsRoundNumber
+      }
+    });
+  }, [debugMode, pendingPayer, rpsActiveUserIds, rpsRoundEndsAt, rpsRoundNumber]);
+
+  useEffect(() => {
+    if (
+      !isPaymentOpen ||
+      completedOrder ||
+      isSignatureOpen ||
+      pendingPayer ||
+      rpsRoundEndsAt ||
+      rpsActiveUserIds.length > 0 ||
+      paymentParticipantCount <= 0
+    ) {
+      return;
+    }
+
+    startRpsRound(paymentPlayerList.map((participant) => participant.userId), 1);
+  }, [
+    completedOrder,
+    isPaymentOpen,
+    isSignatureOpen,
+    paymentParticipantCount,
+    paymentPlayerList,
+    pendingPayer,
+    rpsActiveUserIds.length,
+    rpsRoundEndsAt,
+    startRpsRound
+  ]);
+
+  useEffect(() => {
+    if (!rpsRoundEndsAt || pendingPayer || rpsActiveUserIds.length <= 0) {
+      return;
+    }
+
+    const allSelected = rpsActiveUserIds.every((userId) => Boolean(rpsSelections[userId]));
+
+    if (allSelected || now >= rpsRoundEndsAt) {
+      resolveRpsRound(rpsSelections);
+    }
+  }, [
+    now,
+    pendingPayer,
+    resolveRpsRound,
+    rpsActiveUserIds,
+    rpsRoundEndsAt,
+    rpsSelections
+  ]);
 
   const sendMessage = useCallback(
     async (body: string, kind: ChatMessage["kind"] = "normal") => {
@@ -1536,6 +1781,89 @@ export function HasikRoom({
     await sendMessage(`[확성기] ${cleanBody}`, "system");
   }, [isCoolingDown, megaphoneCount, megaphoneInput, sendMessage]);
 
+  const getSignaturePoint = useCallback((event: ReactPointerEvent<SVGSVGElement>): SignaturePoint => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * 320,
+      y: ((event.clientY - rect.top) / rect.height) * 160
+    };
+  }, []);
+
+  const startSignatureStroke = useCallback((event: ReactPointerEvent<SVGSVGElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setCurrentSignatureStroke([getSignaturePoint(event)]);
+  }, [getSignaturePoint]);
+
+  const moveSignatureStroke = useCallback((event: ReactPointerEvent<SVGSVGElement>) => {
+    if (!currentSignatureStroke) {
+      return;
+    }
+
+    const nextPoint = getSignaturePoint(event);
+    setCurrentSignatureStroke((current) => (current ? [...current, nextPoint] : current));
+  }, [currentSignatureStroke, getSignaturePoint]);
+
+  const finishSignatureStroke = useCallback(() => {
+    setCurrentSignatureStroke((current) => {
+      if (current && current.length > 1) {
+        setSignatureStrokes((strokes) => [...strokes, current]);
+      }
+
+      return null;
+    });
+  }, []);
+
+  const approveSignedPayment = useCallback(() => {
+    if (!pendingPayer || orderTotal <= 0 || signatureStrokes.length <= 0) {
+      return;
+    }
+
+    const isMine = pendingPayer.userId === sessionIdRef.current;
+
+    if (isMine && walletBalance < orderTotal) {
+      return;
+    }
+
+    const receipt: ApprovedReceipt = {
+      id: createId(),
+      payerNickname: pendingPayer.nickname,
+      payerRole: pendingPayer.role,
+      amount: orderTotal,
+      at: Date.now(),
+      items: receiptLines,
+      signatureStrokes
+    };
+
+    registerApprovedReceipt(receipt);
+    completeResolvedPayment({
+      id: receipt.id,
+      payerNickname: receipt.payerNickname,
+      payerRole: receipt.payerRole,
+      amount: receipt.amount,
+      at: receipt.at,
+      label: "결제 승인",
+      method: "rps"
+    }, isMine ? orderTotal : 0);
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "receipt_approved",
+      payload: receipt
+    });
+    setSignatureOpen(false);
+    setPaymentOpen(false);
+    setPendingPayer(null);
+    setSignatureStrokes([]);
+    setCurrentSignatureStroke(null);
+  }, [
+    completeResolvedPayment,
+    orderTotal,
+    pendingPayer,
+    receiptLines,
+    registerApprovedReceipt,
+    signatureStrokes,
+    walletBalance
+  ]);
+
   const reportProfile = useCallback(async () => {
     if (!activeProfile) {
       return;
@@ -1602,6 +1930,30 @@ export function HasikRoom({
           );
         })}
       </div>
+    );
+  };
+
+  const renderSignatureSvg = (
+    strokes: SignatureStroke[],
+    className = "signature-preview",
+    draftStroke: SignatureStroke | null = null
+  ) => {
+    const allStrokes = draftStroke ? [...strokes, draftStroke] : strokes;
+
+    return (
+      <svg className={className} viewBox="0 0 320 160" aria-hidden="true">
+        {allStrokes.map((stroke, index) => (
+          <path
+            key={`${index}-${stroke.length}`}
+            d={createSignaturePath(stroke)}
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="5"
+          />
+        ))}
+      </svg>
     );
   };
 
@@ -1813,6 +2165,16 @@ export function HasikRoom({
                 </div>
                 <button
                   type="button"
+                  className="menu-trigger table-receipt-trigger"
+                  onClick={() => setReceiptListOpen(true)}
+                  aria-label="영수증 모아보기"
+                  title="영수증"
+                >
+                  <ReceiptText size={30} />
+                  <span>영수증</span>
+                </button>
+                <button
+                  type="button"
                   className="menu-trigger table-menu-trigger"
                   onClick={() => setMenuOpen(true)}
                   aria-label="메뉴판 열기"
@@ -2004,7 +2366,7 @@ export function HasikRoom({
           >
             <div className="menu-head">
               <div>
-                <p id="payment-title">가위바위보</p>
+                <p id="payment-title">가위바위보로 단 한 명 결제 승부</p>
               </div>
               <button
                 type="button"
@@ -2031,10 +2393,86 @@ export function HasikRoom({
 
             <div className="payment-status-row">
               <span className="money-pill">내 돈 {formatPrice(walletBalance)}</span>
-              <span className="payment-status-text">{paymentParticipantCount}명 참가 중</span>
+              <span className="payment-status-text">
+                {pendingPayer
+                  ? "결제 대상 확정"
+                  : rpsRemainingSeconds !== null
+                    ? `${rpsRemainingSeconds}초`
+                    : `${paymentParticipantCount}명 참가 중`}
+              </span>
             </div>
 
-            {completedOrder ? (
+            {isSignatureOpen && pendingPayer ? (
+              <div className="signature-payment-panel">
+                <div className="receipt-paper">
+                  <strong>영수증</strong>
+                  <span>
+                    <NameWithRole nickname={pendingPayer.nickname} role={pendingPayer.role} />
+                  </span>
+                  <div className="receipt-lines">
+                    {receiptLines.map((item) => (
+                      <div key={item.name}>
+                        <span>{item.name} x {item.count}</span>
+                        <strong>{formatPrice(item.amount)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="receipt-total">
+                    <span>합계</span>
+                    <strong>{formatPrice(orderTotal)}</strong>
+                  </div>
+                </div>
+
+                <div className="signature-pad-wrap">
+                  <span>사인</span>
+                  <svg
+                    className="signature-pad"
+                    viewBox="0 0 320 160"
+                    role="img"
+                    aria-label="사인 입력 영역"
+                    onPointerDown={startSignatureStroke}
+                    onPointerMove={moveSignatureStroke}
+                    onPointerUp={finishSignatureStroke}
+                    onPointerCancel={finishSignatureStroke}
+                    onPointerLeave={finishSignatureStroke}
+                  >
+                    <rect width="320" height="160" rx="8" />
+                    {[...signatureStrokes, ...(currentSignatureStroke ? [currentSignatureStroke] : [])].map((stroke, index) => (
+                      <path
+                        key={`${index}-${stroke.length}`}
+                        d={createSignaturePath(stroke)}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="5"
+                      />
+                    ))}
+                  </svg>
+                </div>
+
+                <div className="signature-actions">
+                  <button
+                    type="button"
+                    className="signature-clear-button"
+                    onClick={() => {
+                      setSignatureStrokes([]);
+                      setCurrentSignatureStroke(null);
+                    }}
+                  >
+                    지우기
+                  </button>
+                  <button
+                    type="button"
+                    className="signature-pay-button"
+                    disabled={signatureStrokes.length <= 0}
+                    onClick={approveSignedPayment}
+                  >
+                    결제 승인
+                  </button>
+                </div>
+              </div>
+            ) : completedOrder ? (
               <div className="order-complete payment-complete-card">
                 <div className="payment-complete-badge" aria-hidden="true">
                   완료
@@ -2063,29 +2501,102 @@ export function HasikRoom({
               </div>
             ) : (
               <div className="payment-resolution">
-                <strong>가위바위보 확정</strong>
                 {rpsRound ? renderRpsCircle(rpsRound) : null}
-                <div className="rps-choice-list">
-                  {rpsChoices.map((choice) => {
-                    const ChoiceIcon = choice.icon;
+                {pendingPayer ? (
+                  <button
+                    type="button"
+                    className="payment-sign-button"
+                    onClick={() => {
+                      setSignatureOpen(true);
+                      setSignatureStrokes([]);
+                      setCurrentSignatureStroke(null);
+                    }}
+                  >
+                    결제하기
+                  </button>
+                ) : null}
+                {!pendingPayer && rpsRoundEndsAt ? (
+                  <div className="rps-choice-list">
+                    {rpsChoices.map((choice) => {
+                      const ChoiceIcon = choice.icon;
+                      const isActiveUser = rpsActiveUserIds.includes(sessionIdRef.current);
+                      const isSelected = selectedRpsChoice === choice.id;
 
-                    return (
-                      <button
-                        key={choice.id}
-                        type="button"
-                        className="rps-choice-button"
-                        aria-label={choice.label}
-                        title={choice.label}
-                        onClick={() => playRpsRound(choice.id)}
-                      >
-                        <ChoiceIcon size={38} strokeWidth={2.3} />
-                      </button>
-                    );
-                  })}
-                </div>
+                      return (
+                        <button
+                          key={choice.id}
+                          type="button"
+                          className={isSelected ? "rps-choice-button selected" : "rps-choice-button"}
+                          aria-label={choice.label}
+                          title={choice.label}
+                          disabled={!rpsRoundEndsAt || !isActiveUser || Boolean(selectedRpsChoice)}
+                          onClick={() => submitRpsChoice(choice.id)}
+                        >
+                          <ChoiceIcon size={38} strokeWidth={2.3} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
             )}
           </section>
+        </div>
+      ) : null}
+      {isReceiptListOpen ? (
+        <div
+          className="profile-backdrop centered-backdrop"
+          role="presentation"
+          onClick={() => setReceiptListOpen(false)}
+        >
+          <section
+            className="receipt-popover"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="receipt-list-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="menu-head">
+              <div>
+                <p id="receipt-list-title">영수증</p>
+              </div>
+              <button
+                type="button"
+                className="profile-close"
+                onClick={() => setReceiptListOpen(false)}
+                aria-label="영수증 닫기"
+              >
+                ×
+              </button>
+            </div>
+            <div className="receipt-list">
+              {approvedReceipts.length > 0 ? (
+                approvedReceipts.map((receipt) => (
+                  <article key={receipt.id} className="receipt-card">
+                    <div>
+                      <strong>
+                        <NameWithRole nickname={receipt.payerNickname} role={receipt.payerRole} />
+                      </strong>
+                      <time>{formatClock(receipt.at)}</time>
+                    </div>
+                    <span>{formatPrice(receipt.amount)}</span>
+                    {renderSignatureSvg(receipt.signatureStrokes)}
+                  </article>
+                ))
+              ) : (
+                <p className="empty-receipt">아직 승인된 영수증이 없습니다.</p>
+              )}
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {latestReceipt ? (
+        <div className="receipt-approval-toast" role="status" aria-live="polite">
+          <strong>결제가 승인되었습니다</strong>
+          <span>
+            <NameWithRole nickname={latestReceipt.payerNickname} role={latestReceipt.payerRole} />
+          </span>
+          {renderSignatureSvg(latestReceipt.signatureStrokes, "signature-preview toast-signature")}
         </div>
       ) : null}
       {isMegaphoneOpen ? (
