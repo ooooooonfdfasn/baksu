@@ -20,6 +20,7 @@
   --bhc-brown-soft: #f0c071;
   --bhc-cream: #2c1a10;
   --bhc-gray: #3a3029;
+  --hasik-mobile-frame-w: min(390px, 100vw);
 }
 
 * {
@@ -3537,5 +3538,374 @@ input:disabled {
   .seat-bubble {
     min-width: 48px;
     border-radius: 999px !important;
+  }
+}
+
+@media (min-width: 761px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .app-shell,
+  .lobby-shell {
+    width: var(--hasik-mobile-frame-w);
+    max-width: var(--hasik-mobile-frame-w);
+  }
+
+  .app-shell {
+    padding: 10px 10px calc(116px + env(safe-area-inset-bottom));
+  }
+
+  .room-page .app-shell {
+    padding: 8px;
+  }
+
+  .lobby-page {
+    padding: 10px;
+  }
+
+  .hero-room {
+    min-height: 0;
+  }
+
+  .topbar,
+  .lobby-header {
+    align-items: center;
+    flex-direction: row;
+    gap: 8px;
+    min-height: 0;
+    padding-bottom: 8px;
+    border-bottom: 0;
+  }
+
+  .lobby-header {
+    gap: 6px;
+    padding-bottom: 10px;
+  }
+
+  h1 {
+    font-size: 30px;
+    line-height: 1.08;
+  }
+
+  .topbar h1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .lobby-header p {
+    display: none;
+  }
+
+  .lobby-actions {
+    gap: 6px;
+  }
+
+  .lobby-primary-actions {
+    gap: 8px;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .quick-join-button,
+  .create-room-open-button {
+    min-height: 42px;
+    padding: 0 11px;
+  }
+
+  .lobby-guide-link {
+    min-height: 42px;
+    font-size: 14px;
+  }
+
+  .lobby-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .room-list-panel {
+    width: 100%;
+    grid-column: auto;
+  }
+
+  .room-list-item {
+    min-height: 62px;
+  }
+
+  .room-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .room-page .room-grid {
+    grid-template-rows: minmax(0, 1fr) minmax(0, 0.72fr);
+    height: 100%;
+    gap: 8px;
+    padding-top: 8px;
+  }
+
+  .left-rail {
+    order: 3;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .right-rail {
+    order: 2;
+  }
+
+  .room-page .right-rail {
+    height: 100%;
+    gap: 8px;
+  }
+
+  .table-stage {
+    order: 1;
+  }
+
+  .table-scene {
+    min-height: 430px;
+    padding: 48px 0 0;
+  }
+
+  .room-page .table-scene {
+    min-height: 0;
+    padding: 32px 0 22px;
+  }
+
+  .scene-toolbar {
+    gap: 8px;
+  }
+
+  .scene-stats {
+    gap: 5px;
+    max-width: calc(100% - 88px);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .scene-stats::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scene-room-title {
+    max-width: 118px;
+    font-size: 12px;
+  }
+
+  .scene-stats span {
+    min-height: 24px;
+    font-size: 12px;
+  }
+
+  .analog-time {
+    min-width: 72px;
+    gap: 3px;
+    font-size: 11px;
+  }
+
+  .analog-clock {
+    --clock-size: 60px;
+    --mark-distance: 23px;
+  }
+
+  .seat-map {
+    --seat-bubble-max-width: 260px;
+    width: 100%;
+    min-height: 382px;
+  }
+
+  .seat-map.round {
+    --seat-bubble-max-width: 230px;
+  }
+
+  .seat-map.rectangle {
+    --seat-bubble-max-width: 260px;
+  }
+
+  .seat-map.round .slot-0,
+  .seat-map.round .slot-4 {
+    --seat-bubble-max-width: 250px;
+  }
+
+  .seat-map.round .slot-1,
+  .seat-map.round .slot-3,
+  .seat-map.round .slot-5,
+  .seat-map.round .slot-7 {
+    --seat-bubble-max-width: 176px;
+  }
+
+  .seat-map.round .slot-2,
+  .seat-map.round .slot-6 {
+    --seat-bubble-max-width: 150px;
+  }
+
+  .seat-map.rectangle .slot-0,
+  .seat-map.rectangle .slot-4 {
+    --seat-bubble-max-width: 236px;
+  }
+
+  .seat-map.rectangle .slot-1,
+  .seat-map.rectangle .slot-3,
+  .seat-map.rectangle .slot-5,
+  .seat-map.rectangle .slot-7 {
+    --seat-bubble-max-width: 158px;
+  }
+
+  .seat-map.rectangle .slot-2,
+  .seat-map.rectangle .slot-6 {
+    --seat-bubble-max-width: 178px;
+  }
+
+  .room-page .seat-map {
+    min-height: 0;
+    height: 100%;
+  }
+
+  .seat-map .table {
+    width: 238px;
+    border-width: 14px;
+  }
+
+  .room-page .seat-map .table {
+    width: min(230px, 34dvh);
+    border-width: 12px;
+  }
+
+  .seat-map.rectangle .table {
+    width: 286px;
+    aspect-ratio: 1.7;
+  }
+
+  .room-page .seat-map.rectangle .table {
+    width: min(270px, 38dvh);
+  }
+
+  .seat-slot,
+  .seat-bubble-anchor {
+    width: 88px;
+    min-height: 48px;
+    gap: 5px;
+  }
+
+  .seat-map.rectangle .slot-1,
+  .seat-map.rectangle .slot-3 {
+    left: 28%;
+  }
+
+  .seat-map.rectangle .slot-2 {
+    left: 11%;
+  }
+
+  .seat-map.rectangle .slot-5,
+  .seat-map.rectangle .slot-7 {
+    left: 72%;
+  }
+
+  .seat-map.rectangle .slot-6 {
+    left: 89%;
+  }
+
+  .seat-bubble {
+    min-width: 48px;
+    max-width: var(--seat-bubble-max-width);
+    min-height: 32px;
+    padding: 7px 8px;
+    border-radius: 999px !important;
+    font-size: 11px;
+  }
+
+  .seat-token {
+    width: 64px;
+    min-height: 48px;
+    padding: 6px 4px;
+    border-radius: 18px !important;
+  }
+
+  .seat-token > span,
+  .seat-token .display-name {
+    font-size: 12px;
+  }
+
+  .seat-token small {
+    font-size: 10px;
+  }
+
+  .menu-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px 0 0;
+  }
+
+  .menu-item {
+    min-height: 64px;
+    padding: 10px;
+    border-radius: 18px !important;
+  }
+
+  .chat-panel {
+    order: 0;
+    grid-template-rows: minmax(0, 1fr);
+    height: auto;
+    min-height: 0;
+  }
+
+  .chat-header {
+    min-height: 42px;
+    padding: 7px 10px;
+  }
+
+  .chat-feed {
+    max-height: none;
+    padding: 0;
+  }
+
+  .chat-message {
+    grid-template-columns: minmax(68px, 0.42fr) minmax(0, 1fr) max-content;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .profile-trigger {
+    max-width: none;
+  }
+
+  .chat-form {
+    gap: 7px;
+    min-height: 54px;
+    padding: 7px;
+  }
+
+  .icon-action,
+  .send-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .chat-form input {
+    min-height: 44px;
+  }
+
+  .chat-helper {
+    padding: 0 10px 8px;
+    font-size: 11px;
+  }
+
+  .profile-backdrop {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .centered-backdrop {
+    align-items: center;
+  }
+
+  .profile-popover,
+  .settings-popover,
+  .menu-popover,
+  .payment-popover,
+  .receipt-popover {
+    width: 100%;
   }
 }
