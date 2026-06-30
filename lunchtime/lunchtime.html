@@ -482,6 +482,10 @@
         grid-template-rows: calc(var(--row-h) * 2) minmax(0, 1fr);
       }
 
+      .option-content-page {
+        grid-template-rows: var(--row-h) minmax(0, 1fr);
+      }
+
       .content-page-panel[hidden] {
         display: none;
       }
@@ -709,7 +713,7 @@
       .chat-panel {
         z-index: 3;
         grid-column: 4 / 9;
-        grid-row: 31 / 33;
+        grid-row: 33 / 35;
         display: grid;
         grid-template-columns: minmax(0, 1fr);
         grid-template-rows: min-content calc(var(--row-h) * 2);
@@ -719,7 +723,7 @@
       }
 
       .chat-panel.has-visible-messages {
-        grid-row: 27 / 33;
+        grid-row: 29 / 35;
         grid-template-rows: min-content calc(var(--row-h) * 2);
       }
 
@@ -818,7 +822,7 @@
 
       .notice-panel {
         grid-column: 1 / -1;
-        grid-row: 33 / 35;
+        grid-row: 35 / 37;
         display: grid;
         grid-template-columns: var(--col-w) minmax(0, 1fr);
         align-items: center;
@@ -886,22 +890,6 @@
         font-weight: 700;
         line-height: 1;
         text-align: center;
-      }
-
-      .option-back-cell {
-        z-index: 3;
-        grid-column: 1 / 2;
-        grid-row: 4 / 5;
-      }
-
-      .option-page-panel {
-        z-index: 3;
-        grid-column: 1 / 7;
-        grid-row: 6 / 10;
-        display: grid;
-        grid-template-rows: repeat(4, var(--row-h));
-        background: var(--panel-bg);
-        box-shadow: inset 0 0 0 1px var(--strong);
       }
 
       .option-setting-row {
@@ -974,7 +962,7 @@
         :root {
           --col-w: calc(100vw / 6);
           --col-head-h: 30px;
-          --row-h: 24px;
+          --row-h: 22px;
         }
 
         .screen {
@@ -1038,24 +1026,24 @@
 
         .chat-panel {
           grid-column: 1 / 7;
-          grid-row: 32 / 34;
+          grid-row: 34 / 36;
         }
 
         .chat-panel.has-visible-messages {
-          grid-row: 28 / 34;
+          grid-row: 30 / 36;
         }
 
         .is-chat-focused .chat-panel {
-          grid-row: 23 / 34;
+          grid-row: 25 / 36;
         }
 
         .notice-panel {
           grid-column: 1 / 7;
-          grid-row: 34 / 36;
+          grid-row: 36 / 38;
         }
 
         .is-chat-focused .notice-panel {
-          grid-row: 34 / 36;
+          grid-row: 36 / 38;
         }
 
         .is-chat-focused .message-feed {
@@ -1138,7 +1126,7 @@
               type="button"
               class="sheet-button option-toggle"
               id="optionToggle"
-              aria-controls="optionScreen"
+              aria-controls="optionPanel"
             >
               옵션
             </button>
@@ -1205,6 +1193,15 @@
             <div class="menu-candidate-list" id="menuCandidateList"></div>
           </section>
 
+          <section class="content-page-panel option-content-page" id="optionPanel" aria-label="옵션 설정" hidden>
+            <div class="option-setting-row">
+              <span class="option-setting-label">시간 표시</span>
+              <div class="option-setting-control">
+                <button type="button" class="sheet-button" id="timeModeToggle">24시간</button>
+              </div>
+            </div>
+          </section>
+
           <section class="chat-panel" id="chatPanel" aria-label="채팅">
             <div class="chat-dock" id="chatDock">
               <div class="message-feed" id="messageFeed" aria-live="polite"></div>
@@ -1226,28 +1223,6 @@
             <strong class="notice-label">공지</strong>
             <span class="notice-text">...</span>
           </footer>
-        </div>
-      </section>
-    </main>
-
-    <main class="screen option-screen" id="optionScreen" hidden>
-      <section class="sheet-grid option-grid" aria-label="옵션 화면">
-        <h1 class="title-cell">옵션</h1>
-        <a class="baksu-doc-link" href="../articles/lunch-menu.html" aria-label="점심시간 이용안내 보기">이용안내</a>
-        <div class="cell-layer" id="optionCellLayer" aria-hidden="true"></div>
-        <div class="overlay-layer">
-          <div class="option-back-cell">
-            <button type="button" class="sheet-button" id="backToMainButton">뒤로</button>
-          </div>
-
-          <section class="option-page-panel" aria-label="옵션 설정">
-            <div class="option-setting-row">
-              <span class="option-setting-label">시간 표시</span>
-              <div class="option-setting-control">
-                <button type="button" class="sheet-button" id="timeModeToggle">24시간</button>
-              </div>
-            </div>
-          </section>
         </div>
       </section>
     </main>
@@ -1283,12 +1258,9 @@
       ];
 
       const mainScreen = document.querySelector("#mainScreen");
-      const optionScreen = document.querySelector("#optionScreen");
       const cellLayer = document.querySelector("#cellLayer");
-      const optionCellLayer = document.querySelector("#optionCellLayer");
       const clock = document.querySelector("#clock");
       const optionToggle = document.querySelector("#optionToggle");
-      const backToMainButton = document.querySelector("#backToMainButton");
       const timeModeToggle = document.querySelector("#timeModeToggle");
       const sponsorButton = document.querySelector("#sponsorButton");
       const titleHomeButton = document.querySelector("#titleHomeButton");
@@ -1319,6 +1291,7 @@
       const menuRandomButton = document.querySelector("#menuRandomButton");
       const menuRandomResult = document.querySelector("#menuRandomResult");
       const menuCandidateList = document.querySelector("#menuCandidateList");
+      const optionPanel = document.querySelector("#optionPanel");
       const toast = document.querySelector("#toast");
 
       const state = loadState();
@@ -1341,14 +1314,12 @@
 
       function lockPageScroll({ resetX = false } = {}) {
         mainScreen.scrollTop = 0;
-        optionScreen.scrollTop = 0;
         document.scrollingElement.scrollTop = 0;
         document.body.scrollTop = 0;
         window.scrollTo(0, 0);
 
         if (resetX) {
           mainScreen.scrollLeft = 0;
-          optionScreen.scrollLeft = 0;
         }
       }
 
@@ -1495,24 +1466,22 @@
       }
 
       function syncPageFromHash() {
-        const showOptions = window.location.hash === "#options";
-        mainScreen.hidden = showOptions;
-        optionScreen.hidden = !showOptions;
-        document.documentElement.classList.toggle("is-options-page", showOptions);
+        if (window.location.hash === "#options") {
+          setContentView("options");
+          return;
+        }
         lockPageScroll({ resetX: true });
       }
 
       function openOptionsPage() {
-        if (window.location.hash !== "#options") {
-          window.location.hash = "options";
-          return;
-        }
-        syncPageFromHash();
+        setContentView("options");
       }
 
       function openMainPage() {
-        history.pushState(null, "", `${window.location.pathname}${window.location.search}`);
-        syncPageFromHash();
+        if (window.location.hash) {
+          history.pushState(null, "", `${window.location.pathname}${window.location.search}`);
+        }
+        setContentView("main");
       }
 
       function setChatFocusMode(active) {
@@ -1701,6 +1670,7 @@
         mainLunchPanel.hidden = contentView !== "main";
         sentenceBoardPanel.hidden = contentView !== "board";
         menuCandidatePanel.hidden = contentView !== "menu";
+        optionPanel.hidden = contentView !== "options";
         contentReturnButton.hidden = contentView === "main";
       }
 
@@ -1843,7 +1813,6 @@
 
       syncViewportHeight();
       buildSheet(cellLayer);
-      buildSheet(optionCellLayer);
       renderMessages();
       renderContentPanels();
       updateClock();
@@ -1851,10 +1820,6 @@
 
       optionToggle.addEventListener("click", () => {
         openOptionsPage();
-      });
-
-      backToMainButton.addEventListener("click", () => {
-        openMainPage();
       });
 
       timeModeToggle.addEventListener("click", () => {
@@ -1868,12 +1833,11 @@
       });
 
       titleHomeButton.addEventListener("click", () => {
-        setContentView("main");
         openMainPage();
       });
 
       contentReturnButton.addEventListener("click", () => {
-        setContentView("main");
+        openMainPage();
       });
 
       openBoardButton.addEventListener("click", () => {
@@ -2040,7 +2004,6 @@
       window.addEventListener("resize", syncViewportHeight);
       window.addEventListener("scroll", lockPageScroll, { passive: true });
       mainScreen.addEventListener("scroll", lockPageScroll, { passive: true });
-      optionScreen.addEventListener("scroll", lockPageScroll, { passive: true });
       window.addEventListener("hashchange", syncPageFromHash);
 
       setInterval(updateClock, 30 * 1000);
