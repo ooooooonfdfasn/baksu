@@ -83,6 +83,7 @@
       }
 
       .screen {
+        position: relative;
         height: var(--viewport-h);
         min-height: 0;
         width: 100%;
@@ -129,7 +130,70 @@
           repeat;
       }
 
+      .screen::before,
+      .screen::after {
+        content: "";
+        position: absolute;
+        pointer-events: none;
+      }
+
+      .screen::before {
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 0;
+        width: var(--sheet-x);
+        background-color: var(--sheet-bg);
+        background-image:
+          repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc(var(--col-w) - 1px),
+            var(--grid) calc(var(--col-w) - 1px),
+            var(--grid) var(--col-w)
+          ),
+          linear-gradient(var(--grid), var(--grid)),
+          linear-gradient(var(--grid), var(--grid)),
+          linear-gradient(var(--grid), var(--grid)),
+          repeating-linear-gradient(
+            to bottom,
+            transparent 0,
+            transparent calc(var(--row-h) - 1px),
+            var(--grid) calc(var(--row-h) - 1px),
+            var(--grid) var(--row-h)
+          );
+        background-size:
+          auto,
+          100% 1px,
+          100% 1px,
+          100% 1px,
+          auto;
+        background-position:
+          0 0,
+          0 var(--grid-row-1-y),
+          0 var(--grid-row-2-y),
+          0 var(--grid-body-line-y),
+          0 var(--grid-body-y);
+        background-repeat:
+          repeat,
+          no-repeat,
+          no-repeat,
+          no-repeat,
+          repeat;
+      }
+
+      .screen::after {
+        top: 0;
+        right: 0;
+        left: 0;
+        z-index: 0;
+        height: calc(var(--row-h) * 2);
+        background: var(--accent);
+      }
+
       .sheet-grid {
+        position: relative;
+        z-index: 1;
         display: grid;
         grid-template-columns: repeat(6, var(--col-w));
         grid-template-rows: repeat(2, var(--row-h)) var(--col-head-h) repeat(35, var(--row-h));
