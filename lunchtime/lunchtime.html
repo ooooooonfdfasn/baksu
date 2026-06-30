@@ -26,7 +26,9 @@
         --button-divider: rgba(255, 255, 255, 0.9);
         --strong: var(--accent);
         --select: var(--accent);
-        --col-w: min(calc(100vw / 6), 65px);
+        --sheet-w: min(100vw, var(--viewport-h));
+        --sheet-x: 0px;
+        --col-w: calc(var(--sheet-w) / 6);
         --col-head-h: 30px;
         --viewport-h: 100svh;
         --row-h: 22px;
@@ -84,7 +86,25 @@
         overflow-y: hidden;
         overscroll-behavior-y: none;
         -webkit-overflow-scrolling: touch;
-        background: var(--sheet-bg);
+        background-color: var(--sheet-bg);
+        background-image:
+          repeating-linear-gradient(
+            to right,
+            transparent 0,
+            transparent calc(var(--col-w) - 1px),
+            var(--grid) calc(var(--col-w) - 1px),
+            var(--grid) var(--col-w)
+          ),
+          repeating-linear-gradient(
+            to bottom,
+            transparent 0,
+            transparent calc(var(--row-h) - 1px),
+            var(--grid) calc(var(--row-h) - 1px),
+            var(--grid) var(--row-h)
+          );
+        background-position:
+          var(--sheet-x) 0,
+          0 0;
       }
 
       .sheet-grid {
@@ -92,7 +112,7 @@
         grid-template-columns: repeat(6, var(--col-w));
         grid-template-rows: repeat(2, var(--row-h)) var(--col-head-h) repeat(35, var(--row-h));
         height: 100%;
-        width: calc(var(--col-w) * 6);
+        width: var(--sheet-w);
         min-height: 0;
         margin: 0 auto;
         background: var(--sheet-bg);
@@ -972,7 +992,8 @@
 
       @media (max-width: 760px) {
         :root {
-          --col-w: min(calc(100vw / 6), 65px);
+          --sheet-w: min(100vw, var(--viewport-h));
+          --col-w: calc(var(--sheet-w) / 6);
           --col-head-h: 30px;
           --row-h: 22px;
         }
@@ -1342,8 +1363,15 @@
 
       function syncViewportHeight() {
         const viewportHeight = window.visualViewport?.height || window.innerHeight;
+        const viewportWidth =
+          document.documentElement.clientWidth || window.visualViewport?.width || window.innerWidth;
         if (viewportHeight > 0) {
           document.documentElement.style.setProperty("--viewport-h", `${viewportHeight}px`);
+          const sheetWidth = Math.max(1, Math.min(viewportWidth, viewportHeight));
+          const sheetOffsetX = Math.max(0, (viewportWidth - sheetWidth) / 2);
+          document.documentElement.style.setProperty("--sheet-w", `${sheetWidth}px`);
+          document.documentElement.style.setProperty("--sheet-x", `${sheetOffsetX}px`);
+          document.documentElement.style.setProperty("--col-w", `${sheetWidth / columns.length}px`);
           const fittedRowHeight = Math.max(16, Math.min(22, (viewportHeight - 30) / 37));
           document.documentElement.style.setProperty("--row-h", `${fittedRowHeight}px`);
         }
