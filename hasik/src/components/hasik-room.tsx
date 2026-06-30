@@ -1,13 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
+import type {
+  ComponentType,
+  CSSProperties,
+  PointerEvent as ReactPointerEvent,
+  SVGProps
+} from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   Flag,
   Hand,
   HandFist,
-  HandMetal,
   Megaphone,
   Pointer,
   ReceiptText,
@@ -29,6 +33,11 @@ type RealtimeMode = "demo" | "setup" | "live";
 type RpsChoice = "scissors" | "rock" | "paper";
 export type TableShape = "round" | "rectangle";
 export type RoomVenue = "a" | "b" | "c";
+type RpsIconProps = SVGProps<SVGSVGElement> & {
+  size?: number | string;
+  strokeWidth?: number | string;
+};
+type RpsIcon = ComponentType<RpsIconProps>;
 
 interface HasikRoomProps {
   initialRoomTitle?: string;
@@ -164,8 +173,30 @@ const menuItems = [
   { id: "corn-tea", name: "옥수수차", price: 4000, kind: "drink", icon: "차" }
 ] as const;
 
-const rpsChoices: Array<{ id: RpsChoice; label: string; icon: typeof Hand }> = [
-  { id: "scissors", label: "가위", icon: HandMetal },
+function ScissorsHandIcon({ size = 24, strokeWidth = 2, ...props }: RpsIconProps) {
+  return (
+    <svg
+      {...props}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M8.2 13.2 5.8 5.7a1.8 1.8 0 0 1 3.4-1.2l3.1 8.4" />
+      <path d="M12.3 12.9 15 4.6a1.8 1.8 0 0 1 3.4 1.1l-2.5 7.7" />
+      <path d="M8.3 13.4V9.8a1.7 1.7 0 0 0-3.4 0v4.4A6.8 6.8 0 0 0 11.7 21h1.8a5.6 5.6 0 0 0 5.6-5.6v-1.8a1.7 1.7 0 0 0-3.4 0v1.1" />
+      <path d="M11.9 13.2v2.3" />
+      <path d="M15.5 13.4v1.9" />
+    </svg>
+  );
+}
+
+const rpsChoices: Array<{ id: RpsChoice; label: string; icon: RpsIcon }> = [
+  { id: "scissors", label: "가위", icon: ScissorsHandIcon },
   { id: "rock", label: "바위", icon: HandFist },
   { id: "paper", label: "보", icon: Hand }
 ];

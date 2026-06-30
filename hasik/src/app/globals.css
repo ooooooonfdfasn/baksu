@@ -2930,6 +2930,7 @@ input:focus {
 
   .profile-backdrop {
     align-items: end;
+    justify-items: center;
     padding: 10px;
   }
 
@@ -3905,7 +3906,10 @@ input:disabled {
   .settings-popover,
   .menu-popover,
   .payment-popover,
-  .receipt-popover {
-    width: 100%;
+  .megaphone-popover,
+  .receipt-popover,
+  .lobby-modal {
+    width: var(--hasik-mobile-frame-w);
+    max-width: calc(100vw - 20px);
   }
 }
