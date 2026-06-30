@@ -16,7 +16,6 @@ interface LobbyRoom {
   hostSessionId: string;
   memberCount: number;
   totalPaymentAmount: number;
-  quickJoinEnabled: boolean;
   isPrivate: boolean;
   password: string;
   debugMode?: boolean;
@@ -26,6 +25,7 @@ const lobbyStorageKey = "hasik:lobby-rooms";
 const lobbyUserStorageKey = "hasik:lobby-user-id";
 const debugRoomId = "debug-full-seats-room";
 const paymentDebugRoomId = "debug-payment-room";
+const privateDebugRoomId = "debug-private-room";
 
 const defaultRooms: LobbyRoom[] = [
   {
@@ -38,7 +38,6 @@ const defaultRooms: LobbyRoom[] = [
     hostSessionId: "system-host",
     memberCount: 3,
     totalPaymentAmount: 0,
-    quickJoinEnabled: true,
     isPrivate: false,
     password: ""
   },
@@ -52,7 +51,6 @@ const defaultRooms: LobbyRoom[] = [
     hostSessionId: "anonymous-host",
     memberCount: 2,
     totalPaymentAmount: 0,
-    quickJoinEnabled: true,
     isPrivate: false,
     password: ""
   }
@@ -137,7 +135,6 @@ function createDebugRoom(fallbackHostSessionId: string): LobbyRoom {
     hostSessionId: fallbackHostSessionId,
     memberCount: 8,
     totalPaymentAmount: 0,
-    quickJoinEnabled: false,
     isPrivate: false,
     password: "",
     debugMode: true
@@ -155,10 +152,25 @@ function createPaymentDebugRoom(fallbackHostSessionId: string): LobbyRoom {
     hostSessionId: fallbackHostSessionId,
     memberCount: 8,
     totalPaymentAmount: 0,
-    quickJoinEnabled: false,
     isPrivate: false,
     password: "",
     debugMode: true
+  };
+}
+
+function createPrivateDebugRoom(fallbackHostSessionId: string): LobbyRoom {
+  return {
+    id: privateDebugRoomId,
+    title: "비밀방 테스트 방",
+    tableShape: "round",
+    roomVenue: "b",
+    createdAt: Date.now() - 1000 * 60 * 3,
+    hostName: "테스트",
+    hostSessionId: fallbackHostSessionId,
+    memberCount: 1,
+    totalPaymentAmount: 0,
+    isPrivate: true,
+    password: "1234"
   };
 }
 
@@ -166,7 +178,13 @@ function ensureDebugRooms(rooms: LobbyRoom[], fallbackHostSessionId: string) {
   return [
     createPaymentDebugRoom(fallbackHostSessionId),
     createDebugRoom(fallbackHostSessionId),
-    ...rooms.filter((room) => room.id !== debugRoomId && room.id !== paymentDebugRoomId)
+    createPrivateDebugRoom(fallbackHostSessionId),
+    ...rooms.filter(
+      (room) =>
+        room.id !== debugRoomId &&
+        room.id !== paymentDebugRoomId &&
+        room.id !== privateDebugRoomId
+    )
   ];
 }
 
@@ -225,7 +243,6 @@ function normalizeRooms(value: unknown, fallbackHostSessionId: string): LobbyRoo
               : fallbackHostSessionId,
           memberCount,
           totalPaymentAmount,
-          quickJoinEnabled: sourceRoom.quickJoinEnabled !== false,
           isPrivate,
           password: isPrivate ? password : "",
           debugMode: sourceRoom.debugMode === true
@@ -244,7 +261,6 @@ export function HasikApp() {
   const [newRoomTitle, setNewRoomTitle] = useState("새 회식방");
   const [newRoomTableShape, setNewRoomTableShape] = useState<TableShape>("round");
   const [newRoomVenue, setNewRoomVenue] = useState<RoomVenue>("a");
-  const [newRoomQuickJoinEnabled, setNewRoomQuickJoinEnabled] = useState(true);
   const [newRoomIsPrivate, setNewRoomPrivate] = useState(false);
   const [newRoomPassword, setNewRoomPassword] = useState("");
   const [isCreateRoomOpen, setCreateRoomOpen] = useState(false);
@@ -305,7 +321,7 @@ export function HasikApp() {
     [rooms, selectedRoomId]
   );
   const quickJoinRooms = useMemo(
-    () => rooms.filter((room) => !room.debugMode && !room.isPrivate && room.quickJoinEnabled && room.memberCount > 0),
+    () => rooms.filter((room) => !room.debugMode && !room.isPrivate && room.memberCount > 0),
     [rooms]
   );
   const canCreateRoom = !newRoomIsPrivate || Boolean(newRoomPassword.trim());
@@ -383,7 +399,6 @@ export function HasikApp() {
       hostSessionId: currentUserId,
       memberCount: 1,
       totalPaymentAmount: 0,
-      quickJoinEnabled: newRoomQuickJoinEnabled,
       isPrivate: newRoomIsPrivate,
       password
     };
@@ -392,7 +407,6 @@ export function HasikApp() {
     setNewRoomTitle("새 회식방");
     setNewRoomTableShape("round");
     setNewRoomVenue("a");
-    setNewRoomQuickJoinEnabled(true);
     setNewRoomPrivate(false);
     setNewRoomPassword("");
     setCreateRoomOpen(false);
@@ -440,12 +454,6 @@ export function HasikApp() {
     );
   }
 
-  function updateRoomQuickJoin(roomId: string, quickJoinEnabled: boolean) {
-    setRooms((current) =>
-      current.map((room) => (room.id === roomId ? { ...room, quickJoinEnabled } : room))
-    );
-  }
-
   function addRoomPayment(roomId: string, amount: number) {
     setRooms((current) =>
       current.map((room) =>
@@ -465,7 +473,6 @@ export function HasikApp() {
         initialTotalPaymentAmount={selectedRoom.totalPaymentAmount}
         initialTableShape={selectedRoom.tableShape}
         initialRoomVenue={selectedRoom.roomVenue}
-        initialQuickJoinEnabled={selectedRoom.quickJoinEnabled}
         canManageRoomSettings={selectedRoom.hostSessionId === currentUserId}
         debugMode={selectedRoom.debugMode}
         roomNameOverride={selectedRoom.id}
@@ -473,7 +480,6 @@ export function HasikApp() {
         onRoomTitleChange={(title) => updateRoomTitle(selectedRoom.id, title)}
         onTableShapeChange={(tableShape) => updateRoomTableShape(selectedRoom.id, tableShape)}
         onRoomVenueChange={(roomVenue) => updateRoomVenue(selectedRoom.id, roomVenue)}
-        onQuickJoinChange={(quickJoinEnabled) => updateRoomQuickJoin(selectedRoom.id, quickJoinEnabled)}
         onOrderCompleted={(amount) => addRoomPayment(selectedRoom.id, amount)}
       />
     );
@@ -621,14 +627,6 @@ export function HasikApp() {
                   장소 C
                 </button>
               </div>
-              <label className="lobby-checkbox">
-                <input
-                  type="checkbox"
-                  checked={newRoomQuickJoinEnabled}
-                  onChange={(event) => setNewRoomQuickJoinEnabled(event.target.checked)}
-                />
-                <span>빠른참가 허용</span>
-              </label>
               <label className="lobby-checkbox">
                 <input
                   type="checkbox"

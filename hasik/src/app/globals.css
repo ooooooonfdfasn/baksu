@@ -691,6 +691,56 @@ input:focus {
   width: min(440px, 52vw, calc(100dvh - 220px));
 }
 
+.served-dish-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.served-dish {
+  position: absolute;
+  left: var(--dish-x, 50%);
+  top: var(--dish-y, 50%);
+  display: inline-grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+  min-width: 58px;
+  max-width: 116px;
+  min-height: 30px;
+  padding: 5px 8px;
+  border: 2px solid rgba(58, 26, 13, 0.68);
+  border-radius: 999px;
+  background: rgba(255, 248, 223, 0.96);
+  color: #3a1a0d;
+  box-shadow: 0 12px 18px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.94);
+  animation: served-dish-enter 680ms cubic-bezier(0.16, 1.22, 0.28, 1) var(--dish-delay, 0ms) forwards;
+}
+
+.served-dish span {
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.served-dish strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 950;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.served-dish small {
+  font-size: 10px;
+  font-weight: 950;
+}
+
 .seat-map.rectangle {
   --seat-bubble-line-clamp: 7;
   --seat-bubble-max-width: min(380px, 45vw);
@@ -1798,6 +1848,14 @@ input:focus {
   animation: rps-icon-thump 720ms cubic-bezier(0.16, 1.34, 0.28, 1) both;
 }
 
+.rps-generated-scissors {
+  display: block;
+  flex: 0 0 auto;
+  background: currentColor;
+  -webkit-mask: var(--rps-scissors-icon) center / contain no-repeat;
+  mask: var(--rps-scissors-icon) center / contain no-repeat;
+}
+
 .rps-result-name {
   margin-top: -7px;
   color: inherit !important;
@@ -2032,6 +2090,27 @@ input:focus {
     filter: drop-shadow(0 0 0 rgba(255, 198, 45, 0));
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes served-dish-enter {
+  0% {
+    opacity: 0;
+    transform:
+      translate(
+        calc(-50% + var(--dish-enter-x, 0px)),
+        calc(-50% + var(--dish-enter-y, 96px))
+      )
+      scale(0.82);
+  }
+
+  68% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 

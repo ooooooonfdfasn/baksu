@@ -4,8 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   ComponentType,
   CSSProperties,
-  PointerEvent as ReactPointerEvent,
-  SVGProps
+  PointerEvent as ReactPointerEvent
 } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
@@ -33,9 +32,10 @@ type RealtimeMode = "demo" | "setup" | "live";
 type RpsChoice = "scissors" | "rock" | "paper";
 export type TableShape = "round" | "rectangle";
 export type RoomVenue = "a" | "b" | "c";
-type RpsIconProps = SVGProps<SVGSVGElement> & {
+type RpsIconProps = {
   size?: number | string;
   strokeWidth?: number | string;
+  className?: string;
 };
 type RpsIcon = ComponentType<RpsIconProps>;
 
@@ -45,7 +45,6 @@ interface HasikRoomProps {
   initialTotalPaymentAmount?: number;
   initialTableShape?: TableShape;
   initialRoomVenue?: RoomVenue;
-  initialQuickJoinEnabled?: boolean;
   canManageRoomSettings?: boolean;
   debugMode?: boolean;
   roomNameOverride?: string;
@@ -53,7 +52,6 @@ interface HasikRoomProps {
   onRoomTitleChange?: (title: string) => void;
   onTableShapeChange?: (shape: TableShape) => void;
   onRoomVenueChange?: (venue: RoomVenue) => void;
-  onQuickJoinChange?: (enabled: boolean) => void;
   onOrderCompleted?: (amount: number) => void;
 }
 
@@ -140,9 +138,20 @@ interface SignaturePoint {
 type SignatureStroke = SignaturePoint[];
 
 interface ReceiptLine {
+  itemId?: string;
   name: string;
   count: number;
   amount: number;
+  icon?: string;
+}
+
+interface ServedDish {
+  id: string;
+  name: string;
+  count: number;
+  icon: string;
+  slotIndex: number;
+  placedAt: number;
 }
 
 interface ApprovedReceipt {
@@ -173,25 +182,19 @@ const menuItems = [
   { id: "corn-tea", name: "옥수수차", price: 4000, kind: "drink", icon: "차" }
 ] as const;
 
-function ScissorsHandIcon({ size = 24, strokeWidth = 2, ...props }: RpsIconProps) {
+function ScissorsHandIcon({ size = 24, className }: RpsIconProps) {
+  const iconSize = typeof size === "number" ? `${size}px` : size;
+
   return (
-    <svg
-      {...props}
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M8.2 13.2 5.8 5.7a1.8 1.8 0 0 1 3.4-1.2l3.1 8.4" />
-      <path d="M12.3 12.9 15 4.6a1.8 1.8 0 0 1 3.4 1.1l-2.5 7.7" />
-      <path d="M8.3 13.4V9.8a1.7 1.7 0 0 0-3.4 0v4.4A6.8 6.8 0 0 0 11.7 21h1.8a5.6 5.6 0 0 0 5.6-5.6v-1.8a1.7 1.7 0 0 0-3.4 0v1.1" />
-      <path d="M11.9 13.2v2.3" />
-      <path d="M15.5 13.4v1.9" />
-    </svg>
+    <span
+      className={["rps-generated-scissors", className].filter(Boolean).join(" ")}
+      aria-hidden="true"
+      style={{
+        width: iconSize,
+        height: iconSize,
+        "--rps-scissors-icon": `url("${getAssetPath("/assets/hasik/rps-scissors-hand.png")}")`
+      } as CSSProperties}
+    />
   );
 }
 
@@ -379,6 +382,28 @@ const seatPositions = [
   { x: 88, y: 50 },
   { x: 76, y: 76 }
 ] as const;
+const servedDishSlots: Record<TableShape, Array<{ x: number; y: number }>> = {
+  round: [
+    { x: 50, y: 50 },
+    { x: 42, y: 43 },
+    { x: 58, y: 43 },
+    { x: 43, y: 57 },
+    { x: 57, y: 57 },
+    { x: 50, y: 37 },
+    { x: 35, y: 50 },
+    { x: 65, y: 50 }
+  ],
+  rectangle: [
+    { x: 50, y: 50 },
+    { x: 42, y: 45 },
+    { x: 58, y: 45 },
+    { x: 42, y: 55 },
+    { x: 58, y: 55 },
+    { x: 34, y: 50 },
+    { x: 66, y: 50 },
+    { x: 50, y: 38 }
+  ]
+};
 
 function createSeedMessages(baseTime: number): ChatMessage[] {
   return [
@@ -515,6 +540,10 @@ function createPaymentParticipant(member: PresenceUser): PaymentParticipant {
   };
 }
 
+function getReceiptLineIcon(line: ReceiptLine) {
+  return line.icon ?? menuItems.find((item) => item.id === line.itemId || item.name === line.name)?.icon ?? "메뉴";
+}
+
 function formatDuration(totalMinutes: number) {
   const minutes = Math.max(0, Math.floor(totalMinutes));
   const hours = Math.floor(minutes / 60);
@@ -612,7 +641,6 @@ export function HasikRoom({
   initialTotalPaymentAmount = 0,
   initialTableShape = "round",
   initialRoomVenue = "a",
-  initialQuickJoinEnabled = true,
   canManageRoomSettings = false,
   debugMode = false,
   roomNameOverride,
@@ -620,7 +648,6 @@ export function HasikRoom({
   onRoomTitleChange,
   onTableShapeChange,
   onRoomVenueChange,
-  onQuickJoinChange,
   onOrderCompleted
 }: HasikRoomProps = {}) {
   const selectedRole: Role = "대리";
@@ -630,7 +657,6 @@ export function HasikRoom({
   const [roomCreatedAt] = useState(initialRoomCreatedAt);
   const [tableShape, setTableShape] = useState<TableShape>(initialTableShape);
   const [roomVenue, setRoomVenue] = useState<RoomVenue>(initialRoomVenue);
-  const [quickJoinEnabled, setQuickJoinEnabled] = useState(initialQuickJoinEnabled);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(seedMessages);
   const [presence, setPresence] = useState<PresenceUser[]>([]);
@@ -648,6 +674,7 @@ export function HasikRoom({
   const [megaphoneCount, setMegaphoneCount] = useState(getSavedMegaphoneCount);
   const [promotedBubbleId, setPromotedBubbleId] = useState<string | null>(null);
   const [menuSelections, setMenuSelections] = useState<Record<string, MenuSelection>>({});
+  const [servedDishes, setServedDishes] = useState<ServedDish[]>([]);
   const [paymentParticipants, setPaymentParticipants] = useState<Record<string, PaymentParticipant>>({});
   const [rpsActiveUserIds, setRpsActiveUserIds] = useState<string[]>([]);
   const [rpsRoundNumber, setRpsRoundNumber] = useState(1);
@@ -713,9 +740,11 @@ export function HasikRoom({
   const receiptLines = useMemo<ReceiptLine[]>(
     () =>
       orderedMenuItems.map((item) => ({
+        itemId: item.id,
         name: item.name,
         count: item.count,
-        amount: item.price * item.count
+        amount: item.price * item.count,
+        icon: item.icon
       })),
     [orderedMenuItems]
   );
@@ -741,6 +770,7 @@ export function HasikRoom({
     "--room-venue-image": `url("${getAssetPath(selectedVenue.image)}")`
   } as CSSProperties;
   const menuButtonImage = getAssetPath("/assets/hasik/menu-clipboard.png");
+  const servedDishSlotList = servedDishSlots[tableShape];
 
   const user = useMemo<PresenceUser>(
     () => ({
@@ -813,6 +843,47 @@ export function HasikRoom({
     inputElement.focus({ preventScroll: true });
   }, []);
 
+  const placeReceiptItemsOnTable = useCallback((items: ReceiptLine[]) => {
+    const displayItems = items.filter((item) => item.count > 0);
+
+    if (displayItems.length <= 0) {
+      return;
+    }
+
+    const slots = servedDishSlots[tableShape];
+
+    setServedDishes((current) => {
+      const occupiedSlots = new Set(current.map((dish) => dish.slotIndex));
+      const nextDishes = [...current];
+
+      displayItems.forEach((item, index) => {
+        const emptySlotIndex = slots.findIndex((_slot, slotIndex) => !occupiedSlots.has(slotIndex));
+        const slotIndex = emptySlotIndex >= 0
+          ? emptySlotIndex
+          : (current.length + index) % slots.length;
+        const replacedIndex = nextDishes.findIndex((dish) => dish.slotIndex === slotIndex);
+
+        if (replacedIndex >= 0) {
+          nextDishes.splice(replacedIndex, 1);
+        }
+
+        occupiedSlots.add(slotIndex);
+        nextDishes.push({
+          id: `${Date.now()}-${item.name}-${slotIndex}-${index}`,
+          name: item.name,
+          count: item.count,
+          icon: getReceiptLineIcon(item),
+          slotIndex,
+          placedAt: Date.now() + index
+        });
+      });
+
+      return nextDishes
+        .sort((left, right) => left.placedAt - right.placedAt)
+        .slice(-slots.length);
+    });
+  }, [tableShape]);
+
   const registerCompletedPayment = useCallback((order: CompletedOrder) => {
     if (completedOrderIdsRef.current.has(order.id)) {
       return;
@@ -831,7 +902,8 @@ export function HasikRoom({
     approvedReceiptIdsRef.current.add(receipt.id);
     setApprovedReceipts((current) => [receipt, ...current].slice(0, 30));
     setLatestReceipt(receipt);
-  }, []);
+    placeReceiptItemsOnTable(receipt.items);
+  }, [placeReceiptItemsOnTable]);
 
   useEffect(() => {
     const mountedAt = Date.now();
@@ -880,10 +952,6 @@ export function HasikRoom({
       return;
     }
   }, [megaphoneCount]);
-
-  useEffect(() => {
-    setQuickJoinEnabled(initialQuickJoinEnabled);
-  }, [initialQuickJoinEnabled]);
 
   useEffect(() => {
     setRoomVenue(initialRoomVenue);
@@ -1077,10 +1145,6 @@ export function HasikRoom({
           onRoomVenueChange?.(payload.roomVenue);
         }
 
-        if (typeof payload?.quickJoinEnabled === "boolean") {
-          setQuickJoinEnabled(payload.quickJoinEnabled);
-          onQuickJoinChange?.(payload.quickJoinEnabled);
-        }
       })
       .on("broadcast", { event: "menu_selection" }, ({ payload }) => {
         if (
@@ -1218,7 +1282,9 @@ export function HasikRoom({
           .map((item) => ({
             name: item.name as string,
             count: item.count as number,
-            amount: item.amount as number
+            amount: item.amount as number,
+            itemId: typeof item.itemId === "string" ? item.itemId as string : undefined,
+            icon: typeof item.icon === "string" ? item.icon as string : undefined
           }));
         const rawStrokes = Array.isArray(payload.signatureStrokes)
           ? payload.signatureStrokes as unknown[]
@@ -1297,7 +1363,6 @@ export function HasikRoom({
     };
   }, [
     debugMode,
-    onQuickJoinChange,
     registerApprovedReceipt,
     registerCompletedPayment,
     onRoomTitleChange,
@@ -1395,20 +1460,6 @@ export function HasikRoom({
       payload: { roomVenue: nextVenue }
     });
   }, [canManageRoomSettings, onRoomVenueChange]);
-
-  const updateQuickJoin = useCallback((nextValue: boolean) => {
-    if (!canManageRoomSettings) {
-      return;
-    }
-
-    setQuickJoinEnabled(nextValue);
-    onQuickJoinChange?.(nextValue);
-    void channelRef.current?.send({
-      type: "broadcast",
-      event: "room_settings",
-      payload: { quickJoinEnabled: nextValue }
-    });
-  }, [canManageRoomSettings, onQuickJoinChange]);
 
   const resetPaymentSession = useCallback(() => {
     setPaymentParticipants({});
@@ -2217,6 +2268,31 @@ export function HasikRoom({
                 </div>
                 <div className={`seat-map ${tableShape}`} aria-label="오늘의 자리 배치">
                   <div className={`table ${tableShape}`} />
+                  <div className="served-dish-layer" aria-hidden="true">
+                    {servedDishes.map((dish, index) => {
+                      const slot = servedDishSlotList[dish.slotIndex % servedDishSlotList.length];
+                      const enterX = slot.x < 45 ? -96 : slot.x > 55 ? 96 : 0;
+                      const enterY = slot.y < 45 ? -80 : slot.y > 55 ? 80 : 96;
+
+                      return (
+                        <div
+                          key={dish.id}
+                          className="served-dish"
+                          style={{
+                            "--dish-x": `${slot.x}%`,
+                            "--dish-y": `${slot.y}%`,
+                            "--dish-enter-x": `${enterX}px`,
+                            "--dish-enter-y": `${enterY}px`,
+                            "--dish-delay": `${Math.min(index, 5) * 70}ms`
+                          } as CSSProperties}
+                        >
+                          <span>{dish.icon}</span>
+                          <strong>{dish.name}</strong>
+                          {dish.count > 1 ? <small>x{dish.count}</small> : null}
+                        </div>
+                      );
+                    })}
+                  </div>
 
                   {seatMembers.map((member, index) => {
                     const seatMessage = member
@@ -2515,29 +2591,33 @@ export function HasikRoom({
               </button>
             </div>
 
-            <div className="ordered-list">
-              {orderedMenuItems.map((item) => (
-                <div key={item.id}>
-                  <span>{item.name}</span>
-                  <strong>{item.count}</strong>
+            {!isSignatureOpen ? (
+              <>
+                <div className="ordered-list">
+                  {orderedMenuItems.map((item) => (
+                    <div key={item.id}>
+                      <span>{item.name}</span>
+                      <strong>{item.count}</strong>
+                    </div>
+                  ))}
+                  <div>
+                    <span>합계</span>
+                    <strong>{formatPrice(orderTotal)}</strong>
+                  </div>
                 </div>
-              ))}
-              <div>
-                <span>합계</span>
-                <strong>{formatPrice(orderTotal)}</strong>
-              </div>
-            </div>
 
-            <div className="payment-status-row">
-              <span className="money-pill">내 돈 {formatPrice(walletBalance)}</span>
-              <span className="payment-status-text">
-                {pendingPayer
-                  ? "결제 대상 확정"
-                  : rpsRemainingSeconds !== null
-                    ? `${rpsRemainingSeconds}초`
-                    : `${paymentParticipantCount}명 참가 중`}
-              </span>
-            </div>
+                <div className="payment-status-row">
+                  <span className="money-pill">내 돈 {formatPrice(walletBalance)}</span>
+                  <span className="payment-status-text">
+                    {pendingPayer
+                      ? "결제 대상 확정"
+                      : rpsRemainingSeconds !== null
+                        ? `${rpsRemainingSeconds}초`
+                        : `${paymentParticipantCount}명 참가 중`}
+                  </span>
+                </div>
+              </>
+            ) : null}
 
             {isSignatureOpen && pendingPayer ? (
               <div className="signature-payment-panel">
@@ -2881,17 +2961,6 @@ export function HasikRoom({
                   </button>
                 ))}
               </div>
-            </div>
-
-            <div className="settings-section">
-              <label className="settings-checkbox">
-                <input
-                  type="checkbox"
-                  checked={quickJoinEnabled}
-                  onChange={(event) => updateQuickJoin(event.target.checked)}
-                />
-                <span>빠른입장 허용</span>
-              </label>
             </div>
           </section>
         </div>
