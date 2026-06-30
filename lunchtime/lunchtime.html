@@ -32,6 +32,10 @@
         --col-head-h: 30px;
         --viewport-h: 100svh;
         --row-h: 22px;
+        --grid-row-1-y: calc(var(--row-h) - 1px);
+        --grid-row-2-y: calc((var(--row-h) * 2) - 1px);
+        --grid-body-y: calc((var(--row-h) * 2) + var(--col-head-h));
+        --grid-body-line-y: calc(var(--grid-body-y) - 1px);
       }
 
       @supports (height: 100dvh) {
@@ -95,6 +99,9 @@
             var(--grid) calc(var(--col-w) - 1px),
             var(--grid) var(--col-w)
           ),
+          linear-gradient(var(--grid), var(--grid)),
+          linear-gradient(var(--grid), var(--grid)),
+          linear-gradient(var(--grid), var(--grid)),
           repeating-linear-gradient(
             to bottom,
             transparent 0,
@@ -102,9 +109,24 @@
             var(--grid) calc(var(--row-h) - 1px),
             var(--grid) var(--row-h)
           );
+        background-size:
+          auto,
+          100% 1px,
+          100% 1px,
+          100% 1px,
+          auto;
         background-position:
           var(--sheet-x) 0,
-          0 0;
+          0 var(--grid-row-1-y),
+          0 var(--grid-row-2-y),
+          0 var(--grid-body-line-y),
+          0 var(--grid-body-y);
+        background-repeat:
+          repeat,
+          no-repeat,
+          no-repeat,
+          no-repeat,
+          repeat;
       }
 
       .sheet-grid {
@@ -1366,14 +1388,22 @@
         const viewportWidth =
           document.documentElement.clientWidth || window.visualViewport?.width || window.innerWidth;
         if (viewportHeight > 0) {
-          document.documentElement.style.setProperty("--viewport-h", `${viewportHeight}px`);
+          const root = document.documentElement;
+          const rootStyle = getComputedStyle(root);
+          root.style.setProperty("--viewport-h", `${viewportHeight}px`);
           const sheetWidth = Math.max(1, Math.min(viewportWidth, viewportHeight));
           const sheetOffsetX = Math.max(0, (viewportWidth - sheetWidth) / 2);
-          document.documentElement.style.setProperty("--sheet-w", `${sheetWidth}px`);
-          document.documentElement.style.setProperty("--sheet-x", `${sheetOffsetX}px`);
-          document.documentElement.style.setProperty("--col-w", `${sheetWidth / columns.length}px`);
+          root.style.setProperty("--sheet-w", `${sheetWidth}px`);
+          root.style.setProperty("--sheet-x", `${sheetOffsetX}px`);
+          root.style.setProperty("--col-w", `${sheetWidth / columns.length}px`);
           const fittedRowHeight = Math.max(16, Math.min(22, (viewportHeight - 30) / 37));
-          document.documentElement.style.setProperty("--row-h", `${fittedRowHeight}px`);
+          const columnHeaderHeight = parseFloat(rootStyle.getPropertyValue("--col-head-h")) || 30;
+          const bodyGridY = fittedRowHeight * 2 + columnHeaderHeight;
+          root.style.setProperty("--row-h", `${fittedRowHeight}px`);
+          root.style.setProperty("--grid-row-1-y", `${Math.max(0, fittedRowHeight - 1)}px`);
+          root.style.setProperty("--grid-row-2-y", `${Math.max(0, fittedRowHeight * 2 - 1)}px`);
+          root.style.setProperty("--grid-body-y", `${bodyGridY}px`);
+          root.style.setProperty("--grid-body-line-y", `${Math.max(0, bodyGridY - 1)}px`);
         }
         lockPageScroll();
       }
