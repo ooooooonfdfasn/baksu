@@ -571,6 +571,10 @@ function clampPercent(value: number) {
   return Math.min(100, Math.max(0, value));
 }
 
+function clampMenuPointerY(value: number, maxValue = 5000) {
+  return Math.min(maxValue, Math.max(0, value));
+}
+
 function getMemberKey(nickname: string, role: Role) {
   return `${nickname}:${role}`;
 }
@@ -1192,7 +1196,7 @@ export function HasikRoom({
           role: payload.role as Role,
           itemId: payload.itemId,
           x: clampPercent(payload.x),
-          y: clampPercent(payload.y),
+          y: clampMenuPointerY(payload.y),
           at: payload.at
         };
 
@@ -1417,7 +1421,7 @@ export function HasikRoom({
             role: member.role,
             itemId: item.id,
             x: 44 + index * 12,
-            y: 22 + index * 14,
+            y: 30 + index * 42,
             at: Date.now() - index * 800
           };
 
@@ -1549,8 +1553,9 @@ export function HasikRoom({
         ? ((event.clientX - listRect.left) / listRect.width) * 100
         : 50;
       const pointerY = listRect
-        ? ((event.clientY - listRect.top) / listRect.height) * 100
+        ? event.clientY - listRect.top + (listElement?.scrollTop ?? 0)
         : 50;
+      const maxPointerY = listElement ? Math.max(0, listElement.scrollHeight - 1) : 5000;
       const nextSelection: MenuSelection = {
         id: createId(),
         userId: sessionIdRef.current,
@@ -1558,7 +1563,7 @@ export function HasikRoom({
         role: selectedRole,
         itemId,
         x: clampPercent(Math.max(38, pointerX)),
-        y: clampPercent(pointerY),
+        y: clampMenuPointerY(pointerY, maxPointerY),
         at: Date.now()
       };
 
@@ -2506,7 +2511,7 @@ export function HasikRoom({
                 const isMine = selection.userId === sessionIdRef.current;
                 const pointerStyle = {
                   "--pointer-x": `${selection.x}%`,
-                  "--pointer-y": `${selection.y}%`
+                  "--pointer-y": `${selection.y}px`
                 } as CSSProperties;
 
                 return isMine ? (
