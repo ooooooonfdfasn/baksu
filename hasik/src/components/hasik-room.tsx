@@ -9,8 +9,6 @@ import type {
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   Flag,
-  Hand,
-  HandFist,
   Megaphone,
   Pointer,
   ReceiptText,
@@ -189,26 +187,49 @@ const menuItems = [
   { id: "oolong-tea", name: "우롱차", price: 3000, kind: "drink", icon: "차" }
 ] as const;
 
-function ScissorsHandIcon({ size = 24, className }: RpsIconProps) {
-  const iconSize = typeof size === "number" ? `${size}px` : size;
+function GeneratedRpsHandIcon({
+  size = 24,
+  className,
+  assetPath,
+  scale = 1
+}: RpsIconProps & { assetPath: string; scale?: number }) {
+  const iconSize = typeof size === "number" ? `${size * scale}px` : size;
 
   return (
     <span
-      className={["rps-generated-scissors", className].filter(Boolean).join(" ")}
+      className={["rps-generated-hand", className].filter(Boolean).join(" ")}
       aria-hidden="true"
       style={{
         width: iconSize,
         height: iconSize,
-        "--rps-scissors-icon": `url("${getAssetPath("/assets/hasik/rps-scissors-hand.png")}")`
+        "--rps-hand-icon": `url("${getAssetPath(assetPath)}")`
       } as CSSProperties}
     />
   );
 }
 
+function ScissorsHandIcon(props: RpsIconProps) {
+  return (
+    <GeneratedRpsHandIcon
+      {...props}
+      assetPath="/assets/hasik/rps-scissors-hand.png"
+      scale={1.5}
+    />
+  );
+}
+
+function RockHandIcon(props: RpsIconProps) {
+  return <GeneratedRpsHandIcon {...props} assetPath="/assets/hasik/rps-rock-hand.png" />;
+}
+
+function PaperHandIcon(props: RpsIconProps) {
+  return <GeneratedRpsHandIcon {...props} assetPath="/assets/hasik/rps-paper-hand.png" />;
+}
+
 const rpsChoices: Array<{ id: RpsChoice; label: string; icon: RpsIcon }> = [
   { id: "scissors", label: "가위", icon: ScissorsHandIcon },
-  { id: "rock", label: "바위", icon: HandFist },
-  { id: "paper", label: "보", icon: Hand }
+  { id: "rock", label: "바위", icon: RockHandIcon },
+  { id: "paper", label: "보", icon: PaperHandIcon }
 ];
 
 const bubbleLifetimeMs = 10000;
@@ -2621,13 +2642,7 @@ export function HasikRoom({
 
             {!isSignatureOpen ? (
               <>
-                <div className="ordered-list">
-                  {orderedMenuItems.map((item) => (
-                    <div key={item.id}>
-                      <span>{item.name}</span>
-                      <strong>{item.count}</strong>
-                    </div>
-                  ))}
+                <div className="ordered-list ordered-list-total-only">
                   <div>
                     <span>합계</span>
                     <strong>{formatPrice(orderTotal)}</strong>
