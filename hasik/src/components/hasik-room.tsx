@@ -708,6 +708,7 @@ export function HasikRoom({
   const channelRef = useRef<RealtimeChannel | null>(null);
   const chatFeedRef = useRef<HTMLDivElement | null>(null);
   const menuListRef = useRef<HTMLDivElement | null>(null);
+  const orderChoicePanelRef = useRef<HTMLDivElement | null>(null);
   const activeComposerInputRef = useRef<HTMLInputElement | null>(null);
   const completedOrderIdsRef = useRef(new Set<string>());
   const approvedReceiptIdsRef = useRef(new Set<string>());
@@ -777,6 +778,21 @@ export function HasikRoom({
     "--room-venue-image": `url("${getAssetPath(selectedVenue.image)}")`
   } as CSSProperties;
   const menuButtonImage = getAssetPath("/assets/hasik/menu-clipboard.png");
+
+  useEffect(() => {
+    if (!isOrderChoiceOpen) {
+      return;
+    }
+
+    const scrollFrame = window.requestAnimationFrame(() => {
+      orderChoicePanelRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "end"
+      });
+    });
+
+    return () => window.cancelAnimationFrame(scrollFrame);
+  }, [isOrderChoiceOpen]);
   const servedDishSlotList = servedDishSlots[tableShape];
 
   const user = useMemo<PresenceUser>(
@@ -2546,7 +2562,7 @@ export function HasikRoom({
             </div>
 
             {isOrderChoiceOpen ? (
-              <div className="order-choice-panel">
+              <div className="order-choice-panel" ref={orderChoicePanelRef}>
                 <span className="money-pill">내 돈 {formatPrice(walletBalance)}</span>
                 <div className="order-choice-actions">
                   <button

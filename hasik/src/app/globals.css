@@ -1372,6 +1372,14 @@ input:focus {
   color: var(--text);
 }
 
+.menu-popover {
+  display: flex;
+  flex-direction: column;
+  max-height: min(680px, calc(100dvh - 24px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .payment-popover {
   max-height: min(680px, calc(100dvh - 24px));
   overflow-y: auto;
@@ -1488,9 +1496,14 @@ input:focus {
 
 .menu-list {
   position: relative;
+  flex: 1 1 auto;
   margin: 12px 16px 0;
   padding: 8px 0;
   border: 1px solid var(--line);
+  max-height: clamp(180px, 42dvh, 390px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .menu-row {
@@ -1583,6 +1596,7 @@ input:focus {
 }
 
 .menu-order-summary {
+  flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -1599,6 +1613,7 @@ input:focus {
 }
 
 .menu-order-bar {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -1632,6 +1647,7 @@ input:focus {
 }
 
 .order-choice-panel {
+  flex: 0 0 auto;
   display: grid;
   gap: 10px;
   margin: 0 16px 16px;
