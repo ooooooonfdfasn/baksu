@@ -173,13 +173,20 @@ const rpsWinnerFadeMs = 1250;
 const rpsPostFadeWaitMs = 3000;
 const roles: Role[] = ["인턴", "사원", "대리", "과장", "부장"];
 const menuItems = [
-  { id: "kimchi-jeon", name: "김치전", price: 16000, kind: "food", icon: "전" },
-  { id: "fishcake-soup", name: "어묵탕", price: 18000, kind: "food", icon: "탕" },
-  { id: "chicken-skewer", name: "닭꼬치", price: 14000, kind: "food", icon: "꼬치" },
-  { id: "dried-pollack", name: "먹태", price: 19000, kind: "food", icon: "먹태" },
-  { id: "highball", name: "하이볼", price: 9000, kind: "drink", icon: "잔" },
-  { id: "zero-cola", name: "제로콜라", price: 3000, kind: "drink", icon: "콜라" },
-  { id: "corn-tea", name: "옥수수차", price: 4000, kind: "drink", icon: "차" }
+  { id: "steamed-clam-platter", name: "조개모듬찜", price: 50000, kind: "food", icon: "조개" },
+  { id: "grilled-mackerel", name: "고등어구이", price: 20000, kind: "food", icon: "고등어" },
+  { id: "spicy-pork", name: "제육볶음", price: 20000, kind: "food", icon: "제육" },
+  { id: "pork-skin", name: "돼지껍데기", price: 10000, kind: "food", icon: "껍데기" },
+  { id: "live-octopus", name: "산낙지", price: 20000, kind: "food", icon: "낙지" },
+  { id: "rolled-omelet", name: "계란말이", price: 10000, kind: "food", icon: "계란" },
+  { id: "ramyeon", name: "라면", price: 5000, kind: "food", icon: "라면" },
+  { id: "kimchi-jeon", name: "김치전", price: 10000, kind: "food", icon: "전" },
+  { id: "soju", name: "소주", price: 6000, kind: "drink", icon: "소주" },
+  { id: "makgeolli", name: "막걸리", price: 5000, kind: "drink", icon: "막걸리" },
+  { id: "draft-beer", name: "생맥주", price: 5000, kind: "drink", icon: "맥주" },
+  { id: "cola", name: "콜라", price: 2000, kind: "drink", icon: "콜라" },
+  { id: "cider", name: "사이다", price: 2000, kind: "drink", icon: "사이다" },
+  { id: "oolong-tea", name: "우롱차", price: 3000, kind: "drink", icon: "차" }
 ] as const;
 
 function ScissorsHandIcon({ size = 24, className }: RpsIconProps) {
