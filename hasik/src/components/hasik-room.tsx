@@ -467,9 +467,9 @@ const roomVenues: Array<{
   label: string;
   image: string;
 }> = [
-  { id: "a", label: "장소 A", image: "/assets/hasik/venue-a-pocha.png" },
-  { id: "b", label: "장소 B", image: "/assets/hasik/venue-b-hanok.png" },
-  { id: "c", label: "장소 C", image: "/assets/hasik/venue-c-lounge.png" }
+  { id: "a", label: "장소 A", image: "/assets/hasik/venue-a-pocha.webp" },
+  { id: "b", label: "장소 B", image: "/assets/hasik/venue-b-hanok.webp" },
+  { id: "c", label: "장소 C", image: "/assets/hasik/venue-c-lounge.webp" }
 ];
 
 function getAssetPath(path: string) {
@@ -802,7 +802,7 @@ export function HasikRoom({
   const venueBackdropStyle = {
     "--room-venue-image": `url("${getAssetPath(selectedVenue.image)}")`
   } as CSSProperties;
-  const menuButtonImage = getAssetPath("/assets/hasik/menu-clipboard.png");
+  const menuButtonImage = getAssetPath("/assets/hasik/menu-clipboard.webp");
 
   useEffect(() => {
     if (!isOrderChoiceOpen) {
