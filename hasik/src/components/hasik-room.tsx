@@ -31,6 +31,7 @@ type RpsChoice = "scissors" | "rock" | "paper";
 export type TableShape = "round" | "rectangle";
 export type RoomVenue = "a" | "b" | "c";
 type MenuKind = "food" | "drink";
+type PaymentFlow = "solo" | "rps";
 type RpsIconProps = {
   size?: number | string;
   strokeWidth?: number | string;
@@ -101,7 +102,7 @@ interface CompletedOrder {
   label?: string;
   summary?: string;
   detail?: string;
-  method?: "rps";
+  method?: PaymentFlow;
 }
 
 interface PaymentParticipant {
@@ -861,6 +862,7 @@ export function HasikRoom({
   const [rpsPlayerSlots, setRpsPlayerSlots] = useState<Record<string, number>>({});
   const [rpsPlayerSlotCount, setRpsPlayerSlotCount] = useState(0);
   const [pendingPayer, setPendingPayer] = useState<PaymentParticipant | null>(null);
+  const [paymentFlow, setPaymentFlow] = useState<PaymentFlow | null>(null);
   const [isSignatureOpen, setSignatureOpen] = useState(false);
   const [signatureStrokes, setSignatureStrokes] = useState<SignatureStroke[]>([]);
   const [currentSignatureStroke, setCurrentSignatureStroke] = useState<SignatureStroke | null>(null);
@@ -1550,7 +1552,9 @@ export function HasikRoom({
           label: typeof payload?.label === "string" ? payload.label : undefined,
           summary: typeof payload?.summary === "string" ? payload.summary : undefined,
           detail: typeof payload?.detail === "string" ? payload.detail : undefined,
-          method: payload?.method === "rps" ? "rps" as const : undefined
+          method: payload?.method === "rps" || payload?.method === "solo"
+            ? payload.method as PaymentFlow
+            : undefined
         };
 
         setCompletedOrder(nextCompletedOrder);
@@ -1693,6 +1697,7 @@ export function HasikRoom({
     setRpsPlayerSlots({});
     setRpsPlayerSlotCount(0);
     setPendingPayer(null);
+    setPaymentFlow(null);
     setSignatureOpen(false);
     setSignatureStrokes([]);
     setCurrentSignatureStroke(null);
@@ -1707,51 +1712,20 @@ export function HasikRoom({
       return;
     }
 
-    const receipt: ApprovedReceipt = {
-      id: createId(),
-      payerUserId: sessionIdRef.current,
-      payerNickname: nickname,
-      payerRole: selectedRole,
-      amount: orderTotal,
-      at: Date.now(),
-      items: receiptLines,
-      signatureStrokes: []
-    };
-    const nextCompletedOrder: CompletedOrder = {
-      id: receipt.id,
-      payerNickname: nickname,
-      payerRole: selectedRole,
-      amount: orderTotal,
-      at: receipt.at,
-      label: "혼자 주문 완료"
-    };
-
-    setWalletBalance((current) => Math.max(0, current - orderTotal));
-    setCompletedOrder(nextCompletedOrder);
-    registerApprovedReceipt(receipt);
-    registerCompletedPayment(nextCompletedOrder);
+    setCompletedOrder(null);
     resetPaymentSession();
+    setPaymentFlow("solo");
+    setPendingPayer(fallbackPaymentParticipant);
+    setSignatureOpen(true);
+    setSignatureStrokes([]);
+    setCurrentSignatureStroke(null);
     setOrderChoiceOpen(false);
     setMenuOpen(false);
-    setPaymentOpen(false);
-    void channelRef.current?.send({
-      type: "broadcast",
-      event: "order_completed",
-      payload: nextCompletedOrder
-    });
-    void channelRef.current?.send({
-      type: "broadcast",
-      event: "receipt_approved",
-      payload: receipt
-    });
+    setPaymentOpen(true);
   }, [
-    nickname,
+    fallbackPaymentParticipant,
     orderTotal,
-    receiptLines,
-    registerApprovedReceipt,
-    registerCompletedPayment,
     resetPaymentSession,
-    selectedRole,
     walletBalance
   ]);
 
@@ -1762,6 +1736,7 @@ export function HasikRoom({
 
     setCompletedOrder(null);
     resetPaymentSession();
+    setPaymentFlow("rps");
     setOrderChoiceOpen(false);
     setMenuOpen(false);
     setPaymentOpen(true);
@@ -2450,8 +2425,17 @@ export function HasikRoom({
       return;
     }
 
+    const isSoloPayment = paymentFlow === "solo";
+    if (isSoloPayment && walletBalance < orderTotal) {
+      return;
+    }
+
     const isMine = pendingPayer.userId === sessionIdRef.current;
-    const walletChargeAmount = isMine ? Math.min(orderTotal, walletBalance) : 0;
+    const walletChargeAmount = isSoloPayment
+      ? orderTotal
+      : isMine
+        ? Math.min(orderTotal, walletBalance)
+        : 0;
 
     const receipt: ApprovedReceipt = {
       id: createId(),
@@ -2473,8 +2457,8 @@ export function HasikRoom({
       payerRole: receipt.payerRole,
       amount: receipt.amount,
       at: receipt.at,
-      label: "결제 승인",
-      method: "rps"
+      label: isSoloPayment ? "혼자 주문 완료" : "결제 승인",
+      method: isSoloPayment ? "solo" : "rps"
     }, walletChargeAmount);
     void channelRef.current?.send({
       type: "broadcast",
@@ -2486,6 +2470,7 @@ export function HasikRoom({
     completeResolvedPayment,
     orderTotal,
     pendingPayer,
+    paymentFlow,
     receiptLines,
     registerApprovedReceipt,
     resetPaymentSession,
@@ -2729,11 +2714,13 @@ export function HasikRoom({
                         draggingDishId === dish.id ? "dragging" : "",
                         canControlDish ? "controllable" : ""
                       ].filter(Boolean).join(" ");
+                      const dishAge = now - dish.placedAt;
+                      const isSettledDish = dishAge > 1100;
 
                       return (
                         <div
                           key={dish.id}
-                          className={dishClassName}
+                          className={`${dishClassName} ${isSettledDish ? "settled" : ""}`.trim()}
                           style={{
                             "--dish-x": `${dish.x}%`,
                             "--dish-y": `${dish.y}%`,
@@ -2767,9 +2754,6 @@ export function HasikRoom({
                           ) : (
                             <span className="served-dish-fallback">{dish.icon}</span>
                           )}
-                          <strong>{dish.name}</strong>
-                          {dish.count > 1 ? <small>x{dish.count}</small> : null}
-                          <em>{dish.remainingServings}</em>
                           {currentDishAction ? (
                             <span className="dish-particles" aria-hidden="true">
                               {dishParticleSeeds.map((particle, particleIndex) => (
