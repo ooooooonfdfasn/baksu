@@ -30,6 +30,7 @@ type RealtimeMode = "demo" | "setup" | "live";
 type RpsChoice = "scissors" | "rock" | "paper";
 export type TableShape = "round" | "rectangle";
 export type RoomVenue = "a" | "b" | "c";
+type MenuKind = "food" | "drink";
 type RpsIconProps = {
   size?: number | string;
   strokeWidth?: number | string;
@@ -141,25 +142,44 @@ interface ReceiptLine {
   count: number;
   amount: number;
   icon?: string;
+  image?: string;
+  kind?: MenuKind;
 }
 
 interface ServedDish {
   id: string;
+  itemId?: string;
   name: string;
   count: number;
   icon: string;
+  image?: string;
+  kind: MenuKind;
   slotIndex: number;
+  x: number;
+  y: number;
   placedAt: number;
+  remainingServings: number;
+  ownerUserId?: string;
+  ownerKey?: string;
 }
 
 interface ApprovedReceipt {
   id: string;
+  payerUserId?: string;
   payerNickname: string;
   payerRole: Role;
   amount: number;
   at: number;
   items: ReceiptLine[];
   signatureStrokes: SignatureStroke[];
+}
+
+interface DishActionState {
+  id: string;
+  dishId: string;
+  targetX: number;
+  targetY: number;
+  kind: MenuKind;
 }
 
 const chatCooldownMs = 500;
@@ -171,20 +191,118 @@ const rpsWinnerFadeMs = 1250;
 const rpsPostFadeWaitMs = 3000;
 const roles: Role[] = ["인턴", "사원", "대리", "과장", "부장"];
 const menuItems = [
-  { id: "steamed-clam-platter", name: "조개모듬찜", price: 50000, kind: "food", icon: "조개" },
-  { id: "grilled-mackerel", name: "고등어구이", price: 20000, kind: "food", icon: "고등어" },
-  { id: "spicy-pork", name: "제육볶음", price: 20000, kind: "food", icon: "제육" },
-  { id: "pork-skin", name: "돼지껍데기", price: 10000, kind: "food", icon: "껍데기" },
-  { id: "live-octopus", name: "산낙지", price: 20000, kind: "food", icon: "낙지" },
-  { id: "rolled-omelet", name: "계란말이", price: 10000, kind: "food", icon: "계란" },
-  { id: "ramyeon", name: "라면", price: 5000, kind: "food", icon: "라면" },
-  { id: "kimchi-jeon", name: "김치전", price: 10000, kind: "food", icon: "전" },
-  { id: "soju", name: "소주", price: 6000, kind: "drink", icon: "소주" },
-  { id: "makgeolli", name: "막걸리", price: 5000, kind: "drink", icon: "막걸리" },
-  { id: "draft-beer", name: "생맥주", price: 5000, kind: "drink", icon: "맥주" },
-  { id: "cola", name: "콜라", price: 2000, kind: "drink", icon: "콜라" },
-  { id: "cider", name: "사이다", price: 2000, kind: "drink", icon: "사이다" },
-  { id: "oolong-tea", name: "우롱차", price: 3000, kind: "drink", icon: "차" }
+  {
+    id: "steamed-clam-platter",
+    name: "조개모듬찜",
+    price: 50000,
+    kind: "food",
+    icon: "조개",
+    image: "/assets/hasik/menu-items/steamed-clam-platter.webp"
+  },
+  {
+    id: "grilled-mackerel",
+    name: "고등어구이",
+    price: 20000,
+    kind: "food",
+    icon: "고등어",
+    image: "/assets/hasik/menu-items/grilled-mackerel.webp"
+  },
+  {
+    id: "spicy-pork",
+    name: "제육볶음",
+    price: 20000,
+    kind: "food",
+    icon: "제육",
+    image: "/assets/hasik/menu-items/spicy-pork.webp"
+  },
+  {
+    id: "pork-skin",
+    name: "돼지껍데기",
+    price: 10000,
+    kind: "food",
+    icon: "껍데기",
+    image: "/assets/hasik/menu-items/pork-skin.webp"
+  },
+  {
+    id: "live-octopus",
+    name: "산낙지",
+    price: 20000,
+    kind: "food",
+    icon: "낙지",
+    image: "/assets/hasik/menu-items/live-octopus.webp"
+  },
+  {
+    id: "rolled-omelet",
+    name: "계란말이",
+    price: 10000,
+    kind: "food",
+    icon: "계란",
+    image: "/assets/hasik/menu-items/rolled-omelet.webp"
+  },
+  {
+    id: "ramyeon",
+    name: "라면",
+    price: 5000,
+    kind: "food",
+    icon: "라면",
+    image: "/assets/hasik/menu-items/ramyeon.webp"
+  },
+  {
+    id: "kimchi-jeon",
+    name: "김치전",
+    price: 10000,
+    kind: "food",
+    icon: "전",
+    image: "/assets/hasik/menu-items/kimchi-jeon.webp"
+  },
+  {
+    id: "soju",
+    name: "소주",
+    price: 6000,
+    kind: "drink",
+    icon: "소주",
+    image: "/assets/hasik/menu-items/soju.webp"
+  },
+  {
+    id: "makgeolli",
+    name: "막걸리",
+    price: 5000,
+    kind: "drink",
+    icon: "막걸리",
+    image: "/assets/hasik/menu-items/makgeolli.webp"
+  },
+  {
+    id: "draft-beer",
+    name: "생맥주",
+    price: 5000,
+    kind: "drink",
+    icon: "맥주",
+    image: "/assets/hasik/menu-items/draft-beer.webp"
+  },
+  {
+    id: "cola",
+    name: "콜라",
+    price: 2000,
+    kind: "drink",
+    icon: "콜라",
+    image: "/assets/hasik/menu-items/cola.webp"
+  },
+  {
+    id: "cider",
+    name: "사이다",
+    price: 2000,
+    kind: "drink",
+    icon: "사이다",
+    image: "/assets/hasik/menu-items/cider.webp"
+  },
+  {
+    id: "oolong-tea",
+    name: "우롱차",
+    price: 3000,
+    kind: "drink",
+    icon: "차",
+    image: "/assets/hasik/menu-items/oolong-tea.webp"
+  }
 ] as const;
 
 function GeneratedRpsHandIcon({
@@ -432,6 +550,20 @@ const servedDishSlots: Record<TableShape, Array<{ x: number; y: number }>> = {
     { x: 50, y: 38 }
   ]
 };
+const dishParticleSeeds = [
+  { x: -34, y: -22, r: -18 },
+  { x: 28, y: -30, r: 22 },
+  { x: -42, y: 10, r: 14 },
+  { x: 38, y: 12, r: -26 },
+  { x: -18, y: 34, r: 30 },
+  { x: 18, y: 36, r: -12 },
+  { x: -6, y: -42, r: 8 },
+  { x: 48, y: -8, r: 18 },
+  { x: -50, y: -2, r: -28 },
+  { x: 4, y: 46, r: 24 },
+  { x: 26, y: -48, r: -16 },
+  { x: -28, y: 42, r: 12 }
+] as const;
 
 function createSeedMessages(baseTime: number): ChatMessage[] {
   return [
@@ -568,8 +700,20 @@ function createPaymentParticipant(member: PresenceUser): PaymentParticipant {
   };
 }
 
+function getMenuItemByLine(line: Pick<ReceiptLine, "itemId" | "name">) {
+  return menuItems.find((item) => item.id === line.itemId || item.name === line.name);
+}
+
 function getReceiptLineIcon(line: ReceiptLine) {
-  return line.icon ?? menuItems.find((item) => item.id === line.itemId || item.name === line.name)?.icon ?? "메뉴";
+  return line.icon ?? getMenuItemByLine(line)?.icon ?? "메뉴";
+}
+
+function getReceiptLineImage(line: ReceiptLine) {
+  return line.image ?? getMenuItemByLine(line)?.image;
+}
+
+function getReceiptLineKind(line: ReceiptLine): MenuKind {
+  return line.kind ?? getMenuItemByLine(line)?.kind ?? "food";
 }
 
 function formatDuration(totalMinutes: number) {
@@ -713,6 +857,9 @@ export function HasikRoom({
   const [rpsRoundEndsAt, setRpsRoundEndsAt] = useState<number | null>(null);
   const [rpsSelections, setRpsSelections] = useState<Record<string, RpsChoice>>({});
   const [rpsRound, setRpsRound] = useState<RpsRound | null>(null);
+  const [rpsParticipantSnapshot, setRpsParticipantSnapshot] = useState<PaymentParticipant[]>([]);
+  const [rpsPlayerSlots, setRpsPlayerSlots] = useState<Record<string, number>>({});
+  const [rpsPlayerSlotCount, setRpsPlayerSlotCount] = useState(0);
   const [pendingPayer, setPendingPayer] = useState<PaymentParticipant | null>(null);
   const [isSignatureOpen, setSignatureOpen] = useState(false);
   const [signatureStrokes, setSignatureStrokes] = useState<SignatureStroke[]>([]);
@@ -721,6 +868,9 @@ export function HasikRoom({
   const [isReceiptListOpen, setReceiptListOpen] = useState(false);
   const [latestReceipt, setLatestReceipt] = useState<ApprovedReceipt | null>(null);
   const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null);
+  const [activeDishId, setActiveDishId] = useState<string | null>(null);
+  const [dishAction, setDishAction] = useState<DishActionState | null>(null);
+  const [draggingDishId, setDraggingDishId] = useState<string | null>(null);
   const [totalPaymentAmount, setTotalPaymentAmount] = useState(initialTotalPaymentAmount);
   const [reportStatus, setReportStatus] = useState("");
   const [isReporting, setIsReporting] = useState(false);
@@ -731,6 +881,7 @@ export function HasikRoom({
   const [now, setNow] = useState(initialRenderTime);
   const sessionIdRef = useRef(createId());
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const seatMapRef = useRef<HTMLDivElement | null>(null);
   const chatFeedRef = useRef<HTMLDivElement | null>(null);
   const menuListRef = useRef<HTMLDivElement | null>(null);
   const orderChoicePanelRef = useRef<HTMLDivElement | null>(null);
@@ -739,6 +890,14 @@ export function HasikRoom({
   const approvedReceiptIdsRef = useRef(new Set<string>());
   const nextRpsRoundTimerRef = useRef<number | null>(null);
   const rpsProgressMessageIdsRef = useRef(new Set<string>());
+  const dishDragRef = useRef<{
+    dishId: string;
+    startClientX: number;
+    startClientY: number;
+    startX: number;
+    startY: number;
+    moved: boolean;
+  } | null>(null);
 
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const roomName = useMemo(() => roomNameOverride ?? getHasikRoomName(), [roomNameOverride]);
@@ -777,7 +936,9 @@ export function HasikRoom({
         name: item.name,
         count: item.count,
         amount: item.price * item.count,
-        icon: item.icon
+        icon: item.icon,
+        image: item.image,
+        kind: item.kind
       })),
     [orderedMenuItems]
   );
@@ -818,8 +979,6 @@ export function HasikRoom({
 
     return () => window.cancelAnimationFrame(scrollFrame);
   }, [isOrderChoiceOpen]);
-  const servedDishSlotList = servedDishSlots[tableShape];
-
   const user = useMemo<PresenceUser>(
     () => ({
       id: sessionIdRef.current,
@@ -830,6 +989,7 @@ export function HasikRoom({
     }),
     [nickname, startedAt]
   );
+  const currentUserKey = getMemberKey(nickname, selectedRole);
   const fallbackPaymentParticipant = useMemo(() => createPaymentParticipant(user), [user]);
   const paymentPlayerList = useMemo(
     () => (paymentParticipantList.length > 0 ? paymentParticipantList : [fallbackPaymentParticipant]),
@@ -891,14 +1051,15 @@ export function HasikRoom({
     inputElement.focus({ preventScroll: true });
   }, []);
 
-  const placeReceiptItemsOnTable = useCallback((items: ReceiptLine[]) => {
-    const displayItems = items.filter((item) => item.count > 0);
+  const placeReceiptItemsOnTable = useCallback((receipt: ApprovedReceipt) => {
+    const displayItems = receipt.items.filter((item) => item.count > 0);
 
     if (displayItems.length <= 0) {
       return;
     }
 
     const slots = servedDishSlots[tableShape];
+    const ownerKey = getMemberKey(receipt.payerNickname, receipt.payerRole);
 
     setServedDishes((current) => {
       const occupiedSlots = new Set(current.map((dish) => dish.slotIndex));
@@ -916,13 +1077,22 @@ export function HasikRoom({
         }
 
         occupiedSlots.add(slotIndex);
+        const slot = slots[slotIndex % slots.length];
         nextDishes.push({
-          id: `${Date.now()}-${item.name}-${slotIndex}-${index}`,
+          id: `${receipt.id}-${item.itemId ?? item.name}-${index}`,
+          itemId: item.itemId,
           name: item.name,
           count: item.count,
           icon: getReceiptLineIcon(item),
+          image: getReceiptLineImage(item),
+          kind: getReceiptLineKind(item),
           slotIndex,
-          placedAt: Date.now() + index
+          x: slot.x,
+          y: slot.y,
+          placedAt: receipt.at + index,
+          remainingServings: 3,
+          ownerUserId: receipt.payerUserId,
+          ownerKey
         });
       });
 
@@ -950,7 +1120,7 @@ export function HasikRoom({
     approvedReceiptIdsRef.current.add(receipt.id);
     setApprovedReceipts((current) => [receipt, ...current].slice(0, 30));
     setLatestReceipt(receipt);
-    placeReceiptItemsOnTable(receipt.items);
+    placeReceiptItemsOnTable(receipt);
   }, [placeReceiptItemsOnTable]);
 
   useEffect(() => {
@@ -1332,7 +1502,9 @@ export function HasikRoom({
             count: item.count as number,
             amount: item.amount as number,
             itemId: typeof item.itemId === "string" ? item.itemId as string : undefined,
-            icon: typeof item.icon === "string" ? item.icon as string : undefined
+            icon: typeof item.icon === "string" ? item.icon as string : undefined,
+            image: typeof item.image === "string" ? item.image as string : undefined,
+            kind: item.kind === "drink" ? "drink" : item.kind === "food" ? "food" : undefined
           }));
         const rawStrokes = Array.isArray(payload.signatureStrokes)
           ? payload.signatureStrokes as unknown[]
@@ -1348,6 +1520,7 @@ export function HasikRoom({
 
         registerApprovedReceipt({
           id: payload.id,
+          payerUserId: typeof payload.payerUserId === "string" ? payload.payerUserId : undefined,
           payerNickname: payload.payerNickname,
           payerRole: payload.payerRole as Role,
           amount: payload.amount,
@@ -1516,6 +1689,9 @@ export function HasikRoom({
     setRpsRoundEndsAt(null);
     setRpsSelections({});
     setRpsRound(null);
+    setRpsParticipantSnapshot([]);
+    setRpsPlayerSlots({});
+    setRpsPlayerSlotCount(0);
     setPendingPayer(null);
     setSignatureOpen(false);
     setSignatureStrokes([]);
@@ -1531,17 +1707,28 @@ export function HasikRoom({
       return;
     }
 
-    const nextCompletedOrder: CompletedOrder = {
+    const receipt: ApprovedReceipt = {
       id: createId(),
+      payerUserId: sessionIdRef.current,
       payerNickname: nickname,
       payerRole: selectedRole,
       amount: orderTotal,
       at: Date.now(),
+      items: receiptLines,
+      signatureStrokes: []
+    };
+    const nextCompletedOrder: CompletedOrder = {
+      id: receipt.id,
+      payerNickname: nickname,
+      payerRole: selectedRole,
+      amount: orderTotal,
+      at: receipt.at,
       label: "혼자 주문 완료"
     };
 
     setWalletBalance((current) => Math.max(0, current - orderTotal));
     setCompletedOrder(nextCompletedOrder);
+    registerApprovedReceipt(receipt);
     registerCompletedPayment(nextCompletedOrder);
     resetPaymentSession();
     setOrderChoiceOpen(false);
@@ -1552,7 +1739,21 @@ export function HasikRoom({
       event: "order_completed",
       payload: nextCompletedOrder
     });
-  }, [nickname, orderTotal, registerCompletedPayment, resetPaymentSession, selectedRole, walletBalance]);
+    void channelRef.current?.send({
+      type: "broadcast",
+      event: "receipt_approved",
+      payload: receipt
+    });
+  }, [
+    nickname,
+    orderTotal,
+    receiptLines,
+    registerApprovedReceipt,
+    registerCompletedPayment,
+    resetPaymentSession,
+    selectedRole,
+    walletBalance
+  ]);
 
   const startTogetherOrder = useCallback(() => {
     if (orderTotal <= 0) {
@@ -1682,6 +1883,19 @@ export function HasikRoom({
       nextRpsRoundTimerRef.current = null;
     }
 
+    if (roundNumber === 1) {
+      const initialParticipants = activeUserIds
+        .map((userId) => paymentPlayerList.find((participant) => participant.userId === userId))
+        .filter((participant): participant is PaymentParticipant => Boolean(participant));
+      const nextSlots = Object.fromEntries(
+        activeUserIds.map((userId, index) => [userId, index])
+      );
+
+      setRpsParticipantSnapshot(initialParticipants.length > 0 ? initialParticipants : paymentPlayerList);
+      setRpsPlayerSlots(nextSlots);
+      setRpsPlayerSlotCount(activeUserIds.length);
+    }
+
     setRpsActiveUserIds(activeUserIds);
     setRpsRoundNumber(roundNumber);
     setRpsRoundEndsAt(Date.now() + rpsRoundDurationMs);
@@ -1691,7 +1905,7 @@ export function HasikRoom({
       `rps:${roomName}:${roundNumber}:start:${activeUserIds.join("-")}`,
       `${roundNumber}라운드 시작. ${activeUserIds.length}명 참가 중, 15초 안에 선택하세요.`
     );
-  }, [postRpsProgressMessage, roomName]);
+  }, [paymentPlayerList, postRpsProgressMessage, roomName]);
 
   const resolveRpsRound = useCallback((currentSelections: Record<string, RpsChoice>) => {
     if (rpsActiveUserIds.length <= 0 || paymentPlayerList.length <= 0 || pendingPayer) {
@@ -1704,11 +1918,14 @@ export function HasikRoom({
     }
 
     const activeUserIdSet = new Set(rpsActiveUserIds);
-    const activeParticipants = paymentPlayerList.filter((participant) =>
+    const participantPool = rpsParticipantSnapshot.length > 0
+      ? rpsParticipantSnapshot
+      : paymentPlayerList;
+    const activeParticipants = participantPool.filter((participant) =>
       activeUserIdSet.has(participant.userId)
     );
     const safeActiveParticipants =
-      activeParticipants.length > 0 ? activeParticipants : paymentPlayerList;
+      activeParticipants.length > 0 ? activeParticipants : participantPool;
     const roundSelections = { ...currentSelections };
 
     if (safeActiveParticipants.length === 1) {
@@ -1803,7 +2020,7 @@ export function HasikRoom({
 
     if (payer) {
       const payerParticipant =
-        paymentPlayerList.find((participant) => participant.userId === payer?.userId) ?? null;
+        participantPool.find((participant) => participant.userId === payer?.userId) ?? null;
       setPendingPayer(payerParticipant);
       postRpsProgressMessage(
         `rps:${roomName}:${rpsRoundNumber}:final:${payer.userId}`,
@@ -1834,6 +2051,7 @@ export function HasikRoom({
     postRpsProgressMessage,
     roomName,
     rpsActiveUserIds,
+    rpsParticipantSnapshot,
     rpsRoundNumber,
     startRpsRound
   ]);
@@ -2022,6 +2240,179 @@ export function HasikRoom({
     await sendMessage(`[확성기] ${cleanBody}`, "system");
   }, [isCoolingDown, megaphoneCount, megaphoneInput, sendMessage]);
 
+  const postActionMessage = useCallback((body: string) => {
+    const nextMessage: ChatMessage = {
+      id: createId(),
+      nickname,
+      role: selectedRole,
+      body: body.slice(0, 120),
+      at: Date.now(),
+      kind: "system"
+    };
+
+    setMessages((current) => mergeMessage(current, nextMessage));
+
+    if (!debugMode && supabase && connected) {
+      void supabase
+        .from("hasik_messages")
+        .insert({
+          id: nextMessage.id,
+          room: roomName,
+          nickname: nextMessage.nickname,
+          role: nextMessage.role,
+          body: nextMessage.body,
+          kind: nextMessage.kind ?? "system"
+        });
+    }
+  }, [connected, debugMode, nickname, roomName, selectedRole, supabase]);
+
+  const updateDishPosition = useCallback((dishId: string, x: number, y: number) => {
+    setServedDishes((current) =>
+      current.map((dish) =>
+        dish.id === dishId
+          ? {
+            ...dish,
+            x: clampPercent(x),
+            y: clampPercent(y)
+          }
+          : dish
+      )
+    );
+  }, []);
+
+  const startDishPointer = useCallback((
+    event: ReactPointerEvent<HTMLDivElement>,
+    dish: ServedDish,
+    canControlDish: boolean
+  ) => {
+    if (!canControlDish || dishAction) {
+      return;
+    }
+
+    event.stopPropagation();
+    dishDragRef.current = {
+      dishId: dish.id,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startX: dish.x,
+      startY: dish.y,
+      moved: false
+    };
+    setDraggingDishId(dish.id);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }, [dishAction]);
+
+  const moveDishPointer = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = dishDragRef.current;
+    const seatMap = seatMapRef.current;
+
+    if (!drag || !seatMap) {
+      return;
+    }
+
+    const deltaX = event.clientX - drag.startClientX;
+    const deltaY = event.clientY - drag.startClientY;
+
+    if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+      drag.moved = true;
+      setActiveDishId(null);
+    }
+
+    const rect = seatMap.getBoundingClientRect();
+    updateDishPosition(
+      drag.dishId,
+      drag.startX + (deltaX / rect.width) * 100,
+      drag.startY + (deltaY / rect.height) * 100
+    );
+  }, [updateDishPosition]);
+
+  const finishDishPointer = useCallback((
+    event: ReactPointerEvent<HTMLDivElement>,
+    dish: ServedDish
+  ) => {
+    const drag = dishDragRef.current;
+
+    if (!drag || drag.dishId !== dish.id) {
+      return;
+    }
+
+    event.stopPropagation();
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    dishDragRef.current = null;
+    setDraggingDishId(null);
+
+    if (!drag.moved) {
+      setActiveDishId((current) => (current === dish.id ? null : dish.id));
+    }
+  }, []);
+
+  const consumeDish = useCallback((dish: ServedDish, mode: "eat" | "feed") => {
+    if (dishAction || dish.remainingServings <= 0) {
+      return;
+    }
+
+    const occupiedSeats = seatMembers
+      .map((member, index) => (member ? { member, index, position: seatPositions[index] } : null))
+      .filter((item): item is { member: PresenceUser; index: number; position: typeof seatPositions[number] } =>
+        Boolean(item)
+      );
+
+    if (occupiedSeats.length <= 0) {
+      return;
+    }
+
+    const selfSeat = occupiedSeats.find((item) => item.member.id === sessionIdRef.current)
+      ?? occupiedSeats[0];
+    const feedCandidates = occupiedSeats.filter((item) => item.member.id !== sessionIdRef.current);
+    const targetSeat = mode === "eat"
+      ? selfSeat
+      : (feedCandidates.length > 0 ? feedCandidates : occupiedSeats)
+        .sort((left, right) => {
+          const leftDistance =
+            Math.hypot(left.position.x - dish.x, left.position.y - dish.y);
+          const rightDistance =
+            Math.hypot(right.position.x - dish.x, right.position.y - dish.y);
+          return leftDistance - rightDistance;
+        })[0];
+
+    const actorName = formatMemberName(nickname, selectedRole);
+    const targetName = formatMemberName(targetSeat.member.nickname, targetSeat.member.role);
+    const body = mode === "eat"
+      ? `${actorName}님이 ${dish.name}을 먹었습니다.`
+      : `${actorName}님이 ${targetName}님에게 ${dish.name}을 먹였습니다.`;
+
+    setActiveDishId(null);
+    setDishAction({
+      id: createId(),
+      dishId: dish.id,
+      targetX: targetSeat.position.x,
+      targetY: targetSeat.position.y,
+      kind: dish.kind
+    });
+    postActionMessage(body);
+  }, [dishAction, nickname, postActionMessage, seatMembers, selectedRole]);
+
+  const finishDishAction = useCallback((dishId: string) => {
+    if (!dishAction || dishAction.dishId !== dishId) {
+      return;
+    }
+
+    setServedDishes((current) =>
+      current.flatMap((dish) => {
+        if (dish.id !== dishId) {
+          return [dish];
+        }
+
+        const nextRemainingServings = dish.remainingServings - 1;
+
+        return nextRemainingServings > 0
+          ? [{ ...dish, remainingServings: nextRemainingServings }]
+          : [];
+      })
+    );
+    setDishAction(null);
+  }, [dishAction]);
+
   const getSignaturePoint = useCallback((event: ReactPointerEvent<SVGSVGElement>): SignaturePoint => {
     const rect = event.currentTarget.getBoundingClientRect();
     return {
@@ -2064,6 +2455,7 @@ export function HasikRoom({
 
     const receipt: ApprovedReceipt = {
       id: createId(),
+      payerUserId: pendingPayer.userId,
       payerNickname: pendingPayer.nickname,
       payerRole: pendingPayer.role,
       amount: orderTotal,
@@ -2134,11 +2526,13 @@ export function HasikRoom({
 
   const renderRpsCircle = (round: RpsRound) => {
     const players = round.players;
+    const slotCount = Math.max(rpsPlayerSlotCount, players.length, 1);
 
     return (
       <div className="rps-result-circle" aria-label="가위바위보 결과">
         {players.map((player, index) => {
-          const angle = players.length > 1 ? (index / players.length) * 360 : 0;
+          const slotIndex = rpsPlayerSlots[player.userId] ?? index;
+          const angle = slotCount > 1 ? (slotIndex / slotCount) * 360 : 0;
           const angleRadians = (angle * Math.PI) / 180;
           const radius = 34;
           const x = 50 + Math.sin(angleRadians) * radius;
@@ -2315,29 +2709,96 @@ export function HasikRoom({
                     </div>
                   </div>
                 </div>
-                <div className={`seat-map ${tableShape}`} aria-label="오늘의 자리 배치">
+                <div className={`seat-map ${tableShape}`} aria-label="오늘의 자리 배치" ref={seatMapRef}>
                   <div className={`table ${tableShape}`} />
-                  <div className="served-dish-layer" aria-hidden="true">
+                  <div className="served-dish-layer">
                     {servedDishes.map((dish, index) => {
-                      const slot = servedDishSlotList[dish.slotIndex % servedDishSlotList.length];
-                      const enterX = slot.x < 45 ? -96 : slot.x > 55 ? 96 : 0;
-                      const enterY = slot.y < 45 ? -80 : slot.y > 55 ? 80 : 96;
+                      const enterX = dish.x < 45 ? -96 : dish.x > 55 ? 96 : 0;
+                      const enterY = dish.y < 45 ? -80 : dish.y > 55 ? 80 : 96;
+                      const isActiveDish = activeDishId === dish.id;
+                      const currentDishAction = dishAction?.dishId === dish.id ? dishAction : null;
+                      const canControlDish =
+                        !dish.ownerUserId ||
+                        dish.ownerUserId === sessionIdRef.current ||
+                        dish.ownerKey === currentUserKey;
+                      const dishClassName = [
+                        "served-dish",
+                        dish.kind,
+                        isActiveDish ? "active" : "",
+                        currentDishAction ? "eating" : "",
+                        draggingDishId === dish.id ? "dragging" : "",
+                        canControlDish ? "controllable" : ""
+                      ].filter(Boolean).join(" ");
 
                       return (
                         <div
                           key={dish.id}
-                          className="served-dish"
+                          className={dishClassName}
                           style={{
-                            "--dish-x": `${slot.x}%`,
-                            "--dish-y": `${slot.y}%`,
+                            "--dish-x": `${dish.x}%`,
+                            "--dish-y": `${dish.y}%`,
+                            "--eat-target-x": `${currentDishAction?.targetX ?? dish.x}%`,
+                            "--eat-target-y": `${currentDishAction?.targetY ?? dish.y}%`,
                             "--dish-enter-x": `${enterX}px`,
                             "--dish-enter-y": `${enterY}px`,
                             "--dish-delay": `${Math.min(index, 5) * 70}ms`
                           } as CSSProperties}
+                          onPointerDown={(event) => startDishPointer(event, dish, canControlDish)}
+                          onPointerMove={moveDishPointer}
+                          onPointerUp={(event) => finishDishPointer(event, dish)}
+                          onPointerCancel={(event) => finishDishPointer(event, dish)}
+                          onAnimationEnd={(event) => {
+                            if (
+                              currentDishAction &&
+                              (event.animationName === "served-dish-eat" ||
+                                event.animationName === "served-drink-eat")
+                            ) {
+                              finishDishAction(dish.id);
+                            }
+                          }}
                         >
-                          <span>{dish.icon}</span>
+                          {dish.image ? (
+                            <img
+                              className="served-dish-image"
+                              src={getAssetPath(dish.image)}
+                              alt=""
+                              draggable={false}
+                            />
+                          ) : (
+                            <span className="served-dish-fallback">{dish.icon}</span>
+                          )}
                           <strong>{dish.name}</strong>
                           {dish.count > 1 ? <small>x{dish.count}</small> : null}
+                          <em>{dish.remainingServings}</em>
+                          {currentDishAction ? (
+                            <span className="dish-particles" aria-hidden="true">
+                              {dishParticleSeeds.map((particle, particleIndex) => (
+                                <i
+                                  key={`${dish.id}-particle-${particleIndex}`}
+                                  style={{
+                                    "--particle-x": `${particle.x}px`,
+                                    "--particle-y": `${particle.y}px`,
+                                    "--particle-r": `${particle.r}deg`,
+                                    "--particle-delay": `${particleIndex * 18}ms`
+                                  } as CSSProperties}
+                                />
+                              ))}
+                            </span>
+                          ) : null}
+                          {isActiveDish && canControlDish && !currentDishAction ? (
+                            <div
+                              className="dish-action-menu"
+                              onPointerDown={(event) => event.stopPropagation()}
+                              onPointerUp={(event) => event.stopPropagation()}
+                            >
+                              <button type="button" onClick={() => consumeDish(dish, "eat")}>
+                                먹기
+                              </button>
+                              <button type="button" onClick={() => consumeDish(dish, "feed")}>
+                                먹이기
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
                       );
                     })}
@@ -2515,7 +2976,10 @@ export function HasikRoom({
                     key={item.id}
                     className={isSelectedByMe ? "menu-row selected" : "menu-row"}
                   >
-                    <span className="menu-name">{item.name}</span>
+                    <span className="menu-name">
+                      <img src={getAssetPath(item.image)} alt="" draggable={false} />
+                      <span>{item.name}</span>
+                    </span>
                     <button
                       type="button"
                       className="menu-select-zone"
@@ -2567,6 +3031,7 @@ export function HasikRoom({
               {orderedMenuItems.length > 0 ? (
                 orderedMenuItems.map((item) => (
                   <span key={item.id}>
+                    <img src={getAssetPath(item.image)} alt="" draggable={false} />
                     {item.name} {item.count}
                   </span>
                 ))
