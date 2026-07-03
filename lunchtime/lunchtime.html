@@ -1116,6 +1116,7 @@
 
         .banner-cell {
           grid-column: 1 / -1;
+          grid-row: 4 / 6;
         }
 
         .time-panel {
@@ -1125,9 +1126,10 @@
 
         .content-return-button {
           grid-column: 1 / 2;
-          grid-row: 6 / 8;
+          grid-row: 6 / 9;
           padding: 0 3px;
-          font-size: 10px;
+          font-size: 11px;
+          line-height: 1.18;
         }
 
         .option-panel {
@@ -1142,30 +1144,37 @@
 
         .quote-panel {
           grid-column: 1 / 7;
-          grid-row: 10 / 12;
+          grid-row: 10 / 14;
+          grid-template-rows: repeat(2, calc(var(--row-h) * 2));
         }
 
         .lunch-entry-panel {
           grid-column: 1 / 7;
-          grid-row: 13 / 16;
+          grid-row: 15 / 18;
         }
 
         .content-page-panel {
           grid-column: 1 / 7;
           grid-row: 10 / 25;
+          grid-template-rows: calc(var(--row-h) * 2) minmax(0, 1fr) calc(var(--row-h) * 2);
+        }
+
+        .menu-content-page {
+          grid-template-rows: calc(var(--row-h) * 2) minmax(0, 1fr);
         }
 
         .option-content-page {
           grid-row: 10 / 11;
+          grid-template-rows: var(--row-h);
         }
 
         .chat-panel {
           grid-column: 1 / 7;
-          grid-row: 34 / 36;
+          grid-row: 33 / 36;
         }
 
         .chat-panel.has-visible-messages {
-          grid-row: 30 / 36;
+          grid-row: 29 / 36;
         }
 
         .is-chat-focused .chat-panel {
@@ -1174,11 +1183,11 @@
 
         .notice-panel {
           grid-column: 1 / 7;
-          grid-row: 36 / 37;
+          grid-row: 36 / 38;
         }
 
         .is-chat-focused .notice-panel {
-          grid-row: 36 / 37;
+          grid-row: 36 / 38;
         }
 
         .is-chat-focused .message-feed {
@@ -1193,19 +1202,52 @@
 
         .banner-track span,
         .panel-row,
-        .quote-panel p,
         .lunch-entry-title,
         .sheet-button {
           font-size: 12px;
         }
 
-        .clock {
-          font-size: 24px;
-          line-height: 1;
+        .banner-track {
+          height: 100%;
+        }
+
+        .banner-track span {
+          font-size: 14px;
+        }
+
+        .quote-panel p {
+          height: calc(var(--row-h) * 2);
+          font-size: 14px;
+          line-height: 1.25;
+        }
+
+        .quote-label,
+        .quote-text {
+          padding: 0 7px;
+          overflow: hidden;
+          white-space: normal;
         }
 
         .quote-label {
-          font-size: 11px;
+          font-size: 12px;
+          line-height: 1.18;
+        }
+
+        .quote-text {
+          font-size: 14px;
+          line-height: 1.24;
+        }
+
+        .menu-rank-strip {
+          flex-wrap: wrap;
+          gap: 2px 6px;
+          line-height: 1.15;
+          white-space: normal;
+        }
+
+        .clock {
+          font-size: 24px;
+          line-height: 1;
         }
 
         .quote-action,
@@ -1214,12 +1256,69 @@
         .random-result,
         .vote-button,
         .menu-count-value {
-          font-size: 11px;
+          font-size: 12px;
         }
 
-        .thread-body,
+        .quote-action {
+          font-size: 13px;
+          line-height: 1.12;
+          white-space: normal;
+        }
+
+        .pagination-row {
+          min-height: calc(var(--row-h) * 2);
+        }
+
+        .pagination-row .content-page-tool,
+        .pagination-row .page-indicator {
+          min-height: calc(var(--row-h) * 2);
+          font-size: 12px;
+          line-height: 1.15;
+        }
+
+        .thread-item {
+          min-height: calc(var(--row-h) * 2);
+        }
+
+        .thread-body {
+          align-items: center;
+          height: calc(var(--row-h) * 2);
+          font-size: 13px;
+          line-height: 1.25;
+          white-space: normal;
+          text-overflow: clip;
+        }
+
+        .vote-button {
+          min-height: calc(var(--row-h) * 2);
+        }
+
+        .vote-icon {
+          width: 17px;
+          height: 17px;
+        }
+
         .menu-candidate-body {
           font-size: 12px;
+        }
+
+        .chat-form {
+          height: calc(var(--row-h) * 3);
+        }
+
+        .chat-input {
+          height: calc(var(--row-h) * 3);
+          font-size: 17px;
+        }
+
+        .notice-panel {
+          font-size: 13px;
+          line-height: 1.24;
+        }
+
+        .notice-label,
+        .notice-text {
+          white-space: normal;
         }
 
         .toast {
@@ -1255,7 +1354,7 @@
           </section>
 
           <button type="button" class="sheet-button content-return-button" id="contentReturnButton" hidden>
-            메인으로<br />돌아가기
+            메인으로<br />돌아<br />가기
           </button>
 
           <section class="option-panel" aria-label="옵션">
