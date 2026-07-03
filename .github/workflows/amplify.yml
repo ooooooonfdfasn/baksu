@@ -1,0 +1,95 @@
+name: Deploy AWS Amplify
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: amplify-production
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: ap-northeast-2
+  AMPLIFY_APP_ID: d17o4anp55pfzo
+  AMPLIFY_BRANCH: main
+  AWS_ROLE_ARN: arn:aws:iam::764428910606:role/BaksuAmplifyGitHubDeployRole
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: hasik/package-lock.json
+
+      - name: Install hasik dependencies
+        run: npm ci --prefix hasik
+
+      - name: Build hasik static export
+        run: NEXT_PUBLIC_BASE_PATH=/hasik GITHUB_PAGES=true NEXT_TELEMETRY_DISABLED=1 npm run build:pages --prefix hasik
+
+      - name: Assemble Amplify artifact
+        run: bash scripts/build-amplify-site.sh
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.1.0
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to Amplify Hosting
+        run: |
+          cd _site
+          zip -qr ../site.zip .
+          cd ..
+
+          deploy_json="$(aws amplify create-deployment \
+            --app-id "$AMPLIFY_APP_ID" \
+            --branch-name "$AMPLIFY_BRANCH" \
+            --region "$AWS_REGION")"
+
+          job_id="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["jobId"])' <<< "$deploy_json")"
+          upload_url="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["zipUploadUrl"])' <<< "$deploy_json")"
+
+          curl -fsS -T site.zip "$upload_url"
+          aws amplify start-deployment \
+            --app-id "$AMPLIFY_APP_ID" \
+            --branch-name "$AMPLIFY_BRANCH" \
+            --job-id "$job_id" \
+            --region "$AWS_REGION"
+
+          for attempt in {1..60}; do
+            status="$(aws amplify get-job \
+              --app-id "$AMPLIFY_APP_ID" \
+              --branch-name "$AMPLIFY_BRANCH" \
+              --job-id "$job_id" \
+              --region "$AWS_REGION" \
+              --query 'job.summary.status' \
+              --output text)"
+            echo "Amplify deployment status: $status"
+
+            case "$status" in
+              SUCCEED)
+                exit 0
+                ;;
+              FAILED|CANCELLED)
+                exit 1
+                ;;
+            esac
+
+            sleep 10
+          done
+
+          echo "Amplify deployment did not finish in time" >&2
+          exit 1

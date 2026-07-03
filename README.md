@@ -48,6 +48,7 @@ npm run dev
 - 운영 URL: `https://baksu.kr`
 - 기본 Amplify URL: `https://main.d17o4anp55pfzo.amplifyapp.com`
 - 커스텀 도메인: `baksu.kr`, `www.baksu.kr`
+- 자동 배포 설정: `main` 브랜치에 푸시하면 GitHub Actions의 `Deploy AWS Amplify` 워크플로가 현재 Amplify 앱에 운영 배포합니다.
 
 2026-07-03에 `baksu.kr`를 Amplify 커스텀 도메인으로 추가했고, 가비아 DNS 관리툴에 Amplify 인증/연결용 CNAME 레코드를 입력했습니다. 같은 날 `https://baksu.kr`, `https://www.baksu.kr`, `/articles/`, `/hasik/`, `/sitemap.xml`의 HTTPS 응답을 확인했습니다.
 
