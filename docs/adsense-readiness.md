@@ -25,6 +25,9 @@ Last updated: 2026-07-03
 - Contact section: `/guide.html#contact`
 - Sitemap: `/sitemap.xml`
 - Robots: `/robots.txt`
+- AdSense site review status: `Preparing`
+- AdSense review request submitted: 2026-07-03 13:51 KST
+- AdSense dashboard Ads.txt status: `Not found`; live `https://baksu.kr/ads.txt` returns `200` with the correct publisher line.
 
 ## Completed preparation
 
@@ -45,12 +48,16 @@ Last updated: 2026-07-03
 - Rebuilt the `hasik` static export and redeployed commit `a127352` to AWS Amplify; deployment job `5` succeeded.
 - Confirmed the production homepage, `/hasik/`, and `/ads.txt` expose the AdSense publisher ID or authorized seller entry.
 - In AdSense, checked "The code has been placed"; Google confirmed site ownership for `baksu.kr`.
-- The AdSense review request button is enabled. Final review submission is pending the user's explicit confirmation.
+- The user submitted the AdSense site review request.
+- Confirmed the AdSense dashboard changed from `Review required` to `Preparing` after submission.
+- Rechecked every URL listed in `sitemap.xml`, plus `/ads.txt` and `/robots.txt`; all returned HTTP `200`.
 
-## Must do before submitting to AdSense
+## Current waiting items
 
-- Click "Review request" in AdSense after the user confirms final submission.
-- Wait for Google to refresh the Ads.txt dashboard status. The live file is reachable, but the AdSense dashboard still showed "not found" immediately after deployment.
+- Wait for Google to finish site review. Google says this usually completes within a few days, but can take 2 to 4 weeks in some cases.
+- Wait for Google to refresh the Ads.txt dashboard status. Google says ads.txt changes can take several days to appear in AdSense, and up to a month for sites with low ad request volume.
+- Keep the live site stable during review: avoid removing policy pages, changing canonical URLs, blocking crawlers, or hiding content behind login.
+- After approval, configure Auto ads or manual ad units and recheck placement so ads are not confused with navigation, buttons, downloads, or chat controls.
 
 ## Recommended review checklist
 
@@ -65,6 +72,8 @@ Last updated: 2026-07-03
 ## Sources to recheck
 
 - https://support.google.com/adsense/answer/9724
+- https://support.google.com/adsense/answer/7584263
+- https://support.google.com/adsense/answer/12171612
 - https://support.google.com/adsense/answer/7299563
 - https://support.google.com/adsense/answer/48182
 - https://support.google.com/adsense/answer/10502938
