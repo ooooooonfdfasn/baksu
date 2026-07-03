@@ -16,6 +16,7 @@ Last updated: 2026-07-03
 - Hosting: AWS Amplify Hosting, `ap-northeast-2`, app ID `d17o4anp55pfzo`
 - Fallback Amplify URL: `https://main.d17o4anp55pfzo.amplifyapp.com`
 - Custom domain: `baksu.kr`, `www.baksu.kr`
+- AdSense publisher ID: `pub-6614664375260186`
 - Content base: static root pages plus article pages under `/articles/`
 - Policy page: `/guide.html`
 - Privacy section: `/guide.html#privacy`
@@ -38,16 +39,15 @@ Last updated: 2026-07-03
 - Confirmed the site has navigation to company info, history, service areas, article pages, application page, policy page, and contact section.
 - Pre-filled the AdSense signup form with `https://baksu.kr`, selected Korea as the payment country/region, and selected no marketing/tips email.
 - Stopped before the AdSense Terms acceptance checkbox and account creation button because this requires the user to personally accept Google's terms.
+- After the user accepted the AdSense Terms, captured the AdSense code snippet for `ca-pub-6614664375260186`.
+- Added the AdSense code snippet to public HTML pages and the `hasik` Next.js root layout.
+- Added `ads.txt` with `google.com, pub-6614664375260186, DIRECT, f08c47fec0942fa0`.
 
 ## Must do before submitting to AdSense
 
-- The user must personally accept the AdSense Terms and click the account creation/start button in Google AdSense.
-- Create or open the user's AdSense account.
-- Add the production site URL in AdSense: `https://baksu.kr`.
-- Copy the publisher-specific AdSense verification/Auto ads code from AdSense.
-- Paste the AdSense code into the `<head>` of every public HTML page, or add a shared include/build step before deployment.
 - Rebuild/redeploy the static site after the publisher code is added.
-- After AdSense provides a publisher ID, add a valid `ads.txt` file if AdSense requests it. Do not publish a placeholder `ads.txt`.
+- In AdSense, check "The code has been placed" and click the verification button.
+- Request site review after AdSense enables the review request button.
 
 ## Recommended review checklist
 
