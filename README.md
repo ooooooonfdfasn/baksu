@@ -37,3 +37,14 @@ npm run dev
 - `/hasik/`: `hasik` Next 정적 export
 
 저장소 Pages 설정은 배포 소스를 `GitHub Actions`로 지정해야 합니다.
+
+## AWS Amplify
+
+운영 배포는 AWS Amplify Hosting을 사용합니다.
+
+- 리전: `ap-northeast-2`
+- 앱 이름: `baksu`
+- 앱 ID: `d17o4anp55pfzo`
+- 운영 URL: `https://main.d17o4anp55pfzo.amplifyapp.com`
+
+AWS 배포용 `hasik` 정적 빌드는 루트 사이트의 `/hasik/` 아래에서 동작해야 하므로 `NEXT_PUBLIC_BASE_PATH=/hasik`와 `GITHUB_PAGES=true`를 함께 사용해 `hasik/out`을 만든 뒤 루트 정적 파일과 함께 업로드합니다.
