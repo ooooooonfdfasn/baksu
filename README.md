@@ -48,3 +48,7 @@ npm run dev
 - 운영 URL: `https://main.d17o4anp55pfzo.amplifyapp.com`
 
 AWS 배포용 `hasik` 정적 빌드는 루트 사이트의 `/hasik/` 아래에서 동작해야 하므로 `NEXT_PUBLIC_BASE_PATH=/hasik`와 `GITHUB_PAGES=true`를 함께 사용해 `hasik/out`을 만든 뒤 루트 정적 파일과 함께 업로드합니다.
+
+## Google AdSense
+
+애드센스 심사 준비 현황과 남은 작업은 `docs/adsense-readiness.md`에 정리합니다. 실제 심사 제출 전에는 AdSense 계정에서 발급되는 `ca-pub-...` 게시자 코드가 필요합니다.
