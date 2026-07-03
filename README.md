@@ -49,7 +49,7 @@ npm run dev
 - 기본 Amplify URL: `https://main.d17o4anp55pfzo.amplifyapp.com`
 - 커스텀 도메인: `baksu.kr`, `www.baksu.kr`
 
-2026-07-03에 `baksu.kr`를 Amplify 커스텀 도메인으로 추가했고, 가비아 DNS 관리툴에 Amplify 인증/연결용 CNAME 레코드를 입력했습니다. DNS 전파와 Amplify 관리형 SSL 인증서 검증은 최대 48시간 걸릴 수 있습니다.
+2026-07-03에 `baksu.kr`를 Amplify 커스텀 도메인으로 추가했고, 가비아 DNS 관리툴에 Amplify 인증/연결용 CNAME 레코드를 입력했습니다. 같은 날 `https://baksu.kr`, `https://www.baksu.kr`, `/articles/`, `/hasik/`, `/sitemap.xml`의 HTTPS 응답을 확인했습니다.
 
 AWS 배포용 `hasik` 정적 빌드는 루트 사이트의 `/hasik/` 아래에서 동작해야 하므로 `NEXT_PUBLIC_BASE_PATH=/hasik`와 `GITHUB_PAGES=true`를 함께 사용해 `hasik/out`을 만든 뒤 루트 정적 파일과 함께 업로드합니다.
 

@@ -30,15 +30,18 @@ Last updated: 2026-07-03
 - Confirmed the site is publicly reachable on AWS Amplify.
 - Added the `baksu.kr` custom domain association in AWS Amplify.
 - Added Amplify DNS records in Gabia for ACM certificate validation, `www.baksu.kr`, and the root `baksu.kr` record.
+- Confirmed HTTPS `200` responses for `https://baksu.kr`, `https://www.baksu.kr`, `/articles/`, `/hasik/`, and `/sitemap.xml`.
 - Updated canonical URLs, `robots.txt`, and `sitemap.xml` to the production custom domain.
 - Confirmed key routes return `200` on the fallback Amplify URL: `/`, `/lunchtime/`, `/pantry/`, `/articles/`, `/hasik/`, `/robots.txt`, `/sitemap.xml`.
 - Added explicit AdSense-oriented privacy language for Google and third-party advertising cookies.
 - Kept contact and reporting path visible through the shared footer on root pages and article pages.
 - Confirmed the site has navigation to company info, history, service areas, article pages, application page, policy page, and contact section.
+- Pre-filled the AdSense signup form with `https://baksu.kr`, selected Korea as the payment country/region, and selected no marketing/tips email.
+- Stopped before the AdSense Terms acceptance checkbox and account creation button because this requires the user to personally accept Google's terms.
 
 ## Must do before submitting to AdSense
 
-- Wait until `https://baksu.kr` resolves, serves HTTPS, and the Amplify custom domain status becomes available.
+- The user must personally accept the AdSense Terms and click the account creation/start button in Google AdSense.
 - Create or open the user's AdSense account.
 - Add the production site URL in AdSense: `https://baksu.kr`.
 - Copy the publisher-specific AdSense verification/Auto ads code from AdSense.
