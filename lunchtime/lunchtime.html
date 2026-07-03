@@ -765,6 +765,15 @@
         outline-offset: -2px;
       }
 
+      .vote-button[data-voted="true"] {
+        opacity: 0.58;
+      }
+
+      .vote-button.is-selected {
+        background: #e8f5ef;
+        opacity: 1;
+      }
+
       .pagination-row,
       .menu-random-row {
         display: grid;
@@ -845,7 +854,7 @@
         grid-row: 34 / 36;
         display: flex;
         background: transparent;
-        pointer-events: auto;
+        pointer-events: none;
       }
 
       .chat-panel.has-visible-messages {
@@ -872,6 +881,7 @@
         -webkit-overflow-scrolling: touch;
         border-bottom: 0;
         background: transparent;
+        pointer-events: auto;
       }
 
       .message-feed:not(.has-messages) {
@@ -929,6 +939,7 @@
         display: grid;
         grid-template-columns: minmax(0, 1fr) var(--col-w);
         height: calc(var(--row-h) * 2);
+        pointer-events: auto;
       }
 
       .chat-input {
@@ -1170,28 +1181,29 @@
 
         .chat-panel {
           grid-column: 1 / 7;
-          grid-row: 33 / 36;
+          grid-row: 34 / 37;
         }
 
         .chat-panel.has-visible-messages {
-          grid-row: 29 / 36;
+          grid-row: 30 / 37;
         }
 
         .is-chat-focused .chat-panel {
-          grid-row: 25 / 36;
+          z-index: 12;
+          grid-row: 10 / 37;
         }
 
         .notice-panel {
           grid-column: 1 / 7;
-          grid-row: 36 / 38;
+          grid-row: 37 / 39;
         }
 
         .is-chat-focused .notice-panel {
-          grid-row: 36 / 38;
+          grid-row: 37 / 39;
         }
 
         .is-chat-focused .message-feed {
-          max-height: calc(var(--row-h) * 8);
+          max-height: calc(var(--row-h) * 21);
         }
 
         .option-toggle {
@@ -1218,31 +1230,37 @@
         .quote-panel p {
           height: calc(var(--row-h) * 2);
           font-size: 14px;
-          line-height: 1.25;
+          line-height: 1;
         }
 
         .quote-label,
         .quote-text {
           padding: 0 7px;
           overflow: hidden;
-          white-space: normal;
+          white-space: nowrap;
+          text-overflow: ellipsis;
         }
 
         .quote-label {
           font-size: 12px;
-          line-height: 1.18;
+          line-height: 1;
         }
 
         .quote-text {
           font-size: 14px;
-          line-height: 1.24;
+          line-height: 1;
         }
 
         .menu-rank-strip {
-          flex-wrap: wrap;
-          gap: 2px 6px;
-          line-height: 1.15;
-          white-space: normal;
+          flex-wrap: nowrap;
+          max-width: 100%;
+          gap: 5px;
+          line-height: 1;
+          white-space: nowrap;
+        }
+
+        .menu-rank-item {
+          flex: 0 0 auto;
         }
 
         .clock {
@@ -1261,8 +1279,10 @@
 
         .quote-action {
           font-size: 13px;
-          line-height: 1.12;
-          white-space: normal;
+          line-height: 1;
+          overflow: hidden;
+          white-space: nowrap;
+          text-overflow: ellipsis;
         }
 
         .pagination-row {
@@ -1468,6 +1488,7 @@
     <script>
       const stateKey = "lunchtime-sheet-state";
       const contentStateKey = "lunchtime-content-state";
+      const sentenceVotesKey = "lunchtime-sentence-votes";
       const columns = "ABCDEF".split("");
       const rowCount = 35;
       const messageVisibleMs = 10 * 1000;
@@ -1536,6 +1557,7 @@
       let messages = [];
       let timeMode = state.timeMode;
       let sentenceThreads = contentState.sentences;
+      let sentenceVotes = loadSentenceVotes();
       let menuEntries = contentState.menus;
       let contentView = "main";
       let sentenceSortMode = "top";
@@ -1563,17 +1585,22 @@
       function syncViewportHeight() {
         const viewportHeight = window.visualViewport?.height || window.innerHeight;
         const viewportWidth =
-          document.documentElement.clientWidth || window.visualViewport?.width || window.innerWidth;
+          document.documentElement.clientWidth || window.innerWidth || window.visualViewport?.width;
         if (viewportHeight > 0) {
           const root = document.documentElement;
           const rootStyle = getComputedStyle(root);
+          const layoutViewportHeight = window.innerHeight || viewportHeight;
+          const hasVisualKeyboard =
+            Boolean(window.visualViewport) && viewportHeight < layoutViewportHeight - 80;
           root.style.setProperty("--viewport-h", `${viewportHeight}px`);
-          const sheetWidth = Math.max(1, Math.min(viewportWidth, viewportHeight));
+          const sheetWidthReferenceHeight = hasVisualKeyboard ? layoutViewportHeight : viewportHeight;
+          const sheetWidth = Math.max(1, Math.min(viewportWidth, sheetWidthReferenceHeight));
           const sheetOffsetX = Math.max(0, (viewportWidth - sheetWidth) / 2);
           root.style.setProperty("--sheet-w", `${sheetWidth}px`);
           root.style.setProperty("--sheet-x", `${sheetOffsetX}px`);
           root.style.setProperty("--col-w", `${sheetWidth / columns.length}px`);
-          const fittedRowHeight = Math.max(16, Math.min(22, (viewportHeight - 30) / 37));
+          const minimumRowHeight = hasVisualKeyboard ? 6 : 16;
+          const fittedRowHeight = Math.max(minimumRowHeight, Math.min(22, (viewportHeight - 30) / 37));
           const columnHeaderHeight = parseFloat(rootStyle.getPropertyValue("--col-head-h")) || 30;
           const bodyGridY = fittedRowHeight * 2 + columnHeaderHeight;
           root.style.setProperty("--row-h", `${fittedRowHeight}px`);
@@ -1683,6 +1710,23 @@
             menus: menuEntries
           })
         );
+      }
+
+      function loadSentenceVotes() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(sentenceVotesKey) || "{}");
+          return Object.fromEntries(
+            Object.entries(saved).filter(
+              ([id, vote]) => typeof id === "string" && (vote === "up" || vote === "down")
+            )
+          );
+        } catch {
+          return {};
+        }
+      }
+
+      function saveSentenceVotes() {
+        localStorage.setItem(sentenceVotesKey, JSON.stringify(sentenceVotes));
       }
 
       function normalizeText(text, maxLength) {
@@ -1852,16 +1896,17 @@
           sentenceThreadList.appendChild(empty);
         } else {
           pageItems.forEach((item) => {
+            const userVote = sentenceVotes[item.id];
             const article = document.createElement("article");
             article.className = "thread-item";
             article.innerHTML = `
               <div class="thread-body">${escapeHtml(`${item.name}: ${item.text}`)}</div>
               <div class="vote-box">
-                <button type="button" class="vote-button" data-vote="up" data-id="${item.id}" aria-label="추천 ${item.up}">
+                <button type="button" class="vote-button${userVote === "up" ? " is-selected" : ""}" data-vote="up" data-id="${item.id}" data-voted="${userVote ? "true" : "false"}" aria-pressed="${userVote === "up"}" aria-label="추천 ${item.up}">
                   <img class="vote-icon" src="../assets/lunch-vote-arrow-up.svg" alt="" aria-hidden="true" />
                   <span class="vote-count">${item.up}</span>
                 </button>
-                <button type="button" class="vote-button" data-vote="down" data-id="${item.id}" aria-label="비추천 ${item.down}">
+                <button type="button" class="vote-button${userVote === "down" ? " is-selected" : ""}" data-vote="down" data-id="${item.id}" data-voted="${userVote ? "true" : "false"}" aria-pressed="${userVote === "down"}" aria-label="비추천 ${item.down}">
                   <img class="vote-icon" src="../assets/lunch-vote-arrow-down.svg" alt="" aria-hidden="true" />
                   <span class="vote-count">${item.down}</span>
                 </button>
@@ -2168,11 +2213,17 @@
         if (!item) {
           return;
         }
+        if (sentenceVotes[item.id]) {
+          showToast("이미 이 문장에 투표했습니다.");
+          return;
+        }
         if (button.dataset.vote === "up") {
           item.up += 1;
         } else {
           item.down += 1;
         }
+        sentenceVotes[item.id] = button.dataset.vote === "up" ? "up" : "down";
+        saveSentenceVotes();
         saveContentState();
         renderContentPanels();
       });
