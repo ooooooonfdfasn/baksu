@@ -42,12 +42,15 @@ Last updated: 2026-07-03
 - After the user accepted the AdSense Terms, captured the AdSense code snippet for `ca-pub-6614664375260186`.
 - Added the AdSense code snippet to public HTML pages and the `hasik` Next.js root layout.
 - Added `ads.txt` with `google.com, pub-6614664375260186, DIRECT, f08c47fec0942fa0`.
+- Rebuilt the `hasik` static export and redeployed commit `a127352` to AWS Amplify; deployment job `5` succeeded.
+- Confirmed the production homepage, `/hasik/`, and `/ads.txt` expose the AdSense publisher ID or authorized seller entry.
+- In AdSense, checked "The code has been placed"; Google confirmed site ownership for `baksu.kr`.
+- The AdSense review request button is enabled. Final review submission is pending the user's explicit confirmation.
 
 ## Must do before submitting to AdSense
 
-- Rebuild/redeploy the static site after the publisher code is added.
-- In AdSense, check "The code has been placed" and click the verification button.
-- Request site review after AdSense enables the review request button.
+- Click "Review request" in AdSense after the user confirms final submission.
+- Wait for Google to refresh the Ads.txt dashboard status. The live file is reachable, but the AdSense dashboard still showed "not found" immediately after deployment.
 
 ## Recommended review checklist
 
