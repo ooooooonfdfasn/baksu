@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://main.d17o4anp55pfzo.amplifyapp.com/sitemap.xml
+Sitemap: https://baksu.kr/sitemap.xml
