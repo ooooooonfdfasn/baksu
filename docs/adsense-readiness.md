@@ -1,6 +1,6 @@
 # Google AdSense review readiness
 
-Last updated: 2026-07-03
+Last updated: 2026-07-06
 
 ## Official policy basis
 
@@ -25,9 +25,9 @@ Last updated: 2026-07-03
 - Contact section: `/guide.html#contact`
 - Sitemap: `/sitemap.xml`
 - Robots: `/robots.txt`
-- AdSense site review status: `Preparing`
-- AdSense review request submitted: 2026-07-03 13:51 KST
-- AdSense dashboard Ads.txt status: `Not found`; live `https://baksu.kr/ads.txt` returns `200` with the correct publisher line.
+- AdSense site review status: `Preparing` / `준비 중`
+- Latest AdSense review request time shown in the dashboard: 2026-07-06 22:13 KST
+- AdSense dashboard Ads.txt status: `Approved` / `승인됨`
 
 ## Completed preparation
 
@@ -51,11 +51,12 @@ Last updated: 2026-07-03
 - The user submitted the AdSense site review request.
 - Confirmed the AdSense dashboard changed from `Review required` to `Preparing` after submission.
 - Rechecked every URL listed in `sitemap.xml`, plus `/ads.txt` and `/robots.txt`; all returned HTTP `200`.
+- After the duplicate-account blocker was cleared, confirmed the AdSense Sites page shows `baksu.kr` as `준비 중`, `Ads.txt 상태` as `승인됨`, and the detail panel as `리뷰가 요청됨`.
+- Confirmed the latest AdSense dashboard review request time is 2026-07-06 22:13 KST.
 
 ## Current waiting items
 
 - Wait for Google to finish site review. Google says this usually completes within a few days, but can take 2 to 4 weeks in some cases.
-- Wait for Google to refresh the Ads.txt dashboard status. Google says ads.txt changes can take several days to appear in AdSense, and up to a month for sites with low ad request volume.
 - Keep the live site stable during review: avoid removing policy pages, changing canonical URLs, blocking crawlers, or hiding content behind login.
 - After approval, configure Auto ads or manual ad units and recheck placement so ads are not confused with navigation, buttons, downloads, or chat controls.
 
