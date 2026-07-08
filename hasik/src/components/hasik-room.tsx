@@ -11,7 +11,6 @@ import {
   Flag,
   Megaphone,
   Pointer,
-  ReceiptText,
   Send,
   Settings2,
   UserRound
@@ -966,6 +965,7 @@ export function HasikRoom({
     "--room-venue-image": `url("${getAssetPath(selectedVenue.image)}")`
   } as CSSProperties;
   const menuButtonImage = getAssetPath("/assets/hasik/menu-clipboard.webp");
+  const receiptButtonImage = getAssetPath("/assets/hasik/receipt-clipboard.png");
 
   useEffect(() => {
     if (!isOrderChoiceOpen) {
@@ -2595,7 +2595,7 @@ export function HasikRoom({
           <input
             aria-label="채팅 입력"
             maxLength={120}
-            placeholder="내 자리에서 한마디"
+            placeholder="채팅입력"
             value={input}
             ref={(element) => {
               if (element) {
@@ -2877,8 +2877,7 @@ export function HasikRoom({
                   aria-label="영수증 모아보기"
                   title="영수증"
                 >
-                  <ReceiptText size={30} />
-                  <span>영수증</span>
+                  <img src={receiptButtonImage} alt="" draggable={false} />
                 </button>
                 <button
                   type="button"
@@ -2898,15 +2897,17 @@ export function HasikRoom({
                 <div className="chat-feed" ref={chatFeedRef}>
                   {visibleMessages.map((message) => (
                     <article key={message.id} className={`chat-message ${message.kind ?? "normal"}`}>
-                      <button
-                        type="button"
-                        className="profile-trigger chat-name"
-                        onClick={() => setActiveProfile(message)}
-                      >
-                        <NameWithRole nickname={message.nickname} role={message.role} />
-                      </button>
+                      <div className="message-meta">
+                        <button
+                          type="button"
+                          className="profile-trigger chat-name"
+                          onClick={() => setActiveProfile(message)}
+                        >
+                          <NameWithRole nickname={message.nickname} role={message.role} />
+                        </button>
+                        <time className="message-time">{formatClock(message.at)}</time>
+                      </div>
                       <p>{message.body}</p>
-                      <time className="message-time">{formatClock(message.at)}</time>
                     </article>
                   ))}
                 </div>
