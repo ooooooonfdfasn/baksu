@@ -1343,6 +1343,7 @@ input:focus {
 .chat-message p {
   margin: 0;
   color: #fff8ec;
+  font-size: 12px;
   line-height: 1.38;
   overflow-wrap: anywhere;
 }
@@ -3460,10 +3461,13 @@ input {
 
 .room-page .chat-panel,
 .room-page .composer-shell,
-.room-page .chat-form input,
+.room-page .chat-form input {
+  border-radius: 0 !important;
+}
+
 .room-page .chat-form .icon-action,
 .room-page .chat-form .send-button {
-  border-radius: 0 !important;
+  border-radius: 18px !important;
 }
 
 .room-list-panel {
