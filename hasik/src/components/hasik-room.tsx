@@ -965,7 +965,7 @@ export function HasikRoom({
     "--room-venue-image": `url("${getAssetPath(selectedVenue.image)}")`
   } as CSSProperties;
   const menuButtonImage = getAssetPath("/assets/hasik/menu-clipboard.webp");
-  const receiptButtonImage = getAssetPath("/assets/hasik/receipt-clipboard.png");
+  const receiptButtonImage = getAssetPath("/assets/hasik/receipt-slip.png");
 
   useEffect(() => {
     if (!isOrderChoiceOpen) {
