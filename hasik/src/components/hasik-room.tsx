@@ -10,6 +10,8 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   Flag,
   Megaphone,
+  MessageCircle,
+  MessageCircleOff,
   Pointer,
   Send,
   Settings2,
@@ -848,6 +850,7 @@ export function HasikRoom({
   const [isMegaphoneOpen, setMegaphoneOpen] = useState(false);
   const [megaphoneInput, setMegaphoneInput] = useState("");
   const [megaphoneCount, setMegaphoneCount] = useState(getSavedMegaphoneCount);
+  const [areSeatBubblesHidden, setSeatBubblesHidden] = useState(false);
   const [promotedBubbleId, setPromotedBubbleId] = useState<string | null>(null);
   const [menuSelections, setMenuSelections] = useState<Record<string, MenuSelection>>({});
   const [servedDishes, setServedDishes] = useState<ServedDish[]>([]);
@@ -2660,6 +2663,15 @@ export function HasikRoom({
             <section className="table-stage" aria-label="가상 테이블">
               <div className="table-scene">
                 <div className="room-venue-backdrop" style={venueBackdropStyle} aria-hidden="true" />
+                <button
+                  type="button"
+                  className="seat-bubble-toggle"
+                  aria-pressed={areSeatBubblesHidden}
+                  onClick={() => setSeatBubblesHidden((isHidden) => !isHidden)}
+                >
+                  {areSeatBubblesHidden ? <MessageCircle size={16} /> : <MessageCircleOff size={16} />}
+                  <span>{areSeatBubblesHidden ? "말풍선 보이기" : "말풍선 숨기기"}</span>
+                </button>
                 <div className="scene-toolbar">
                   <div className="scene-stats">
                     <strong className="scene-room-title">{roomTitle || "이름 없는 회식방"}</strong>
@@ -2831,44 +2843,46 @@ export function HasikRoom({
                     );
                   })}
 
-                  <div className="seat-bubble-layer" aria-label="좌석 말풍선">
-                    {seatMembers.map((member, index) => {
-                      const seatMessage = member
-                        ? latestMessageByMember.get(getMemberKey(member.nickname, member.role))
-                        : null;
-                      const visibleSeatMessage =
-                        seatMessage && now - seatMessage.at <= bubbleLifetimeMs ? seatMessage : null;
+                  {!areSeatBubblesHidden ? (
+                    <div className="seat-bubble-layer" aria-label="좌석 말풍선">
+                      {seatMembers.map((member, index) => {
+                        const seatMessage = member
+                          ? latestMessageByMember.get(getMemberKey(member.nickname, member.role))
+                          : null;
+                        const visibleSeatMessage =
+                          seatMessage && now - seatMessage.at <= bubbleLifetimeMs ? seatMessage : null;
 
-                      if (!visibleSeatMessage) {
-                        return null;
-                      }
+                        if (!visibleSeatMessage) {
+                          return null;
+                        }
 
-                      const bubbleStackLevel = Math.max(
-                        1,
-                        Math.min(
-                          bubbleLifetimeMs,
-                          Math.round(visibleSeatMessage.at - (now - bubbleLifetimeMs))
-                        )
-                      );
-                      const isPromotedBubble = promotedBubbleId === visibleSeatMessage.id;
+                        const bubbleStackLevel = Math.max(
+                          1,
+                          Math.min(
+                            bubbleLifetimeMs,
+                            Math.round(visibleSeatMessage.at - (now - bubbleLifetimeMs))
+                          )
+                        );
+                        const isPromotedBubble = promotedBubbleId === visibleSeatMessage.id;
 
-                      return (
-                        <div
-                          key={`bubble-${member?.id ?? index}`}
-                          className={`seat-bubble-anchor slot-${index}`}
-                          style={{ zIndex: isPromotedBubble ? bubbleLifetimeMs + 1 : bubbleStackLevel }}
-                        >
-                          <button
-                            type="button"
-                            className={`seat-bubble ${visibleSeatMessage.kind ?? "normal"}`}
-                            onClick={() => setPromotedBubbleId(visibleSeatMessage.id)}
+                        return (
+                          <div
+                            key={`bubble-${member?.id ?? index}`}
+                            className={`seat-bubble-anchor slot-${index}`}
+                            style={{ zIndex: isPromotedBubble ? bubbleLifetimeMs + 1 : bubbleStackLevel }}
                           >
-                            <span>{visibleSeatMessage.body}</span>
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
+                            <button
+                              type="button"
+                              className={`seat-bubble ${visibleSeatMessage.kind ?? "normal"}`}
+                              onClick={() => setPromotedBubbleId(visibleSeatMessage.id)}
+                            >
+                              <span>{visibleSeatMessage.body}</span>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
                 </div>
                 <button
                   type="button"

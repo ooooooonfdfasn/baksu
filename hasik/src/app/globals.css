@@ -462,6 +462,43 @@ input:focus {
   mask-image: linear-gradient(180deg, transparent 0%, #000 17%, #000 82%, transparent 100%);
 }
 
+.seat-bubble-toggle {
+  position: absolute;
+  top: 36px;
+  left: 12px;
+  z-index: 7;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 2px solid rgba(255, 198, 45, 0.6);
+  border-radius: 999px;
+  background: rgba(33, 19, 13, 0.88);
+  color: #ffe6bb;
+  font-size: 12px;
+  font-weight: 950;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32);
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.seat-bubble-toggle[aria-pressed="true"] {
+  border-color: var(--bhc-brown);
+  background: var(--bhc-yellow);
+  color: var(--bhc-brown);
+}
+
+.seat-bubble-toggle:hover {
+  border-color: var(--bhc-yellow);
+  transform: translateY(-1px);
+}
+
 .scene-toolbar {
   position: absolute;
   top: 0;
