@@ -356,7 +356,8 @@
         box-shadow:
           inset 1px 0 0 var(--strong),
           inset -1px 0 0 var(--strong),
-          inset 0 1px 0 var(--strong);
+          inset 0 1px 0 var(--strong),
+          inset 0 -1px 0 var(--strong);
       }
 
       .banner-track {
@@ -457,7 +458,7 @@
 
       .quote-panel p {
         display: grid;
-        grid-template-columns: var(--col-w) minmax(0, 1fr) var(--col-w);
+        grid-template-columns: calc(var(--col-w) * 1.5) minmax(0, 1fr) var(--col-w);
         align-items: stretch;
         height: var(--row-h);
         min-height: 0;
@@ -1286,7 +1287,7 @@
           z-index: 15;
           grid-row: auto;
           width: min(var(--sheet-w), 100vw);
-          height: var(--row-h);
+          height: calc(var(--row-h) * 2);
           transform: translateX(-50%);
           visibility: visible;
         }
@@ -1294,7 +1295,7 @@
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .chat-panel {
           position: fixed;
           right: auto;
-          bottom: calc(var(--keyboard-inset) + var(--row-h) + 14px);
+          bottom: calc(var(--keyboard-inset) + (var(--row-h) * 2) + 14px);
           left: 50%;
           z-index: 30;
           grid-row: auto;
@@ -1327,19 +1328,19 @@
         }
 
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .chat-form {
-          height: 54px;
-          padding: 0;
+          height: calc(var(--row-h) * 3);
+          padding: 3px 8px;
         }
 
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .chat-input {
-          height: 54px;
+          height: 100%;
           border-radius: 999px;
         }
 
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .chat-send-button {
-          top: 4px;
-          right: 8px;
-          bottom: 4px;
+          top: 6px;
+          right: 14px;
+          bottom: 6px;
           height: auto;
           border-radius: 999px;
         }
