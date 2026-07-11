@@ -2,7 +2,10 @@
 <html lang="ko">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f9d59" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta http-equiv="Cache-Control" content="no-store" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
@@ -31,6 +34,9 @@
         --col-w: calc(var(--sheet-w) / 6);
         --col-head-h: 30px;
         --viewport-h: 100svh;
+        --safe-top: env(safe-area-inset-top, 0px);
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
+        --button-font-scale: 1;
         --row-h: 22px;
         --grid-row-1-y: calc(var(--row-h) - 1px);
         --grid-row-2-y: calc((var(--row-h) * 2) - 1px);
@@ -54,7 +60,7 @@
         min-height: 100%;
         overflow: hidden;
         overscroll-behavior: none;
-        background: var(--sheet-bg);
+        background: var(--accent);
       }
 
       body {
@@ -63,7 +69,7 @@
         margin: 0;
         overflow: hidden;
         overscroll-behavior: none;
-        background: var(--sheet-bg);
+        background: var(--accent);
         color: var(--ink);
         font-family:
           Arial,
@@ -87,6 +93,8 @@
         height: var(--viewport-h);
         min-height: 0;
         width: 100%;
+        padding-top: var(--safe-top);
+        padding-bottom: var(--safe-bottom);
         overflow-x: hidden;
         overflow-y: hidden;
         overscroll-behavior-y: none;
@@ -128,6 +136,7 @@
           no-repeat,
           no-repeat,
           repeat;
+        background-clip: content-box;
       }
 
       .screen::before,
@@ -138,8 +147,8 @@
       }
 
       .screen::before {
-        top: 0;
-        bottom: 0;
+        top: var(--safe-top);
+        bottom: var(--safe-bottom);
         left: 0;
         z-index: 0;
         width: var(--sheet-x);
@@ -187,7 +196,7 @@
         right: 0;
         left: 0;
         z-index: 0;
-        height: calc(var(--row-h) * 2);
+        height: calc(var(--safe-top) + (var(--row-h) * 2));
         background: var(--accent);
       }
 
@@ -210,7 +219,7 @@
         top: calc(var(--row-h) * 2);
         bottom: 0;
         left: 0;
-        z-index: 20;
+        z-index: 2;
         width: 1px;
         background: var(--grid);
         content: "";
@@ -393,6 +402,8 @@
         font-weight: 700;
         line-height: 1.1;
         text-align: center;
+        letter-spacing: 0.2em;
+        padding-left: 0.2em;
       }
 
       .content-return-button {
@@ -400,10 +411,9 @@
         grid-column: 1 / 2;
         grid-row: 6 / 8;
         padding: 0 3px;
-        font-size: 10px;
+        font-size: calc(10px * var(--button-font-scale));
         line-height: 1.15;
-        white-space: normal;
-        word-break: keep-all;
+        white-space: nowrap;
       }
 
       .content-return-button[hidden] {
@@ -424,6 +434,8 @@
         align-content: start;
         gap: 0;
         background: var(--panel-bg);
+        border-right: 1px solid var(--strong);
+        border-left: 1px solid var(--strong);
         box-shadow: inset 0 0 0 1px var(--strong);
       }
 
@@ -475,9 +487,11 @@
         background: var(--accent);
         color: #ffffff;
         cursor: pointer;
-        font-size: 12px;
+        font-size: calc(12px * var(--button-font-scale));
         font-weight: 800;
         line-height: 1;
+        overflow: hidden;
+        white-space: nowrap;
       }
 
       .quote-action:hover,
@@ -536,6 +550,8 @@
         display: grid;
         grid-template-rows: var(--row-h) calc(var(--row-h) * 2);
         background: transparent;
+        border-right: 1px solid var(--strong);
+        border-left: 1px solid var(--strong);
         box-shadow: inset 0 0 0 1px var(--strong);
         pointer-events: auto;
       }
@@ -609,8 +625,8 @@
       }
 
       .option-content-page {
-        grid-row: 10 / 11;
-        grid-template-rows: var(--row-h);
+        grid-row: 10 / 12;
+        grid-template-rows: repeat(2, var(--row-h));
         background: transparent;
         box-shadow: none;
       }
@@ -968,6 +984,8 @@
         align-items: center;
         overflow: hidden;
         padding: 0;
+        border-right: 1px solid var(--strong);
+        border-left: 1px solid var(--strong);
         font-size: 13px;
         text-align: center;
       }
@@ -1026,10 +1044,13 @@
         color: #ffffff;
         box-shadow: inset 0 0 0 1px var(--strong);
         cursor: pointer;
-        font-size: 13px;
+        font-size: calc(13px * var(--button-font-scale));
         font-weight: 700;
         line-height: 1;
         text-align: center;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: clip;
       }
 
       .option-setting-row {
@@ -1139,7 +1160,7 @@
           grid-column: 1 / 2;
           grid-row: 6 / 9;
           padding: 0 3px;
-          font-size: 11px;
+          font-size: calc(11px * var(--button-font-scale));
           line-height: 1.18;
         }
 
@@ -1175,8 +1196,8 @@
         }
 
         .option-content-page {
-          grid-row: 10 / 11;
-          grid-template-rows: var(--row-h);
+          grid-row: 10 / 12;
+          grid-template-rows: repeat(2, var(--row-h));
         }
 
         .chat-panel {
@@ -1216,7 +1237,7 @@
         .panel-row,
         .lunch-entry-title,
         .sheet-button {
-          font-size: 12px;
+          font-size: calc(12px * var(--button-font-scale));
         }
 
         .banner-track {
@@ -1278,7 +1299,7 @@
         }
 
         .quote-action {
-          font-size: 13px;
+          font-size: calc(13px * var(--button-font-scale));
           line-height: 1;
           overflow: hidden;
           white-space: nowrap;
@@ -1373,8 +1394,14 @@
             <div class="clock" id="clock">9:31</div>
           </section>
 
-          <button type="button" class="sheet-button content-return-button" id="contentReturnButton" hidden>
-            메인으로<br />돌아<br />가기
+          <button
+            type="button"
+            class="sheet-button content-return-button"
+            id="contentReturnButton"
+            aria-label="메인으로 돌아가기"
+            hidden
+          >
+            메인으로
           </button>
 
           <section class="option-panel" aria-label="옵션">
@@ -1456,6 +1483,12 @@
                 <button type="button" class="sheet-button" id="timeModeToggle">24시간</button>
               </div>
             </div>
+            <div class="option-setting-row">
+              <span class="option-setting-label">버튼 글자 크기</span>
+              <div class="option-setting-control">
+                <button type="button" class="sheet-button" id="buttonFontSizeToggle">보통</button>
+              </div>
+            </div>
           </section>
 
           <section class="chat-panel" id="chatPanel" aria-label="채팅">
@@ -1519,6 +1552,7 @@
       const clock = document.querySelector("#clock");
       const optionToggle = document.querySelector("#optionToggle");
       const timeModeToggle = document.querySelector("#timeModeToggle");
+      const buttonFontSizeToggle = document.querySelector("#buttonFontSizeToggle");
       const sponsorButton = document.querySelector("#sponsorButton");
       const titleHomeButton = document.querySelector("#titleHomeButton");
       const contentReturnButton = document.querySelector("#contentReturnButton");
@@ -1556,6 +1590,7 @@
       const contentState = loadContentState();
       let messages = [];
       let timeMode = state.timeMode;
+      let buttonFontSize = state.buttonFontSize;
       let sentenceThreads = contentState.sentences;
       let sentenceVotes = loadSentenceVotes();
       let menuEntries = contentState.menus;
@@ -1610,16 +1645,20 @@
           root.style.setProperty("--grid-body-line-y", `${Math.max(0, bodyGridY - 1)}px`);
         }
         lockPageScroll();
+        requestAnimationFrame(() => fitButtonLabels({ recaptureBaseSize: true }));
       }
 
       function loadState() {
         try {
           const saved = JSON.parse(localStorage.getItem(stateKey) || "{}");
           return {
-            timeMode: saved.timeMode === "12" ? "12" : "24"
+            timeMode: saved.timeMode === "12" ? "12" : "24",
+            buttonFontSize: ["small", "medium", "large"].includes(saved.buttonFontSize)
+              ? saved.buttonFontSize
+              : "medium"
           };
         } catch {
-          return { timeMode: "24" };
+          return { timeMode: "24", buttonFontSize: "medium" };
         }
       }
 
@@ -1699,7 +1738,7 @@
       }
 
       function saveState() {
-        localStorage.setItem(stateKey, JSON.stringify({ timeMode }));
+        localStorage.setItem(stateKey, JSON.stringify({ timeMode, buttonFontSize }));
       }
 
       function saveContentState() {
@@ -1798,6 +1837,48 @@
         clock.textContent = `${hours}:${minutes}`;
         timeModeToggle.textContent = timeMode === "24" ? "24시간" : "12시간";
         timeModeToggle.setAttribute("aria-pressed", String(timeMode === "12"));
+        requestAnimationFrame(() => fitButtonLabels());
+      }
+
+      function getButtonFontScale() {
+        return { small: 0.86, medium: 1, large: 1.14 }[buttonFontSize] || 1;
+      }
+
+      function updateButtonFontSizeControl() {
+        const fontLabels = { small: "작게", medium: "보통", large: "크게" };
+        document.documentElement.style.setProperty("--button-font-scale", String(getButtonFontScale()));
+        buttonFontSizeToggle.textContent = fontLabels[buttonFontSize];
+        buttonFontSizeToggle.setAttribute("aria-label", `버튼 글자 크기: ${fontLabels[buttonFontSize]}`);
+        requestAnimationFrame(() => fitButtonLabels({ recaptureBaseSize: true }));
+      }
+
+      function fitButtonLabels({ recaptureBaseSize = false } = {}) {
+        const fontScale = getButtonFontScale();
+        document.querySelectorAll(".sheet-button, .quote-action").forEach((button) => {
+          if (button.hidden || button.getClientRects().length === 0 || button.clientWidth <= 0) {
+            return;
+          }
+
+          if (recaptureBaseSize) {
+            button.style.removeProperty("font-size");
+            delete button.dataset.baseFontSize;
+          }
+
+          if (!button.dataset.baseFontSize) {
+            const computedSize = parseFloat(getComputedStyle(button).fontSize);
+            button.dataset.baseFontSize = String(computedSize / fontScale);
+          }
+
+          const baseSize = Number(button.dataset.baseFontSize) || 12;
+          let size = baseSize * fontScale;
+          const minimumSize = 8;
+          button.style.fontSize = `${size}px`;
+
+          while (button.scrollWidth > button.clientWidth && size > minimumSize) {
+            size = Math.max(minimumSize, size - 0.25);
+            button.style.fontSize = `${size}px`;
+          }
+        });
       }
 
       function getTopSentence() {
@@ -1972,6 +2053,7 @@
         menuCandidatePanel.hidden = contentView !== "menu";
         optionPanel.hidden = contentView !== "options";
         contentReturnButton.hidden = contentView === "main";
+        requestAnimationFrame(() => fitButtonLabels());
       }
 
       function setContentView(nextView) {
@@ -2116,6 +2198,7 @@
       renderMessages();
       renderContentPanels();
       updateClock();
+      updateButtonFontSizeControl();
       syncPageFromHash();
 
       optionToggle.addEventListener("click", () => {
@@ -2125,6 +2208,13 @@
       timeModeToggle.addEventListener("click", () => {
         timeMode = timeMode === "24" ? "12" : "24";
         updateClock();
+        saveState();
+      });
+
+      buttonFontSizeToggle.addEventListener("click", () => {
+        const sizes = ["small", "medium", "large"];
+        buttonFontSize = sizes[(sizes.indexOf(buttonFontSize) + 1) % sizes.length];
+        updateButtonFontSizeControl();
         saveState();
       });
 
