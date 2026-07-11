@@ -953,9 +953,8 @@
       }
 
       .chat-form {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 8px;
+        position: relative;
+        display: block;
         height: calc(var(--row-h) * 2);
         padding: 3px 8px;
         pointer-events: auto;
@@ -964,10 +963,9 @@
       .chat-input {
         width: 100%;
         height: calc(var(--row-h) * 2);
-        padding: 0 14px;
-        border: 1px solid #78caa2;
-        border: 1px solid color-mix(in srgb, var(--strong) 62%, #ffffff);
-        border-radius: 16px;
+        padding: 0 84px 0 14px;
+        border: 1px solid var(--strong);
+        border-radius: 999px;
         background: var(--panel-bg);
         color: #111111;
         -webkit-text-fill-color: #111111;
@@ -989,11 +987,16 @@
       }
 
       .sheet-button.chat-send-button {
-        width: auto;
+        position: absolute;
+        top: 6px;
+        right: 14px;
+        bottom: 6px;
+        width: 64px;
         min-width: 64px;
-        height: 100%;
-        padding: 0 14px;
-        border-radius: 16px;
+        min-height: 0;
+        height: auto;
+        padding: 0 10px;
+        border-radius: 999px;
         box-shadow: 0 4px 12px rgba(11, 127, 70, 0.24);
       }
 
@@ -1235,17 +1238,6 @@
           grid-row: 37 / 39;
         }
 
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .screen {
-          background-image: none;
-        }
-
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .sheet-grid::before {
-          display: none;
-        }
-
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .sheet-cell,
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .col-head,
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .banner-cell,
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .baksu-doc-link,
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .content-return-button,
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .option-panel,
@@ -1261,6 +1253,11 @@
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .time-panel {
           visibility: visible;
           z-index: 14;
+        }
+
+        :is(html.is-chat-focused, html:has(#chatInput:focus)) .banner-track {
+          animation: none;
+          transform: translateX(0);
         }
 
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .chat-panel {
@@ -1303,10 +1300,17 @@
           padding: 0;
         }
 
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .chat-input,
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .chat-send-button {
+        :is(html.is-chat-focused, html:has(#chatInput:focus)) .chat-input {
           height: 54px;
-          border-radius: 18px;
+          border-radius: 999px;
+        }
+
+        :is(html.is-chat-focused, html:has(#chatInput:focus)) .chat-send-button {
+          top: 4px;
+          right: 8px;
+          bottom: 4px;
+          height: auto;
+          border-radius: 999px;
         }
 
         .option-toggle {
