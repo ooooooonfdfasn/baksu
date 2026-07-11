@@ -416,8 +416,7 @@
       .option-icon {
         width: 26px;
         height: 26px;
-        stroke: currentColor;
-        stroke-width: 2;
+        object-fit: contain;
       }
 
       .time-panel {
@@ -1231,6 +1230,55 @@
         display: none;
       }
 
+      .pull-refresh-indicator {
+        position: fixed;
+        top: var(--safe-top);
+        left: 50%;
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 32px;
+        padding: 0 10px;
+        border: 1px solid var(--strong);
+        border-top: 0;
+        background: var(--panel-bg);
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1;
+        opacity: 0;
+        pointer-events: none;
+        transform: translate(-50%, -110%);
+        transition:
+          transform 160ms ease,
+          opacity 160ms ease;
+      }
+
+      .pull-refresh-indicator.is-pulling {
+        opacity: 1;
+        transform: translate(-50%, calc(-110% + var(--pull-distance, 0px)));
+      }
+
+      .pull-refresh-indicator.is-ready {
+        color: var(--accent-dark);
+      }
+
+      .pull-refresh-indicator.is-refreshing {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+
+      .pull-refresh-arrow {
+        display: inline-block;
+        font-size: 16px;
+        transition: transform 160ms ease;
+      }
+
+      .pull-refresh-indicator.is-ready .pull-refresh-arrow {
+        transform: rotate(180deg);
+      }
+
       @media (max-width: 760px) {
         :root {
           --sheet-w: min(100vw, var(--viewport-h));
@@ -1599,10 +1647,7 @@
               aria-controls="optionPanel"
               aria-label="옵션 열기"
             >
-              <svg class="option-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="12" cy="12" r="3"></circle>
-                <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2 2-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V20h-2.82v-.09A1.7 1.7 0 0 0 10.97 18.36a1.7 1.7 0 0 0-1.88.34l-.06.06-2-2 .06-.06A1.7 1.7 0 0 0 7.43 15a1.7 1.7 0 0 0-1.55-1.03H5.8v-2.82h.08A1.7 1.7 0 0 0 7.43 10.12a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2-2 .06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.03-1.55V4.95h2.82v.08a1.7 1.7 0 0 0 1.03 1.55 1.7 1.7 0 0 0 1.88-.34l.06-.06 2 2-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.55 1.03h.08v2.82h-.08A1.7 1.7 0 0 0 19.4 15Z"></path>
-              </svg>
+              <img class="option-icon" src="../assets/lunch-option-gear.png" alt="" aria-hidden="true" />
               <span class="sr-only">옵션</span>
             </button>
           </section>
@@ -1719,6 +1764,11 @@
       </section>
     </main>
 
+    <div class="pull-refresh-indicator" id="pullRefreshIndicator" aria-live="polite" aria-hidden="true">
+      <span class="pull-refresh-arrow" aria-hidden="true">↓</span>
+      <span id="pullRefreshLabel">아래로 당겨 새로고침</span>
+    </div>
+
     <div class="toast" id="toast" hidden></div>
 
     <script>
@@ -1787,6 +1837,8 @@
       const menuRandomResult = document.querySelector("#menuRandomResult");
       const menuCandidateList = document.querySelector("#menuCandidateList");
       const optionPanel = document.querySelector("#optionPanel");
+      const pullRefreshIndicator = document.querySelector("#pullRefreshIndicator");
+      const pullRefreshLabel = document.querySelector("#pullRefreshLabel");
       const toast = document.querySelector("#toast");
 
       const state = loadState();
@@ -1806,9 +1858,91 @@
       let keepChatOpenUntil = 0;
       let stableViewportHeight = Math.max(window.innerHeight || 0, window.visualViewport?.height || 0);
       let stableViewportWidth = document.documentElement.clientWidth || window.innerWidth || 0;
+      let pullPointerId = null;
+      let pullStartY = 0;
+      let pullDistance = 0;
+      let isPullRefreshing = false;
+      const pullRefreshThreshold = 72;
+      const pullRefreshLimit = 96;
 
       function getActiveScreen() {
         return document.querySelector(".screen:not([hidden])") || mainScreen;
+      }
+
+      function canStartPullRefresh(target) {
+        if (isPullRefreshing || document.documentElement.classList.contains("is-chat-focused")) {
+          return false;
+        }
+        if (window.scrollY > 0 || mainScreen.scrollTop > 0) {
+          return false;
+        }
+        return !target.closest("input, textarea, button, a, select, .message-feed, .chat-panel");
+      }
+
+      function setPullRefreshState(distance) {
+        pullDistance = Math.min(distance, pullRefreshLimit);
+        const isReady = pullDistance >= pullRefreshThreshold;
+        pullRefreshIndicator.style.setProperty("--pull-distance", `${pullDistance}px`);
+        pullRefreshIndicator.classList.add("is-pulling");
+        pullRefreshIndicator.classList.toggle("is-ready", isReady);
+        pullRefreshIndicator.setAttribute("aria-hidden", "false");
+        pullRefreshLabel.textContent = isReady ? "놓으면 새로고침" : "아래로 당겨 새로고침";
+      }
+
+      function resetPullRefreshState() {
+        if (isPullRefreshing) {
+          return;
+        }
+        pullPointerId = null;
+        pullStartY = 0;
+        pullDistance = 0;
+        pullRefreshIndicator.classList.remove("is-pulling", "is-ready");
+        pullRefreshIndicator.style.removeProperty("--pull-distance");
+        pullRefreshIndicator.setAttribute("aria-hidden", "true");
+        pullRefreshLabel.textContent = "아래로 당겨 새로고침";
+      }
+
+      function triggerPullRefresh() {
+        isPullRefreshing = true;
+        pullRefreshIndicator.classList.remove("is-pulling", "is-ready");
+        pullRefreshIndicator.classList.add("is-refreshing");
+        pullRefreshIndicator.setAttribute("aria-hidden", "false");
+        pullRefreshLabel.textContent = "새로고침 중...";
+        window.setTimeout(() => window.location.reload(), 180);
+      }
+
+      function handlePullPointerDown(event) {
+        if (!event.isPrimary || event.button !== 0 || !canStartPullRefresh(event.target)) {
+          return;
+        }
+        pullPointerId = event.pointerId;
+        pullStartY = event.clientY;
+      }
+
+      function handlePullPointerMove(event) {
+        if (event.pointerId !== pullPointerId || pullPointerId === null || isPullRefreshing) {
+          return;
+        }
+        const delta = event.clientY - pullStartY;
+        if (delta <= 0) {
+          resetPullRefreshState();
+          return;
+        }
+        if (event.cancelable) {
+          event.preventDefault();
+        }
+        setPullRefreshState(delta * 0.55);
+      }
+
+      function handlePullPointerEnd(event) {
+        if (event.pointerId !== pullPointerId) {
+          return;
+        }
+        if (pullDistance >= pullRefreshThreshold) {
+          triggerPullRefresh();
+          return;
+        }
+        resetPullRefreshState();
       }
 
       function lockPageScroll({ resetX = false } = {}) {
@@ -2649,6 +2783,10 @@
       window.addEventListener("resize", syncViewportHeight);
       window.addEventListener("scroll", lockPageScroll, { passive: true });
       mainScreen.addEventListener("scroll", lockPageScroll, { passive: true });
+      mainScreen.addEventListener("pointerdown", handlePullPointerDown);
+      mainScreen.addEventListener("pointermove", handlePullPointerMove, { passive: false });
+      mainScreen.addEventListener("pointerup", handlePullPointerEnd);
+      mainScreen.addEventListener("pointercancel", resetPullRefreshState);
       window.addEventListener("hashchange", syncPageFromHash);
 
       setInterval(updateClock, 30 * 1000);
