@@ -353,15 +353,26 @@
         grid-row: 4 / 5;
         overflow: hidden;
         white-space: nowrap;
+        box-shadow:
+          inset 1px 0 0 var(--strong),
+          inset -1px 0 0 var(--strong),
+          inset 0 1px 0 var(--strong);
       }
 
       .banner-track {
-        display: inline-flex;
+        display: flex;
         align-items: center;
-        min-width: 100%;
+        width: max-content;
+        min-width: max-content;
         height: 100%;
-        animation: none;
-        transform: translateX(0);
+        animation: marquee 42s linear infinite;
+        will-change: transform;
+      }
+
+      .banner-group {
+        display: flex;
+        align-items: center;
+        flex: 0 0 auto;
       }
 
       .banner-track span {
@@ -373,10 +384,10 @@
 
       @keyframes marquee {
         from {
-          transform: translateX(100%);
+          transform: translateX(0);
         }
         to {
-          transform: translateX(-100%);
+          transform: translateX(-50%);
         }
       }
 
@@ -385,6 +396,7 @@
         z-index: 5;
         grid-column: 5 / 6;
         grid-row: 8 / 9;
+        height: calc(var(--row-h) * 1.5);
       }
 
       .time-panel {
@@ -396,6 +408,7 @@
         justify-content: center;
         padding: 0 6px;
         border: 1px solid var(--strong);
+        border-top: 0;
         background: var(--panel-bg);
         box-shadow: none;
       }
@@ -868,10 +881,11 @@
         color: #333333;
       }
 
-      .sponsor-button {
+      .sheet-button.sponsor-button {
         z-index: 3;
         grid-column: 2 / 5;
         grid-row: 8 / 9;
+        height: calc(var(--row-h) * 1.5);
       }
 
       .chat-panel {
@@ -1265,8 +1279,9 @@
 
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .notice-panel {
           position: fixed;
-          top: calc(var(--safe-top) + var(--col-head-h) + (var(--row-h) * 6) + 2px);
+          top: auto;
           right: auto;
+          bottom: calc(var(--keyboard-inset) + 10px);
           left: 50%;
           z-index: 15;
           grid-row: auto;
@@ -1279,7 +1294,7 @@
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .chat-panel {
           position: fixed;
           right: auto;
-          bottom: calc(var(--keyboard-inset) + 10px);
+          bottom: calc(var(--keyboard-inset) + var(--row-h) + 14px);
           left: 50%;
           z-index: 30;
           grid-row: auto;
@@ -1482,12 +1497,22 @@
         <div class="overlay-layer">
           <section class="merged banner-cell" aria-label="상단 정보 배너">
             <div class="banner-track">
-              <span>뉴스: 점심시간 랜덤 대화방 베타 진행 중</span>
-              <span>날씨: 서울 구름 조금 25도, 강수 확률 10%</span>
-              <span>경제: 코스피 보합권 출발, 환율은 소폭 하락</span>
-              <span>생활: 오늘의 추천 메뉴는 냉모밀, 돈가스, 제육</span>
-              <span>스포츠: 저녁 7시 야구 경기 주요 매치업 안내</span>
-              <span>주식: 관심 종목 알림은 점심 이후 업데이트</span>
+              <div class="banner-group">
+                <span>뉴스: 점심시간 랜덤 대화방 베타 진행 중</span>
+                <span>날씨: 서울 구름 조금 25도, 강수 확률 10%</span>
+                <span>경제: 코스피 보합권 출발, 환율은 소폭 하락</span>
+                <span>생활: 오늘의 추천 메뉴는 냉모밀, 돈가스, 제육</span>
+                <span>스포츠: 저녁 7시 야구 경기 주요 매치업 안내</span>
+                <span>주식: 관심 종목 알림은 점심 이후 업데이트</span>
+              </div>
+              <div class="banner-group" aria-hidden="true">
+                <span>뉴스: 점심시간 랜덤 대화방 베타 진행 중</span>
+                <span>날씨: 서울 구름 조금 25도, 강수 확률 10%</span>
+                <span>경제: 코스피 보합권 출발, 환율은 소폭 하락</span>
+                <span>생활: 오늘의 추천 메뉴는 냉모밀, 돈가스, 제육</span>
+                <span>스포츠: 저녁 7시 야구 경기 주요 매치업 안내</span>
+                <span>주식: 관심 종목 알림은 점심 이후 업데이트</span>
+              </div>
             </div>
           </section>
 
