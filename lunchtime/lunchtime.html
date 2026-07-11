@@ -358,14 +358,15 @@
       .banner-track {
         display: inline-flex;
         align-items: center;
-        min-width: max-content;
+        min-width: 100%;
         height: 100%;
-        animation: marquee 72s linear infinite;
-        will-change: transform;
+        animation: none;
+        transform: translateX(0);
       }
 
       .banner-track span {
-        padding-right: 72px;
+        padding-left: 6px;
+        padding-right: 28px;
         font-size: 13px;
         font-weight: 700;
       }
@@ -394,8 +395,9 @@
         align-items: center;
         justify-content: center;
         padding: 0 6px;
+        border: 1px solid var(--strong);
         background: var(--panel-bg);
-        box-shadow: inset 0 0 0 1px var(--strong);
+        box-shadow: none;
       }
 
       .clock {
@@ -463,6 +465,13 @@
         padding: 0 6px;
         overflow: hidden;
         white-space: nowrap;
+      }
+
+      .option-setting-label,
+      .notice-label {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: clip;
       }
 
       .quote-label {
@@ -1244,8 +1253,7 @@
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .sponsor-button,
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .quote-panel,
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .lunch-entry-panel,
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .content-page-panel,
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .notice-panel {
+        :is(html.is-chat-focused, html:has(#chatInput:focus)) .content-page-panel {
           visibility: hidden;
         }
 
@@ -1255,9 +1263,17 @@
           z-index: 14;
         }
 
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .banner-track {
-          animation: none;
-          transform: translateX(0);
+        :is(html.is-chat-focused, html:has(#chatInput:focus)) .notice-panel {
+          position: fixed;
+          top: calc(var(--safe-top) + var(--col-head-h) + (var(--row-h) * 6) + 2px);
+          right: auto;
+          left: 50%;
+          z-index: 15;
+          grid-row: auto;
+          width: min(var(--sheet-w), 100vw);
+          height: var(--row-h);
+          transform: translateX(-50%);
+          visibility: visible;
         }
 
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .chat-panel {
@@ -1282,10 +1298,10 @@
         }
 
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .message-feed {
-          max-height: min(132px, calc(100dvh - 176px));
-          border: 1px solid rgba(15, 157, 89, 0.35);
-          border-radius: 18px;
-          box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+          max-height: min(114px, calc(100dvh - 198px));
+          border: 0;
+          border-radius: 0;
+          box-shadow: none;
         }
 
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .message-feed p {
@@ -1331,7 +1347,7 @@
         }
 
         .banner-track span {
-          font-size: 14px;
+          font-size: clamp(11px, 3.1vw, 13px);
         }
 
         .quote-panel p {
@@ -1443,7 +1459,6 @@
           line-height: 1.24;
         }
 
-        .notice-label,
         .notice-text {
           white-space: normal;
         }
@@ -1467,8 +1482,8 @@
         <div class="overlay-layer">
           <section class="merged banner-cell" aria-label="상단 정보 배너">
             <div class="banner-track">
+              <span>뉴스: 점심시간 랜덤 대화방 베타 진행 중</span>
               <span>날씨: 서울 구름 조금 25도, 강수 확률 10%</span>
-              <span>뉴스: 점심시간 랜덤 대화방 베타 테스트 진행 중</span>
               <span>경제: 코스피 보합권 출발, 환율은 소폭 하락</span>
               <span>생활: 오늘의 추천 메뉴는 냉모밀, 돈가스, 제육</span>
               <span>스포츠: 저녁 7시 야구 경기 주요 매치업 안내</span>
@@ -1984,6 +1999,33 @@
           while (button.scrollWidth > button.clientWidth && size > minimumSize) {
             size = Math.max(minimumSize, size - 0.25);
             button.style.fontSize = `${size}px`;
+          }
+        });
+        fitFixedLabels({ recaptureBaseSize });
+      }
+
+      function fitFixedLabels({ recaptureBaseSize = false } = {}) {
+        const selector = ".quote-label, .lunch-entry-title, .option-setting-label, .notice-label, .baksu-doc-link";
+        document.querySelectorAll(selector).forEach((label) => {
+          if (label.hidden || label.getClientRects().length === 0 || label.clientWidth <= 0) {
+            return;
+          }
+
+          if (recaptureBaseSize) {
+            label.style.removeProperty("font-size");
+            delete label.dataset.baseFontSize;
+          }
+
+          if (!label.dataset.baseFontSize) {
+            label.dataset.baseFontSize = getComputedStyle(label).fontSize;
+          }
+
+          let size = Number.parseFloat(label.dataset.baseFontSize) || 12;
+          label.style.fontSize = `${size}px`;
+
+          while (label.scrollWidth > label.clientWidth && size > 8) {
+            size = Math.max(8, size - 0.25);
+            label.style.fontSize = `${size}px`;
           }
         });
       }
