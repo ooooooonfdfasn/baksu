@@ -421,18 +421,22 @@
         align-items: center;
         justify-content: center;
         min-width: 0;
-        padding: 2px 8px;
+        padding: 1px 8px;
         border: 1px solid var(--strong);
         background: var(--panel-bg);
-        pointer-events: none;
+      }
+
+      .lunchtime-ad-unit {
+        width: min(320px, 100%);
+        height: 50px;
       }
 
       .ad-banner-placeholder {
-        display: flex;
+        display: none;
         align-items: center;
         justify-content: center;
-        width: min(320px, 100%);
-        height: min(50px, 100%);
+        width: 100%;
+        height: 100%;
         border: 1px dashed #a8cbb8;
         background: #f7fbf8;
         color: #728178;
@@ -440,6 +444,10 @@
         font-weight: 700;
         letter-spacing: 0.04em;
         white-space: nowrap;
+      }
+
+      .lunchtime-ad-unit[data-ad-status="unfilled"] .ad-banner-placeholder {
+        display: flex;
       }
 
       .ad-banner-panel[hidden] {
@@ -1562,9 +1570,17 @@
             </button>
           </section>
 
-          <section class="ad-banner-panel" id="mainAdBannerPanel" aria-label="광고 배너 준비 영역">
-            <!-- 광고 단위를 만든 뒤 이 영역을 data-ad-slot이 포함된 AdSense ins 요소로 교체합니다. -->
-            <div class="ad-banner-placeholder" aria-hidden="true">320 × 50 광고 배너 준비 영역</div>
+          <section class="ad-banner-panel" id="mainAdBannerPanel" aria-label="점심시간 광고">
+            <!-- 점심시간 모바일 배너 -->
+            <ins
+              class="adsbygoogle lunchtime-ad-unit"
+              style="display: block"
+              data-ad-client="ca-pub-6614664375260186"
+              data-ad-slot="3996437949"
+            ><span class="ad-banner-placeholder" aria-hidden="true">광고 준비 중</span></ins>
+            <script>
+              (adsbygoogle = window.adsbygoogle || []).push({});
+            </script>
           </section>
 
           <section class="quote-panel" aria-label="오늘의 문장">
