@@ -454,6 +454,15 @@
         display: none;
       }
 
+      .overlay-layer:has(#mainAdBannerPanel:not([hidden])) .ad-banner-panel {
+        grid-row: 6 / 9;
+      }
+
+      .overlay-layer:has(#mainAdBannerPanel:not([hidden])) .time-panel,
+      .overlay-layer:has(#mainAdBannerPanel:not([hidden])) .option-panel {
+        grid-row: 9 / 11;
+      }
+
       .clock {
         font-size: min(31px, calc(var(--row-h) * 1.5));
         font-weight: 700;
@@ -1304,6 +1313,10 @@
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .time-panel {
           visibility: visible;
           z-index: 14;
+        }
+
+        :is(html.is-chat-focused, html:has(#chatInput:focus)) .time-panel {
+          grid-row: 6 / 8 !important;
         }
 
         :is(html.is-chat-focused, html:has(#chatInput:focus)) .notice-panel {
