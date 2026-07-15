@@ -657,7 +657,7 @@ function formatPeriod(value: number) {
 }
 
 function formatPrice(value: number) {
-  return `${new Intl.NumberFormat("ko-KR").format(value)}원`;
+  return new Intl.NumberFormat("ko-KR").format(value);
 }
 
 function compareRps(left: RpsChoice, right: RpsChoice) {
@@ -2641,7 +2641,7 @@ export function HasikRoom({
               </h1>
             </div>
             <div className="topbar-actions">
-              <span className="money-pill topbar-money">내 돈 {formatPrice(walletBalance)}</span>
+              <span className="money-pill topbar-money">Ⓒ {formatPrice(walletBalance)}</span>
               <button
                 type="button"
                 className="room-settings-icon-button"
@@ -2667,10 +2667,11 @@ export function HasikRoom({
                   type="button"
                   className="seat-bubble-toggle"
                   aria-pressed={areSeatBubblesHidden}
+                  aria-label={areSeatBubblesHidden ? "말풍선 보이기" : "말풍선 숨기기"}
+                  title={areSeatBubblesHidden ? "말풍선 보이기" : "말풍선 숨기기"}
                   onClick={() => setSeatBubblesHidden((isHidden) => !isHidden)}
                 >
                   {areSeatBubblesHidden ? <MessageCircle size={16} /> : <MessageCircleOff size={16} />}
-                  <span>{areSeatBubblesHidden ? "말풍선 보이기" : "말풍선 숨기기"}</span>
                 </button>
                 <div className="scene-toolbar">
                   <div className="scene-stats">
@@ -3053,7 +3054,7 @@ export function HasikRoom({
 
             {isOrderChoiceOpen ? (
               <div className="order-choice-panel" ref={orderChoicePanelRef}>
-                <span className="money-pill">내 돈 {formatPrice(walletBalance)}</span>
+                <span className="money-pill">Ⓒ {formatPrice(walletBalance)}</span>
                 <div className="order-choice-actions">
                   <button
                     type="button"
@@ -3114,7 +3115,7 @@ export function HasikRoom({
                 </div>
 
                 <div className="payment-status-row">
-                  <span className="money-pill">내 돈 {formatPrice(walletBalance)}</span>
+                  <span className="money-pill">Ⓒ {formatPrice(walletBalance)}</span>
                   <span className="payment-status-text">
                     {pendingPayer
                       ? "결제 대상 확정"

@@ -65,7 +65,7 @@ function createId() {
 }
 
 function formatPrice(value: number) {
-  return `${new Intl.NumberFormat("ko-KR").format(value)}원`;
+  return new Intl.NumberFormat("ko-KR").format(value);
 }
 
 function formatDuration(totalMinutes: number) {
@@ -494,7 +494,7 @@ export function HasikApp() {
             <p>만들어진 회식방을 고르거나 새 방을 만드세요.</p>
           </div>
           <div className="lobby-actions">
-            <span className="money-pill lobby-money">내 돈 {formatPrice(walletBalance)}</span>
+            <span className="money-pill lobby-money">Ⓒ {formatPrice(walletBalance)}</span>
             <a className="lobby-guide-link" href="../articles/dinner-room-rules.html">
               이용안내
             </a>

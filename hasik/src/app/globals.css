@@ -189,6 +189,7 @@ h1 {
 .room-page .right-rail {
   grid-template-rows: minmax(0, 1fr) auto;
   align-content: stretch;
+  gap: 6px;
   min-height: 0;
   height: 100%;
 }
@@ -469,9 +470,11 @@ input:focus {
   z-index: 7;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
   min-height: 34px;
-  padding: 0 10px;
+  padding: 0;
   border: 2px solid rgba(255, 198, 45, 0.6);
   border-radius: 999px;
   background: rgba(33, 19, 13, 0.88);
@@ -514,6 +517,7 @@ input:focus {
 
 .scene-actions {
   display: flex;
+  flex: 0 0 auto;
   align-items: flex-start;
   gap: 8px;
   pointer-events: auto;
@@ -521,6 +525,7 @@ input:focus {
 
 .scene-stats {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -556,7 +561,7 @@ input:focus {
   display: grid;
   justify-items: center;
   gap: 4px;
-  min-width: 76px;
+  min-width: 52px;
   color: #ffe3b1;
   font-size: 12px;
   font-weight: 900;
@@ -613,8 +618,8 @@ input:focus {
 
 .analog-clock {
   position: relative;
-  --clock-size: 68px;
-  --mark-distance: 27px;
+  --clock-size: 46px;
+  --mark-distance: 18px;
   width: var(--clock-size);
   height: var(--clock-size);
   border: 1px solid #181818;
@@ -633,15 +638,15 @@ input:focus {
 }
 
 .clock-mark {
-  width: 2px;
-  height: 4px;
+  width: 1.5px;
+  height: 3px;
   border-radius: 999px;
   background: #181818;
   transform: translate(-50%, -50%) rotate(var(--mark-angle)) translateY(calc(var(--mark-distance) * -1));
 }
 
 .clock-mark:nth-child(3n + 1) {
-  height: 8px;
+  height: 5px;
 }
 
 .clock-hand {
@@ -654,21 +659,21 @@ input:focus {
 }
 
 .hour-hand {
-  width: 3px;
-  height: 18px;
+  width: 2px;
+  height: 12px;
   background: #d94132;
   transform: translateX(-50%) rotate(var(--hour-angle));
 }
 
 .minute-hand {
-  height: 24px;
+  height: 16px;
   background: #111;
   transform: translateX(-50%) rotate(var(--minute-angle));
 }
 
 .clock-pin {
-  width: 7px;
-  height: 7px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: #111;
   transform: translate(-50%, -50%);
@@ -1402,6 +1407,10 @@ input:focus {
   gap: 8px;
   padding: 12px;
   background: transparent;
+}
+
+.room-page .chat-form {
+  padding: 6px 0 0;
 }
 
 .chat-form input {
@@ -2996,7 +3005,7 @@ input:focus {
 
   .scene-stats {
     gap: 5px;
-    max-width: calc(100% - 88px);
+    max-width: calc(100% - 60px);
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -3016,14 +3025,14 @@ input:focus {
   }
 
   .analog-time {
-    min-width: 72px;
+    min-width: 48px;
     gap: 3px;
     font-size: 11px;
   }
 
   .analog-clock {
-    --clock-size: 60px;
-    --mark-distance: 23px;
+    --clock-size: 40px;
+    --mark-distance: 15px;
   }
 
   .seat-map {
@@ -3208,7 +3217,7 @@ input:focus {
 
   .room-page .right-rail {
     height: 100%;
-    gap: 8px;
+    gap: 4px;
   }
 
   .chat-panel {
@@ -3500,6 +3509,12 @@ input {
 .room-page .composer-shell,
 .room-page .chat-form input {
   border-radius: 0 !important;
+}
+
+.room-page .composer-shell {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .room-page .chat-form .icon-action,
@@ -4007,7 +4022,7 @@ input:disabled {
 
   .room-page .right-rail {
     height: 100%;
-    gap: 8px;
+    gap: 4px;
   }
 
   .table-stage {
@@ -4030,7 +4045,7 @@ input:disabled {
 
   .scene-stats {
     gap: 5px;
-    max-width: calc(100% - 88px);
+    max-width: calc(100% - 60px);
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -4050,14 +4065,14 @@ input:disabled {
   }
 
   .analog-time {
-    min-width: 72px;
+    min-width: 48px;
     gap: 3px;
     font-size: 11px;
   }
 
   .analog-clock {
-    --clock-size: 60px;
-    --mark-distance: 23px;
+    --clock-size: 40px;
+    --mark-distance: 15px;
   }
 
   .seat-map {
