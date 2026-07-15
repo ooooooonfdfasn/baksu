@@ -739,8 +739,8 @@
       .option-content-page {
         grid-row: 10 / 14;
         grid-template-rows: repeat(2, calc(var(--row-h) * 2));
-        background: transparent;
-        box-shadow: none;
+        background: var(--panel-bg);
+        box-shadow: inset 0 0 0 1px var(--strong);
       }
 
       .content-page-panel[hidden] {
@@ -1185,9 +1185,11 @@
       .option-setting-row {
         display: grid;
         grid-template-columns: calc(var(--col-w) * 2) minmax(0, 1fr);
+        height: calc(var(--row-h) * 2);
         min-height: calc(var(--row-h) * 2);
+        border-bottom: 1px solid var(--grid);
         background: var(--panel-bg);
-        box-shadow: inset 0 0 0 1px var(--strong);
+        box-shadow: none;
       }
 
       .option-setting-row:last-child {
@@ -1199,23 +1201,23 @@
         display: flex;
         align-items: center;
         min-width: 0;
-        height: calc(var(--row-h) * 2);
+        height: 100%;
         padding: 0 6px;
         color: var(--ink);
         font-size: 12px;
         font-weight: 700;
       }
 
-      .option-setting-label {
-        border-right: 1px solid var(--strong);
-      }
-
       .option-setting-control {
         padding: 0;
+        border-left: 1px solid var(--strong);
       }
 
       .option-setting-control .sheet-button {
-        height: calc(var(--row-h) * 2);
+        height: 100%;
+        min-height: 0;
+        border: 0;
+        box-shadow: none;
       }
 
       .sheet-button:hover,
@@ -1304,6 +1306,12 @@
           --col-w: calc(var(--sheet-w) / 6);
           --col-head-h: 30px;
           --row-h: 22px;
+        }
+
+        html.is-chat-focused {
+          --col-head-h: 0px !important;
+          --grid-body-y: calc(var(--row-h) * 2) !important;
+          --grid-body-line-y: calc((var(--row-h) * 2) - 1px) !important;
         }
 
         .screen {
