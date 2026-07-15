@@ -409,8 +409,15 @@
 
       .sheet-button.option-toggle:hover,
       .sheet-button.option-toggle:focus-visible {
-        background: rgba(15, 157, 89, 0.08);
+        background: transparent;
+        outline: 0;
         filter: none;
+      }
+
+      .sheet-button.option-toggle:active {
+        background: rgba(15, 157, 89, 0.08);
+        outline: 2px solid var(--select);
+        outline-offset: -2px;
       }
 
       .option-icon {
@@ -489,6 +496,10 @@
 
       .overlay-layer:has(#mainAdBannerPanel:not([hidden])) .content-page-panel:not(.option-content-page) {
         grid-row: 13 / 25;
+      }
+
+      .overlay-layer:has(#mainAdBannerPanel:not([hidden])) .option-content-page {
+        grid-row: 13 / 17;
       }
 
       .clock {
@@ -726,8 +737,8 @@
       }
 
       .option-content-page {
-        grid-row: 10 / 12;
-        grid-template-rows: repeat(2, var(--row-h));
+        grid-row: 10 / 14;
+        grid-template-rows: repeat(2, calc(var(--row-h) * 2));
         background: transparent;
         box-shadow: none;
       }
@@ -1174,7 +1185,7 @@
       .option-setting-row {
         display: grid;
         grid-template-columns: calc(var(--col-w) * 2) minmax(0, 1fr);
-        min-height: var(--row-h);
+        min-height: calc(var(--row-h) * 2);
         background: var(--panel-bg);
         box-shadow: inset 0 0 0 1px var(--strong);
       }
@@ -1188,7 +1199,7 @@
         display: flex;
         align-items: center;
         min-width: 0;
-        height: var(--row-h);
+        height: calc(var(--row-h) * 2);
         padding: 0 6px;
         color: var(--ink);
         font-size: 12px;
@@ -1204,7 +1215,7 @@
       }
 
       .option-setting-control .sheet-button {
-        height: var(--row-h);
+        height: calc(var(--row-h) * 2);
       }
 
       .sheet-button:hover,
@@ -1358,8 +1369,8 @@
         }
 
         .option-content-page {
-          grid-row: 10 / 12;
-          grid-template-rows: repeat(2, var(--row-h));
+          grid-row: 10 / 14;
+          grid-template-rows: repeat(2, calc(var(--row-h) * 2));
         }
 
         .chat-panel {
@@ -1376,27 +1387,28 @@
           grid-row: 37 / 39;
         }
 
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .baksu-doc-link,
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .content-return-button,
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .option-panel,
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .ad-banner-panel,
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .quote-panel,
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .lunch-entry-panel,
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .content-page-panel {
+        html.is-chat-focused .col-head,
+        html.is-chat-focused .baksu-doc-link,
+        html.is-chat-focused .content-return-button,
+        html.is-chat-focused .option-panel,
+        html.is-chat-focused .ad-banner-panel,
+        html.is-chat-focused .quote-panel,
+        html.is-chat-focused .lunch-entry-panel,
+        html.is-chat-focused .content-page-panel {
           visibility: hidden;
         }
 
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .title-cell,
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .time-panel {
+        html.is-chat-focused .title-cell,
+        html.is-chat-focused .time-panel {
           visibility: visible;
           z-index: 14;
         }
 
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .time-panel {
+        html.is-chat-focused .time-panel {
           grid-row: 6 / 9 !important;
         }
 
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .notice-panel {
+        html.is-chat-focused .notice-panel {
           position: fixed;
           top: auto;
           right: auto;
@@ -1410,7 +1422,7 @@
           visibility: visible;
         }
 
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .chat-panel {
+        html.is-chat-focused .chat-panel {
           position: fixed;
           right: auto;
           bottom: calc(var(--keyboard-inset) + (var(--row-h) * 2) + 14px);
@@ -1424,38 +1436,38 @@
           pointer-events: auto;
         }
 
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .chat-dock {
+        html.is-chat-focused .chat-dock {
           width: 100%;
           height: auto;
           gap: 8px;
           padding: 0 12px;
         }
 
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .message-feed {
+        html.is-chat-focused .message-feed {
           max-height: min(120px, calc(100dvh - 198px));
           border: 0;
           border-radius: 0;
           box-shadow: none;
         }
 
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .message-feed p {
+        html.is-chat-focused .message-feed p {
           height: 20px;
           padding: 0 10px;
           font-size: 12px;
           line-height: 20px;
         }
 
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .chat-form {
+        html.is-chat-focused .chat-form {
           height: calc(var(--row-h) * 3);
           padding: 3px 8px;
         }
 
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .chat-input {
+        html.is-chat-focused .chat-input {
           height: 100%;
           border-radius: 999px;
         }
 
-        :is(html.is-chat-focused, html:has(#chatInput:focus)) .chat-send-button {
+        html.is-chat-focused .chat-send-button {
           top: 6px;
           right: 14px;
           bottom: 6px;
@@ -1695,7 +1707,7 @@
                 maxlength="40"
                 autocomplete="off"
                 enterkeyhint="done"
-                placeholder="여기에 오늘의 메뉴 입력"
+                placeholder="여기에 오늘의 메뉴 입력 🍜"
               />
               <button type="submit" class="sheet-button lunch-save-button">저장</button>
             </form>
@@ -1866,6 +1878,7 @@
       let keepChatOpenUntil = 0;
       let stableViewportHeight = Math.max(window.innerHeight || 0, window.visualViewport?.height || 0);
       let stableViewportWidth = document.documentElement.clientWidth || window.innerWidth || 0;
+      let isVisualKeyboardOpen = false;
       let pullPointerId = null;
       let pullStartY = 0;
       let pullDistance = 0;
@@ -1979,6 +1992,8 @@
             !widthChanged &&
             stableViewportHeight > 0 &&
             viewportHeight < stableViewportHeight - 120;
+          const keyboardJustClosed = isVisualKeyboardOpen && !hasVisualKeyboard;
+          isVisualKeyboardOpen = hasVisualKeyboard;
 
           if (!hasVisualKeyboard) {
             stableViewportHeight = Math.max(currentLayoutHeight, viewportHeight);
@@ -2009,9 +2024,14 @@
           root.style.setProperty("--grid-row-2-y", `${Math.max(0, fittedRowHeight * 2 - 1)}px`);
           root.style.setProperty("--grid-body-y", `${bodyGridY}px`);
           root.style.setProperty("--grid-body-line-y", `${Math.max(0, bodyGridY - 1)}px`);
+
+          if (keyboardJustClosed) {
+            requestAnimationFrame(returnToTopAfterKeyboardClose);
+          }
         }
         lockPageScroll();
         requestAnimationFrame(() => fitButtonLabels({ recaptureBaseSize: true }));
+        return isVisualKeyboardOpen;
       }
 
       function loadState() {
@@ -2442,7 +2462,7 @@
         renderMenuCandidatePage();
         quotePanel.hidden = contentView !== "main";
         mainLunchPanel.hidden = contentView !== "main";
-        mainAdBannerPanel.hidden = contentView === "options";
+        mainAdBannerPanel.hidden = false;
         sentenceBoardPanel.hidden = contentView !== "board";
         menuCandidatePanel.hidden = contentView !== "menu";
         optionPanel.hidden = contentView !== "options";
@@ -2538,6 +2558,7 @@
       }
 
       function returnToTopAfterKeyboardClose() {
+        keepChatOpenUntil = 0;
         setChatFocusMode(false);
         scrollToSheetTop();
         requestAnimationFrame(scrollToSheetTop);
@@ -2597,6 +2618,7 @@
       syncPageFromHash();
 
       optionToggle.addEventListener("click", () => {
+        optionToggle.blur();
         openOptionsPage();
       });
 
@@ -2781,8 +2803,8 @@
       });
 
       window.visualViewport?.addEventListener("resize", () => {
-        syncViewportHeight();
-        if (document.activeElement === chatInput) {
+        const keyboardIsOpen = syncViewportHeight();
+        if (keyboardIsOpen && document.activeElement === chatInput) {
           setChatFocusMode(true);
           alignChatInputToViewport();
         }
