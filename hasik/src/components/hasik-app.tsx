@@ -19,12 +19,14 @@ interface LobbyRoom {
   isPrivate: boolean;
   password: string;
   debugMode?: boolean;
+  staggeredBotMode?: boolean;
 }
 
 const lobbyStorageKey = "hasik:lobby-rooms";
 const lobbyUserStorageKey = "hasik:lobby-user-id";
 const debugRoomId = "debug-full-seats-room";
 const paymentDebugRoomId = "debug-payment-room";
+const staggeredBotDebugRoomId = "debug-staggered-bots-room";
 const privateDebugRoomId = "debug-private-room";
 
 const defaultRooms: LobbyRoom[] = [
@@ -158,6 +160,23 @@ function createPaymentDebugRoom(fallbackHostSessionId: string): LobbyRoom {
   };
 }
 
+function createStaggeredBotDebugRoom(fallbackHostSessionId: string): LobbyRoom {
+  return {
+    id: staggeredBotDebugRoomId,
+    title: "입장 시간차 디버그 방",
+    tableShape: "round",
+    roomVenue: "b",
+    createdAt: Date.now() - 1000 * 60 * 2,
+    hostName: "테스트",
+    hostSessionId: fallbackHostSessionId,
+    memberCount: 1,
+    totalPaymentAmount: 0,
+    isPrivate: false,
+    password: "",
+    staggeredBotMode: true
+  };
+}
+
 function createPrivateDebugRoom(fallbackHostSessionId: string): LobbyRoom {
   return {
     id: privateDebugRoomId,
@@ -178,11 +197,13 @@ function ensureDebugRooms(rooms: LobbyRoom[], fallbackHostSessionId: string) {
   return [
     createPaymentDebugRoom(fallbackHostSessionId),
     createDebugRoom(fallbackHostSessionId),
+    createStaggeredBotDebugRoom(fallbackHostSessionId),
     createPrivateDebugRoom(fallbackHostSessionId),
     ...rooms.filter(
       (room) =>
         room.id !== debugRoomId &&
         room.id !== paymentDebugRoomId &&
+        room.id !== staggeredBotDebugRoomId &&
         room.id !== privateDebugRoomId
     )
   ];
@@ -245,7 +266,8 @@ function normalizeRooms(value: unknown, fallbackHostSessionId: string): LobbyRoo
           totalPaymentAmount,
           isPrivate,
           password: isPrivate ? password : "",
-          debugMode: sourceRoom.debugMode === true
+          debugMode: sourceRoom.debugMode === true,
+          staggeredBotMode: sourceRoom.staggeredBotMode === true
         }
       ];
     });
@@ -321,7 +343,11 @@ export function HasikApp() {
     [rooms, selectedRoomId]
   );
   const quickJoinRooms = useMemo(
-    () => rooms.filter((room) => !room.debugMode && !room.isPrivate && room.memberCount > 0),
+    () =>
+      rooms.filter(
+        (room) =>
+          !room.debugMode && !room.staggeredBotMode && !room.isPrivate && room.memberCount > 0
+      ),
     [rooms]
   );
   const canCreateRoom = !newRoomIsPrivate || Boolean(newRoomPassword.trim());
@@ -332,7 +358,11 @@ export function HasikApp() {
         currentRoom.id === room.id
           ? {
               ...currentRoom,
-              memberCount: currentRoom.debugMode ? 8 : currentRoom.memberCount + 1
+              memberCount: currentRoom.debugMode
+                ? 8
+                : currentRoom.staggeredBotMode
+                  ? 1
+                  : currentRoom.memberCount + 1
             }
           : currentRoom
       )
@@ -429,6 +459,10 @@ export function HasikApp() {
           return [{ ...room, memberCount: 8 }];
         }
 
+        if (room.staggeredBotMode) {
+          return [{ ...room, memberCount: 1 }];
+        }
+
         const nextMemberCount = room.memberCount - 1;
         return nextMemberCount > 0 ? [{ ...room, memberCount: nextMemberCount }] : [];
       })
@@ -475,6 +509,7 @@ export function HasikApp() {
         initialRoomVenue={selectedRoom.roomVenue}
         canManageRoomSettings={selectedRoom.hostSessionId === currentUserId}
         debugMode={selectedRoom.debugMode}
+        staggeredBotMode={selectedRoom.staggeredBotMode}
         roomNameOverride={selectedRoom.id}
         onLeave={leaveRoom}
         onRoomTitleChange={(title) => updateRoomTitle(selectedRoom.id, title)}

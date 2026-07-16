@@ -48,6 +48,7 @@ interface HasikRoomProps {
   initialRoomVenue?: RoomVenue;
   canManageRoomSettings?: boolean;
   debugMode?: boolean;
+  staggeredBotMode?: boolean;
   roomNameOverride?: string;
   onLeave?: () => void;
   onRoomTitleChange?: (title: string) => void;
@@ -822,6 +823,7 @@ export function HasikRoom({
   initialRoomVenue = "a",
   canManageRoomSettings = false,
   debugMode = false,
+  staggeredBotMode = false,
   roomNameOverride,
   onLeave,
   onRoomTitleChange,
@@ -1285,7 +1287,7 @@ export function HasikRoom({
   }, []);
 
   useEffect(() => {
-    if (debugMode) {
+    if (debugMode || !staggeredBotMode) {
       setBotPresence([]);
       return;
     }
@@ -1315,7 +1317,7 @@ export function HasikRoom({
     );
 
     return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [debugMode, roomName]);
+  }, [debugMode, roomName, staggeredBotMode]);
 
   useEffect(() => {
     if (debugMode) {
