@@ -63,7 +63,7 @@ interface ChatMessage {
   role: Role;
   body: string;
   at: number;
-  kind?: "normal" | "system" | "bell" | "rps";
+  kind?: "normal" | "system" | "bell" | "rps" | "join";
 }
 
 interface PresenceUser {
@@ -362,6 +362,7 @@ const bubbleLifetimeMs = 10000;
 const rolePromotionVisualMs = 2200;
 const rolePromotionCommitMs = 2400;
 const seatSwapDurationMs = 900;
+const seatEntranceDurationMs = 1100;
 const clockMarks = Array.from({ length: 12 }, (_, index) => index * 30);
 const maxSeatCount = 8;
 const initialRenderTime = Date.UTC(2026, 0, 1, 12, 0);
@@ -970,6 +971,17 @@ function createDebugMessage(member: PresenceUser, at: number, index: number): Ch
   };
 }
 
+function createJoinMessage(member: PresenceUser): ChatMessage {
+  return {
+    id: `join-${member.id}-${member.joinedAt}`,
+    nickname: member.nickname,
+    role: member.role,
+    body: "방에 새로 입장했습니다.",
+    at: Date.now(),
+    kind: "join"
+  };
+}
+
 export function HasikRoom({
   initialRoomTitle = "퇴근 후 익명 회식방",
   initialRoomCreatedAt = Date.now(),
@@ -999,6 +1011,7 @@ export function HasikRoom({
   const [botPresence, setBotPresence] = useState<PresenceUser[]>([]);
   const [displayedRoles, setDisplayedRoles] = useState<Record<string, Role>>({});
   const [rolePromotions, setRolePromotions] = useState<Record<string, RolePromotion>>({});
+  const [enteringMemberIds, setEnteringMemberIds] = useState<string[]>([]);
   const [connected, setConnected] = useState(false);
   const [realtimeMode, setRealtimeMode] = useState<RealtimeMode>("demo");
   const [activeProfile, setActiveProfile] = useState<ChatMessage | null>(null);
@@ -1057,6 +1070,9 @@ export function HasikRoom({
   const nextRpsRoundTimerRef = useRef<number | null>(null);
   const rpsProgressMessageIdsRef = useRef(new Set<string>());
   const rolePromotionTimersRef = useRef(new Map<string, number>());
+  const seatEntranceTimersRef = useRef(new Map<string, number>());
+  const knownPresenceIdsRef = useRef(new Set<string>());
+  const hasPresenceSnapshotRef = useRef(false);
   const seatElementRefs = useRef(new Map<string, HTMLDivElement>());
   const bubbleElementRefs = useRef(new Map<string, HTMLDivElement>());
   const previousSeatIndexesRef = useRef(new Map<string, number>());
@@ -1361,7 +1377,9 @@ export function HasikRoom({
     const nextMessages = new Map<string, ChatMessage>();
 
     messages.forEach((message) => {
-      nextMessages.set(getMemberKey(message.nickname), message);
+      if (message.kind !== "join") {
+        nextMessages.set(getMemberKey(message.nickname), message);
+      }
     });
 
     return nextMessages;
@@ -1453,6 +1471,25 @@ export function HasikRoom({
     setLatestReceipt(receipt);
     placeReceiptItemsOnTable(receipt);
   }, [placeReceiptItemsOnTable]);
+
+  const markSeatEntrance = useCallback((memberId: string) => {
+    const existingTimer = seatEntranceTimersRef.current.get(memberId);
+
+    if (existingTimer) {
+      window.clearTimeout(existingTimer);
+    }
+
+    setEnteringMemberIds((current) =>
+      current.includes(memberId) ? current : [...current, memberId]
+    );
+
+    const timer = window.setTimeout(() => {
+      setEnteringMemberIds((current) => current.filter((id) => id !== memberId));
+      seatEntranceTimersRef.current.delete(memberId);
+    }, seatEntranceDurationMs);
+
+    seatEntranceTimersRef.current.set(memberId, timer);
+  }, []);
 
   useEffect(() => {
     const mountedAt = Date.now();
@@ -1614,6 +1651,8 @@ export function HasikRoom({
 
       rolePromotionTimersRef.current.forEach((timer) => window.clearTimeout(timer));
       rolePromotionTimersRef.current.clear();
+      seatEntranceTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+      seatEntranceTimersRef.current.clear();
     };
   }, []);
 
@@ -1641,15 +1680,18 @@ export function HasikRoom({
         const nextBot: PresenceUser = {
           ...member,
           id: `bot-${roomName}-${member.id}`,
+          role: "인턴",
           joinedAt: botSequenceStartedAt + delay
         };
 
         setBotPresence((current) => [...current, nextBot]);
+        setMessages((current) => mergeMessage(current, createJoinMessage(nextBot)));
+        markSeatEntrance(nextBot.id);
       }, delay)
     );
 
     return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [debugMode, roomName, staggeredBotMode]);
+  }, [debugMode, markSeatEntrance, roomName, staggeredBotMode]);
 
   useEffect(() => {
     if (debugMode) {
@@ -1928,7 +1970,31 @@ export function HasikRoom({
       })
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState<PresenceUser>();
-        const nextPresence = Object.values(state).flat();
+        const nextPresence = [...new Map(
+          Object.values(state)
+            .flat()
+            .map((member) => [member.id, member] as const)
+        ).values()];
+
+        if (hasPresenceSnapshotRef.current) {
+          const joinedMembers = nextPresence.filter(
+            (member) =>
+              member.id !== sessionIdRef.current && !knownPresenceIdsRef.current.has(member.id)
+          );
+
+          if (joinedMembers.length > 0) {
+            setMessages((current) =>
+              joinedMembers.reduce(
+                (nextMessages, member) => mergeMessage(nextMessages, createJoinMessage(member)),
+                current
+              )
+            );
+            joinedMembers.forEach((member) => markSeatEntrance(member.id));
+          }
+        }
+
+        knownPresenceIdsRef.current = new Set(nextPresence.map((member) => member.id));
+        hasPresenceSnapshotRef.current = true;
         setPresence(nextPresence);
       })
       .subscribe(async (status) => {
@@ -1946,10 +2012,13 @@ export function HasikRoom({
       isActive = false;
       setConnected(false);
       channelRef.current = null;
+      knownPresenceIdsRef.current.clear();
+      hasPresenceSnapshotRef.current = false;
       void client.removeChannel(channel);
     };
   }, [
     debugMode,
+    markSeatEntrance,
     registerApprovedReceipt,
     registerCompletedPayment,
     onRoomTitleChange,
@@ -3167,6 +3236,8 @@ export function HasikRoom({
                     const visibleSeatMessage =
                       seatMessage && now - seatMessage.at <= bubbleLifetimeMs ? seatMessage : null;
                     const isMine = member?.id === sessionIdRef.current;
+                    const activePromotion = member ? rolePromotions[member.id] : undefined;
+                    const isEntering = member ? enteringMemberIds.includes(member.id) : false;
 
                     return (
                       <div
@@ -3186,7 +3257,8 @@ export function HasikRoom({
                           "seat-slot",
                           `slot-${index}`,
                           member ? "occupied" : "empty",
-                          isMine ? "mine" : ""
+                          isMine ? "mine" : "",
+                          isEntering ? "entering" : ""
                         ].join(" ")}
                       >
                         <button
@@ -3203,12 +3275,21 @@ export function HasikRoom({
                             <NameWithRole
                               nickname={member.nickname}
                               role={member.role}
-                              promotion={rolePromotions[member.id]}
+                              promotion={activePromotion}
                             />
                           ) : (
                             <span>빈자리</span>
                           )}
-                          <small>
+                          <small
+                            className={activePromotion ? "seat-duration promoting" : undefined}
+                            style={
+                              activePromotion
+                                ? ({
+                                    "--role-promotion-duration": `${rolePromotionVisualMs}ms`
+                                  } as CSSProperties)
+                                : undefined
+                            }
+                          >
                             {member
                               ? formatDuration(Math.floor((now - member.joinedAt) / 60000))
                               : "착석 가능"}
