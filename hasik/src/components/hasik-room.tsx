@@ -505,7 +505,7 @@ const koreanSurnames = Array.from(new Set([
   "호",
   "화"
 ]));
-const debugRoster: Array<Pick<PresenceUser, "id" | "nickname" | "role" | "mood">> = [
+const botRoster: Array<Pick<PresenceUser, "id" | "nickname" | "role" | "mood">> = [
   { id: "debug-seat-1", nickname: "김인턴", role: "인턴", mood: "talk" },
   { id: "debug-seat-2", nickname: "오사원", role: "사원", mood: "afterwork" },
   { id: "debug-seat-3", nickname: "박대리", role: "대리", mood: "talk" },
@@ -514,6 +514,7 @@ const debugRoster: Array<Pick<PresenceUser, "id" | "nickname" | "role" | "mood">
   { id: "debug-seat-6", nickname: "강사원", role: "사원", mood: "talk" },
   { id: "debug-seat-7", nickname: "이대리", role: "대리", mood: "afterwork" }
 ];
+const botJoinDelaysMs = [1200, 2600, 4300, 6300, 8600, 11200, 14100];
 const debugChatBodies = [
   "지금 말풍선 기본 길이 확인 중입니다.",
   "평범한 길이의 회식방 채팅입니다. 이 정도면 보통 대화처럼 보여야 합니다.",
@@ -838,6 +839,7 @@ export function HasikRoom({
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>(seedMessages);
   const [presence, setPresence] = useState<PresenceUser[]>([]);
+  const [botPresence, setBotPresence] = useState<PresenceUser[]>([]);
   const [connected, setConnected] = useState(false);
   const [realtimeMode, setRealtimeMode] = useState<RealtimeMode>("demo");
   const [activeProfile, setActiveProfile] = useState<ChatMessage | null>(null);
@@ -908,13 +910,6 @@ export function HasikRoom({
   const roomElapsedMinutes = Math.max(1, Math.floor((now - roomCreatedAt) / 60000));
   const cooldownRemainingMs = Math.max(0, cooldownUntil - Date.now());
   const isCoolingDown = cooldownRemainingMs > 0;
-  const onlineCount = debugMode
-    ? maxSeatCount
-    : supabase
-    ? Math.max(presence.length, 1)
-    : hasMounted
-      ? 17 + (Math.floor(now / 1000) % 5)
-      : 17;
   const currentDate = new Date(now);
   const hourAngle = ((currentDate.getHours() % 12) + currentDate.getMinutes() / 60) * 30;
   const minuteAngle = (currentDate.getMinutes() + currentDate.getSeconds() / 60) * 6;
@@ -1004,7 +999,7 @@ export function HasikRoom({
   const debugMembers = useMemo<PresenceUser[]>(() => {
     return [
       user,
-      ...debugRoster.map((member, index) => ({
+      ...botRoster.map((member, index) => ({
         ...member,
         joinedAt: startedAt - (index + 1) * 42000
       }))
@@ -1019,7 +1014,7 @@ export function HasikRoom({
     const nextMembers: PresenceUser[] = [user];
     const seenMemberIds = new Set([user.id]);
 
-    presence.forEach((member) => {
+    [...presence, ...botPresence].forEach((member) => {
       if (seenMemberIds.has(member.id) || nextMembers.length >= maxSeatCount) {
         return;
       }
@@ -1029,7 +1024,8 @@ export function HasikRoom({
     });
 
     return Array.from({ length: maxSeatCount }, (_, index) => nextMembers[index] ?? null);
-  }, [debugMembers, debugMode, presence, user]);
+  }, [botPresence, debugMembers, debugMode, presence, user]);
+  const onlineCount = seatMembers.filter(Boolean).length;
 
   const latestMessageByMember = useMemo(() => {
     const nextMessages = new Map<string, ChatMessage>();
@@ -1289,18 +1285,47 @@ export function HasikRoom({
   }, []);
 
   useEffect(() => {
-    if (!supabase) {
-      setConnected(false);
-      setRealtimeMode("demo");
-      setPresence([
-        user,
-        { id: "demo-1", nickname: "정사원", role: "사원", joinedAt: Date.now() - 200000, mood: "talk" },
-        { id: "demo-2", nickname: "오부장", role: "부장", joinedAt: Date.now() - 500000, mood: "quiet" }
-      ]);
+    if (debugMode) {
+      setBotPresence([]);
       return;
     }
 
+    const nextBotRoster = [...botRoster];
+
+    for (let index = nextBotRoster.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(Math.random() * (index + 1));
+      [nextBotRoster[index], nextBotRoster[swapIndex]] = [
+        nextBotRoster[swapIndex],
+        nextBotRoster[index]
+      ];
+    }
+
+    setBotPresence([]);
+    const timers = botJoinDelaysMs.map((delay, index) =>
+      window.setTimeout(() => {
+        const member = nextBotRoster[index];
+        const nextBot: PresenceUser = {
+          ...member,
+          id: `bot-${roomName}-${member.id}`,
+          joinedAt: Date.now()
+        };
+
+        setBotPresence((current) => [...current, nextBot]);
+      }, delay)
+    );
+
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [debugMode, roomName]);
+
+  useEffect(() => {
     if (debugMode) {
+      setConnected(false);
+      setRealtimeMode("demo");
+      setPresence([]);
+      return;
+    }
+
+    if (!supabase) {
       setConnected(false);
       setRealtimeMode("demo");
       setPresence([]);
