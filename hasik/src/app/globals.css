@@ -1362,14 +1362,11 @@ input:focus {
   color: #1d130f;
 }
 
+.seat-slot.mine .display-name-text,
 .seat-slot.mine .role-label {
-  color: #fff7da;
-  -webkit-text-stroke: 0.75px rgba(60, 29, 14, 0.96);
-  text-shadow:
-    0 1px 0 rgba(60, 29, 14, 0.95),
-    1px 0 0 rgba(60, 29, 14, 0.85),
-    -1px 0 0 rgba(60, 29, 14, 0.85),
-    0 -1px 0 rgba(60, 29, 14, 0.85);
+  color: #3c1d0e;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
 }
 
 .seat-slot.empty .seat-token {
@@ -4471,9 +4468,12 @@ input:disabled {
 .chat-message.join .chat-name,
 .chat-message.join .display-name,
 .chat-message.join .role-label,
-.chat-message.join p,
-.chat-message.join .message-time {
+.chat-message.join p {
   color: #86efac !important;
+}
+
+.chat-message.join .message-time {
+  display: none;
 }
 
 @keyframes join-message-enter {
