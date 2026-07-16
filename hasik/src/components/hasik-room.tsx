@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type {
   ComponentType,
   CSSProperties,
@@ -72,6 +72,11 @@ interface PresenceUser {
   role: Role;
   joinedAt: number;
   mood: Mood;
+}
+
+interface RolePromotion {
+  fromRole: Role;
+  toRole: Role;
 }
 
 interface HasikMessageRow {
@@ -354,6 +359,9 @@ const rpsChoices: Array<{ id: RpsChoice; label: string; icon: RpsIcon }> = [
 ];
 
 const bubbleLifetimeMs = 10000;
+const rolePromotionVisualMs = 2200;
+const rolePromotionCommitMs = 2400;
+const seatSwapDurationMs = 900;
 const clockMarks = Array.from({ length: 12 }, (_, index) => index * 30);
 const maxSeatCount = 8;
 const initialRenderTime = Date.UTC(2026, 0, 1, 12, 0);
@@ -543,7 +551,7 @@ const botRoster: Array<Pick<PresenceUser, "id" | "nickname" | "role" | "mood">> 
   { id: "debug-seat-6", nickname: "강사원", role: "사원", mood: "talk" },
   { id: "debug-seat-7", nickname: "이대리", role: "대리", mood: "afterwork" }
 ];
-const botJoinDelaysMs = [1200, 2600, 4300, 6300, 8600, 11200, 14100];
+const botJoinDelaysMs = [4000, 14000, 24000, 34000, 48000, 58000, 68000];
 const debugChatBodies = [
   "지금 말풍선 기본 길이 확인 중입니다.",
   "평범한 길이의 회식방 채팅입니다. 이 정도면 보통 대화처럼 보여야 합니다.",
@@ -702,6 +710,64 @@ function assignRoleSeats(members: PresenceUser[]) {
   return seats;
 }
 
+function animateSeatSwap(
+  element: HTMLElement,
+  previousRect: DOMRect,
+  nextRect: DOMRect,
+  movementBounds: DOMRect
+) {
+  const deltaX = previousRect.left - nextRect.left;
+  const deltaY = previousRect.top - nextRect.top;
+  const distance = Math.hypot(deltaX, deltaY);
+
+  if (distance < 2) {
+    return;
+  }
+
+  const previousCenter = {
+    x: previousRect.left + previousRect.width / 2,
+    y: previousRect.top + previousRect.height / 2
+  };
+  const nextCenter = {
+    x: nextRect.left + nextRect.width / 2,
+    y: nextRect.top + nextRect.height / 2
+  };
+  const mapCenter = {
+    x: movementBounds.left + movementBounds.width / 2,
+    y: movementBounds.top + movementBounds.height / 2
+  };
+  const departureCenter = {
+    x: mapCenter.x + (previousCenter.x - mapCenter.x) * 0.58,
+    y: mapCenter.y + (previousCenter.y - mapCenter.y) * 0.58
+  };
+  const arrivalCenter = {
+    x: mapCenter.x + (nextCenter.x - mapCenter.x) * 0.58,
+    y: mapCenter.y + (nextCenter.y - mapCenter.y) * 0.58
+  };
+  const toTransform = (center: { x: number; y: number }, scale = 1) => {
+    const offsetX = center.x - nextCenter.x;
+    const offsetY = center.y - nextCenter.y;
+    return `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) scale(${scale})`;
+  };
+
+  element.getAnimations().forEach((animation) => animation.cancel());
+  element.animate(
+    [
+      { transform: toTransform(previousCenter), opacity: 1, offset: 0 },
+      { transform: toTransform(departureCenter, 0.76), opacity: 0, offset: 0.46 },
+      { transform: toTransform(departureCenter, 0.68), opacity: 0, offset: 0.499 },
+      { transform: toTransform(arrivalCenter, 0.68), opacity: 0, offset: 0.501 },
+      { transform: toTransform(arrivalCenter, 0.76), opacity: 0, offset: 0.54 },
+      { transform: "translate(-50%, -50%)", opacity: 1, offset: 1 }
+    ],
+    {
+      duration: seatSwapDurationMs,
+      easing: "cubic-bezier(0.45, 0, 0.2, 1)",
+      fill: "backwards"
+    }
+  );
+}
+
 function formatClock(value: number) {
   return new Intl.DateTimeFormat("ko-KR", {
     hour: "2-digit",
@@ -828,11 +894,44 @@ function getRoleTone(role: Role) {
   }
 }
 
-function NameWithRole({ nickname, role }: { nickname: string; role: Role }) {
+function NameWithRole({
+  nickname,
+  role,
+  promotion
+}: {
+  nickname: string;
+  role: Role;
+  promotion?: RolePromotion;
+}) {
+  const visibleRole = promotion?.toRole ?? role;
+
   return (
-    <span className="display-name">
-      <span>{stripRoleSuffix(nickname)}</span>
-      <span className={`role-label ${getRoleTone(role)}`}>{role}</span>
+    <span
+      className={promotion ? "display-name seat-display-name promoting" : "display-name"}
+      aria-label={formatMemberName(nickname, visibleRole)}
+      style={
+        promotion
+          ? ({ "--role-promotion-duration": `${rolePromotionVisualMs}ms` } as CSSProperties)
+          : undefined
+      }
+    >
+      <span className="display-name-text" aria-hidden="true">
+        {stripRoleSuffix(nickname)}
+      </span>
+      {promotion ? (
+        <span className="promotion-role-stage" aria-hidden="true">
+          <span className={`role-label promotion-role old ${getRoleTone(promotion.fromRole)}`}>
+            {promotion.fromRole}
+          </span>
+          <span className={`role-label promotion-role next ${getRoleTone(promotion.toRole)}`}>
+            {promotion.toRole}
+          </span>
+        </span>
+      ) : (
+        <span className={`role-label ${getRoleTone(role)}`} aria-hidden="true">
+          {role}
+        </span>
+      )}
     </span>
   );
 }
@@ -898,6 +997,8 @@ export function HasikRoom({
   const [messages, setMessages] = useState<ChatMessage[]>(seedMessages);
   const [presence, setPresence] = useState<PresenceUser[]>([]);
   const [botPresence, setBotPresence] = useState<PresenceUser[]>([]);
+  const [displayedRoles, setDisplayedRoles] = useState<Record<string, Role>>({});
+  const [rolePromotions, setRolePromotions] = useState<Record<string, RolePromotion>>({});
   const [connected, setConnected] = useState(false);
   const [realtimeMode, setRealtimeMode] = useState<RealtimeMode>("demo");
   const [activeProfile, setActiveProfile] = useState<ChatMessage | null>(null);
@@ -955,6 +1056,12 @@ export function HasikRoom({
   const approvedReceiptIdsRef = useRef(new Set<string>());
   const nextRpsRoundTimerRef = useRef<number | null>(null);
   const rpsProgressMessageIdsRef = useRef(new Set<string>());
+  const rolePromotionTimersRef = useRef(new Map<string, number>());
+  const seatElementRefs = useRef(new Map<string, HTMLDivElement>());
+  const bubbleElementRefs = useRef(new Map<string, HTMLDivElement>());
+  const previousSeatIndexesRef = useRef(new Map<string, number>());
+  const previousSeatRectsRef = useRef(new Map<string, DOMRect>());
+  const previousBubbleRectsRef = useRef(new Map<string, DOMRect>());
   const dishDragRef = useRef<{
     dishId: string;
     startClientX: number;
@@ -1065,9 +1172,9 @@ export function HasikRoom({
     ].slice(0, maxSeatCount);
   }, [startedAt, user]);
 
-  const seatMembers = useMemo(() => {
+  const targetMembers = useMemo(() => {
     if (debugMode) {
-      return assignRoleSeats(debugMembers);
+      return debugMembers;
     }
 
     const nextMembers: PresenceUser[] = [user];
@@ -1085,9 +1192,170 @@ export function HasikRoom({
       seenMemberIds.add(member.id);
     });
 
-    return assignRoleSeats(nextMembers);
+    return nextMembers;
   }, [botPresence, debugMembers, debugMode, now, presence, staggeredBotMode, user]);
+
+  useEffect(() => {
+    const currentMemberIds = new Set(targetMembers.map((member) => member.id));
+
+    rolePromotionTimersRef.current.forEach((timer, memberId) => {
+      if (!currentMemberIds.has(memberId)) {
+        window.clearTimeout(timer);
+        rolePromotionTimersRef.current.delete(memberId);
+      }
+    });
+
+    setDisplayedRoles((current) => {
+      const next: Record<string, Role> = {};
+      let hasChanged = Object.keys(current).length !== targetMembers.length;
+
+      targetMembers.forEach((member) => {
+        next[member.id] = current[member.id] ?? member.role;
+        hasChanged ||= current[member.id] === undefined;
+      });
+
+      return hasChanged ? next : current;
+    });
+    setRolePromotions((current) => {
+      const next = Object.fromEntries(
+        Object.entries(current).filter(([memberId]) => currentMemberIds.has(memberId))
+      );
+      return Object.keys(next).length === Object.keys(current).length ? current : next;
+    });
+  }, [targetMembers]);
+
+  useEffect(() => {
+    const pendingPromotions = targetMembers.flatMap((member) => {
+      const displayedRole = displayedRoles[member.id];
+
+      if (
+        !displayedRole ||
+        roleRank[member.role] <= roleRank[displayedRole] ||
+        rolePromotionTimersRef.current.has(member.id)
+      ) {
+        return [];
+      }
+
+      return [{ memberId: member.id, fromRole: displayedRole, toRole: member.role }];
+    });
+
+    if (pendingPromotions.length <= 0) {
+      return;
+    }
+
+    const shouldReduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    setRolePromotions((current) => {
+      const next = { ...current };
+      pendingPromotions.forEach(({ memberId, fromRole, toRole }) => {
+        next[memberId] = { fromRole, toRole };
+      });
+      return next;
+    });
+
+    pendingPromotions.forEach(({ memberId, toRole }) => {
+      const timer = window.setTimeout(() => {
+        setDisplayedRoles((current) =>
+          current[memberId] ? { ...current, [memberId]: toRole } : current
+        );
+        setRolePromotions((current) => {
+          if (!current[memberId]) {
+            return current;
+          }
+
+          const { [memberId]: _completed, ...next } = current;
+          return next;
+        });
+        rolePromotionTimersRef.current.delete(memberId);
+      }, shouldReduceMotion ? 0 : rolePromotionCommitMs);
+
+      rolePromotionTimersRef.current.set(memberId, timer);
+    });
+  }, [displayedRoles, targetMembers]);
+
+  const seatMembers = useMemo(
+    () =>
+      assignRoleSeats(
+        targetMembers.map((member) => ({
+          ...member,
+          role: displayedRoles[member.id] ?? member.role
+        }))
+      ),
+    [displayedRoles, targetMembers]
+  );
   const onlineCount = seatMembers.filter(Boolean).length;
+
+  useLayoutEffect(() => {
+    const shouldReduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const nextSeatIndexes = new Map<string, number>();
+
+    seatMembers.forEach((member, index) => {
+      if (member) {
+        nextSeatIndexes.set(member.id, index);
+      }
+    });
+
+    const movedMemberIds = new Set(
+      [...nextSeatIndexes.entries()]
+        .filter(([memberId, index]) => {
+          const previousIndex = previousSeatIndexesRef.current.get(memberId);
+          return previousIndex !== undefined && previousIndex !== index;
+        })
+        .map(([memberId]) => memberId)
+    );
+    const movementBounds = seatMapRef.current?.getBoundingClientRect();
+
+    const animateLayer = (
+      elements: Map<string, HTMLDivElement>,
+      previousRectsRef: { current: Map<string, DOMRect> }
+    ) => {
+      const nextRects = new Map<string, DOMRect>();
+
+      seatMembers.forEach((member) => {
+        if (!member) {
+          return;
+        }
+
+        const element = elements.get(member.id);
+
+        if (!element) {
+          return;
+        }
+
+        const previousRect = previousRectsRef.current.get(member.id);
+        const didMove = movedMemberIds.has(member.id);
+
+        if (didMove && previousRect && !shouldReduceMotion && movementBounds) {
+          const runningAnimation = element
+            .getAnimations()
+            .find((animation) => animation.playState === "running");
+          const visualPreviousRect = runningAnimation
+            ? element.getBoundingClientRect()
+            : previousRect;
+
+          element.getAnimations().forEach((animation) => animation.cancel());
+          const nextRect = element.getBoundingClientRect();
+          nextRects.set(member.id, nextRect);
+          animateSeatSwap(element, visualPreviousRect, nextRect, movementBounds);
+          return;
+        }
+
+        const isMoving = element
+          .getAnimations()
+          .some((animation) => animation.playState === "running");
+        nextRects.set(
+          member.id,
+          isMoving && previousRect ? previousRect : element.getBoundingClientRect()
+        );
+      });
+
+      previousRectsRef.current = nextRects;
+    };
+
+    animateLayer(seatElementRefs.current, previousSeatRectsRef);
+    animateLayer(bubbleElementRefs.current, previousBubbleRectsRef);
+    previousSeatIndexesRef.current = nextSeatIndexes;
+  }, [seatMembers]);
 
   const latestMessageByMember = useMemo(() => {
     const nextMessages = new Map<string, ChatMessage>();
@@ -1343,6 +1611,9 @@ export function HasikRoom({
       if (nextRpsRoundTimerRef.current) {
         window.clearTimeout(nextRpsRoundTimerRef.current);
       }
+
+      rolePromotionTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+      rolePromotionTimersRef.current.clear();
     };
   }, []);
 
@@ -1363,13 +1634,14 @@ export function HasikRoom({
     }
 
     setBotPresence([]);
+    const botSequenceStartedAt = Date.now();
     const timers = botJoinDelaysMs.map((delay, index) =>
       window.setTimeout(() => {
         const member = nextBotRoster[index];
         const nextBot: PresenceUser = {
           ...member,
           id: `bot-${roomName}-${member.id}`,
-          joinedAt: Date.now()
+          joinedAt: botSequenceStartedAt + delay
         };
 
         setBotPresence((current) => [...current, nextBot]);
@@ -2899,6 +3171,17 @@ export function HasikRoom({
                     return (
                       <div
                         key={member?.id ?? `empty-seat-${index}`}
+                        ref={(element) => {
+                          if (!member) {
+                            return;
+                          }
+
+                          if (element) {
+                            seatElementRefs.current.set(member.id, element);
+                          } else {
+                            seatElementRefs.current.delete(member.id);
+                          }
+                        }}
                         className={[
                           "seat-slot",
                           `slot-${index}`,
@@ -2917,7 +3200,11 @@ export function HasikRoom({
                           }}
                         >
                           {member ? (
-                            <NameWithRole nickname={member.nickname} role={member.role} />
+                            <NameWithRole
+                              nickname={member.nickname}
+                              role={member.role}
+                              promotion={rolePromotions[member.id]}
+                            />
                           ) : (
                             <span>빈자리</span>
                           )}
@@ -2956,6 +3243,17 @@ export function HasikRoom({
                         return (
                           <div
                             key={`bubble-${member?.id ?? index}`}
+                            ref={(element) => {
+                              if (!member) {
+                                return;
+                              }
+
+                              if (element) {
+                                bubbleElementRefs.current.set(member.id, element);
+                              } else {
+                                bubbleElementRefs.current.delete(member.id);
+                              }
+                            }}
                             className={`seat-bubble-anchor slot-${index}`}
                             style={{ zIndex: isPromotedBubble ? bubbleLifetimeMs + 1 : bubbleStackLevel }}
                           >

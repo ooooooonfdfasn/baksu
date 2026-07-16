@@ -326,6 +326,108 @@ h1 {
   color: var(--amber);
 }
 
+.seat-token > .seat-display-name.promoting {
+  overflow: visible;
+  isolation: isolate;
+}
+
+.seat-display-name.promoting .display-name-text {
+  animation: promotion-name-transition var(--role-promotion-duration) ease-in-out both;
+}
+
+.promotion-role-stage {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  flex: 0 0 auto;
+  min-width: 28px;
+  place-items: center;
+  animation: promotion-role-stage var(--role-promotion-duration) ease-in-out both;
+  transform-origin: center;
+}
+
+.promotion-role {
+  grid-area: 1 / 1;
+}
+
+.promotion-role.old {
+  animation: promotion-role-old var(--role-promotion-duration) linear both;
+}
+
+.promotion-role.next {
+  animation: promotion-role-next var(--role-promotion-duration) linear both;
+}
+
+@keyframes promotion-name-transition {
+  0%,
+  6% {
+    max-width: 56px;
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  22%,
+  76% {
+    max-width: 0;
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+
+  100% {
+    max-width: 56px;
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes promotion-role-stage {
+  0% {
+    transform: scale(1);
+  }
+
+  24%,
+  48% {
+    transform: scale(1.75);
+  }
+
+  78%,
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes promotion-role-old {
+  0%,
+  41% {
+    opacity: 1;
+  }
+
+  47%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes promotion-role-next {
+  0%,
+  41% {
+    opacity: 0;
+  }
+
+  47%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seat-display-name.promoting .display-name-text,
+  .promotion-role-stage,
+  .promotion-role {
+    animation: none;
+  }
+}
+
 .nickname-label {
   display: block;
   margin-top: 14px;
@@ -893,18 +995,8 @@ input:focus {
   gap: 0;
   width: 118px;
   min-height: 56px;
-  transition:
-    left 720ms cubic-bezier(0.22, 1, 0.36, 1),
-    top 720ms cubic-bezier(0.22, 1, 0.36, 1);
   transform: translate(-50%, -50%);
-  will-change: left, top;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .seat-slot,
-  .seat-bubble-anchor {
-    transition: none;
-  }
+  will-change: transform;
 }
 
 .seat-bubble-layer {
