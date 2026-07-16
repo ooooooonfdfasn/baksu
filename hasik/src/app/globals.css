@@ -893,7 +893,18 @@ input:focus {
   gap: 0;
   width: 118px;
   min-height: 56px;
+  transition:
+    left 720ms cubic-bezier(0.22, 1, 0.36, 1),
+    top 720ms cubic-bezier(0.22, 1, 0.36, 1);
   transform: translate(-50%, -50%);
+  will-change: left, top;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seat-slot,
+  .seat-bubble-anchor {
+    transition: none;
+  }
 }
 
 .seat-bubble-layer {

@@ -357,6 +357,34 @@ const bubbleLifetimeMs = 10000;
 const clockMarks = Array.from({ length: 12 }, (_, index) => index * 30);
 const maxSeatCount = 8;
 const initialRenderTime = Date.UTC(2026, 0, 1, 12, 0);
+const standardRolePromotionMs: Record<Role, number> = {
+  인턴: 0,
+  사원: 5 * 60 * 1000,
+  대리: 15 * 60 * 1000,
+  과장: 30 * 60 * 1000,
+  부장: 60 * 60 * 1000
+};
+const debugRolePromotionMs: Record<Role, number> = {
+  인턴: 0,
+  사원: 10 * 1000,
+  대리: 20 * 1000,
+  과장: 30 * 1000,
+  부장: 40 * 1000
+};
+const roleRank: Record<Role, number> = {
+  인턴: 0,
+  사원: 1,
+  대리: 2,
+  과장: 3,
+  부장: 4
+};
+const roleSeatPreferences: Record<Role, readonly number[]> = {
+  인턴: [0, 1, 7, 2, 6, 3, 5, 4],
+  사원: [1, 7, 0, 2, 6, 3, 5, 4],
+  대리: [2, 6, 1, 7, 3, 5, 0, 4],
+  과장: [3, 5, 2, 6, 4, 1, 7, 0],
+  부장: [4, 3, 5, 2, 6, 1, 7, 0]
+};
 const koreanSurnames = Array.from(new Set([
   "김",
   "이",
@@ -647,6 +675,33 @@ function createAnonymousNickname(role: Role) {
   return `${surname}${role}`;
 }
 
+function getRoleForStay(joinedAt: number, now: number, accelerated: boolean) {
+  const elapsedMs = Math.max(0, now - joinedAt);
+  const promotionMs = accelerated ? debugRolePromotionMs : standardRolePromotionMs;
+
+  return roles.reduce<Role>(
+    (currentRole, role) => (elapsedMs >= promotionMs[role] ? role : currentRole),
+    "인턴"
+  );
+}
+
+function assignRoleSeats(members: PresenceUser[]) {
+  const seats = Array<PresenceUser | null>(maxSeatCount).fill(null);
+  const rankedMembers = [...members]
+    .slice(0, maxSeatCount)
+    .sort((left, right) => roleRank[right.role] - roleRank[left.role] || left.joinedAt - right.joinedAt);
+
+  rankedMembers.forEach((member) => {
+    const seatIndex = roleSeatPreferences[member.role].find((index) => !seats[index]);
+
+    if (seatIndex !== undefined) {
+      seats[seatIndex] = member;
+    }
+  });
+
+  return seats;
+}
+
 function formatClock(value: number) {
   return new Intl.DateTimeFormat("ko-KR", {
     hour: "2-digit",
@@ -744,17 +799,18 @@ function clampMenuPointerY(value: number, maxValue = 5000) {
   return Math.min(maxValue, Math.max(0, value));
 }
 
-function getMemberKey(nickname: string, role: Role) {
-  return `${nickname}:${role}`;
+function getMemberKey(nickname: string) {
+  return stripRoleSuffix(nickname);
 }
 
-function stripRoleSuffix(nickname: string, role: Role) {
+function stripRoleSuffix(nickname: string) {
   const baseName = nickname.replace(/익명\d+$/, "");
-  return baseName.endsWith(role) ? baseName.slice(0, -role.length) || baseName : baseName;
+  const roleSuffix = roles.find((role) => baseName.endsWith(role));
+  return roleSuffix ? baseName.slice(0, -roleSuffix.length) || baseName : baseName;
 }
 
 function formatMemberName(nickname: string, role: Role) {
-  return `${stripRoleSuffix(nickname, role)}${role}`;
+  return `${stripRoleSuffix(nickname)}${role}`;
 }
 
 function getRoleTone(role: Role) {
@@ -775,7 +831,7 @@ function getRoleTone(role: Role) {
 function NameWithRole({ nickname, role }: { nickname: string; role: Role }) {
   return (
     <span className="display-name">
-      <span>{stripRoleSuffix(nickname, role)}</span>
+      <span>{stripRoleSuffix(nickname)}</span>
       <span className={`role-label ${getRoleTone(role)}`}>{role}</span>
     </span>
   );
@@ -831,9 +887,9 @@ export function HasikRoom({
   onRoomVenueChange,
   onOrderCompleted
 }: HasikRoomProps = {}) {
-  const selectedRole: Role = "대리";
+  const initialRole: Role = "인턴";
   const mood: Mood = "afterwork";
-  const [nickname] = useState(() => createAnonymousNickname(selectedRole));
+  const [nickname] = useState(() => createAnonymousNickname(initialRole));
   const [roomTitle, setRoomTitle] = useState(initialRoomTitle);
   const [roomCreatedAt] = useState(initialRoomCreatedAt);
   const [tableShape, setTableShape] = useState<TableShape>(initialTableShape);
@@ -887,6 +943,7 @@ export function HasikRoom({
   const [hasMounted, setHasMounted] = useState(false);
   const [startedAt, setStartedAt] = useState(initialRenderTime);
   const [now, setNow] = useState(initialRenderTime);
+  const currentRole = getRoleForStay(startedAt, now, staggeredBotMode);
   const sessionIdRef = useRef(createId());
   const channelRef = useRef<RealtimeChannel | null>(null);
   const seatMapRef = useRef<HTMLDivElement | null>(null);
@@ -985,13 +1042,13 @@ export function HasikRoom({
     () => ({
       id: sessionIdRef.current,
       nickname,
-      role: selectedRole,
+      role: currentRole,
       joinedAt: startedAt,
       mood
     }),
-    [nickname, startedAt]
+    [currentRole, nickname, startedAt]
   );
-  const currentUserKey = getMemberKey(nickname, selectedRole);
+  const currentUserKey = getMemberKey(nickname);
   const fallbackPaymentParticipant = useMemo(() => createPaymentParticipant(user), [user]);
   const paymentPlayerList = useMemo(
     () => (paymentParticipantList.length > 0 ? paymentParticipantList : [fallbackPaymentParticipant]),
@@ -1010,7 +1067,7 @@ export function HasikRoom({
 
   const seatMembers = useMemo(() => {
     if (debugMode) {
-      return Array.from({ length: maxSeatCount }, (_, index) => debugMembers[index] ?? null);
+      return assignRoleSeats(debugMembers);
     }
 
     const nextMembers: PresenceUser[] = [user];
@@ -1021,19 +1078,22 @@ export function HasikRoom({
         return;
       }
 
-      nextMembers.push(member);
+      nextMembers.push({
+        ...member,
+        role: getRoleForStay(member.joinedAt, now, staggeredBotMode)
+      });
       seenMemberIds.add(member.id);
     });
 
-    return Array.from({ length: maxSeatCount }, (_, index) => nextMembers[index] ?? null);
-  }, [botPresence, debugMembers, debugMode, presence, user]);
+    return assignRoleSeats(nextMembers);
+  }, [botPresence, debugMembers, debugMode, now, presence, staggeredBotMode, user]);
   const onlineCount = seatMembers.filter(Boolean).length;
 
   const latestMessageByMember = useMemo(() => {
     const nextMessages = new Map<string, ChatMessage>();
 
     messages.forEach((message) => {
-      nextMessages.set(getMemberKey(message.nickname, message.role), message);
+      nextMessages.set(getMemberKey(message.nickname), message);
     });
 
     return nextMessages;
@@ -1062,7 +1122,7 @@ export function HasikRoom({
     }
 
     const slots = servedDishSlots[tableShape];
-    const ownerKey = getMemberKey(receipt.payerNickname, receipt.payerRole);
+    const ownerKey = getMemberKey(receipt.payerNickname);
 
     setServedDishes((current) => {
       const occupiedSlots = new Set(current.map((dish) => dish.slotIndex));
@@ -1251,7 +1311,7 @@ export function HasikRoom({
     const participant: PaymentParticipant = {
       userId: sessionIdRef.current,
       nickname,
-      role: selectedRole,
+      role: currentRole,
       at: Date.now()
     };
 
@@ -1276,7 +1336,7 @@ export function HasikRoom({
         payload: { userId: participant.userId }
       });
     };
-  }, [completedOrder, debugMembers, debugMode, isPaymentOpen, nickname, selectedRole]);
+  }, [completedOrder, currentRole, debugMembers, debugMode, isPaymentOpen, nickname]);
 
   useEffect(() => {
     return () => {
@@ -1787,7 +1847,7 @@ export function HasikRoom({
         id: createId(),
         userId: sessionIdRef.current,
         nickname,
-        role: selectedRole,
+        role: currentRole,
         itemId,
         x: clampPercent(Math.max(38, pointerX)),
         y: clampMenuPointerY(pointerY, maxPointerY),
@@ -1806,7 +1866,7 @@ export function HasikRoom({
         payload: nextSelection
       });
     },
-    [nickname, selectedRole]
+    [currentRole, nickname]
   );
 
   const removeMenuSelection = useCallback((selectionId: string) => {
@@ -2165,7 +2225,7 @@ export function HasikRoom({
       const nextMessage: ChatMessage = {
         id: createId(),
         nickname,
-        role: selectedRole,
+        role: currentRole,
         body: cleanBody.slice(0, 120),
         at: sentAt,
         kind
@@ -2217,7 +2277,7 @@ export function HasikRoom({
       keepComposerFocus,
       nickname,
       roomName,
-      selectedRole,
+      currentRole,
       supabase,
       debugMode
     ]
@@ -2249,7 +2309,7 @@ export function HasikRoom({
     const nextMessage: ChatMessage = {
       id: createId(),
       nickname,
-      role: selectedRole,
+      role: currentRole,
       body: body.slice(0, 120),
       at: Date.now(),
       kind: "system"
@@ -2269,7 +2329,7 @@ export function HasikRoom({
           kind: nextMessage.kind ?? "system"
         });
     }
-  }, [connected, debugMode, nickname, roomName, selectedRole, supabase]);
+  }, [connected, currentRole, debugMode, nickname, roomName, supabase]);
 
   const updateDishPosition = useCallback((dishId: string, x: number, y: number) => {
     setServedDishes((current) =>
@@ -2380,7 +2440,7 @@ export function HasikRoom({
           return leftDistance - rightDistance;
         })[0];
 
-    const actorName = formatMemberName(nickname, selectedRole);
+    const actorName = formatMemberName(nickname, currentRole);
     const targetName = formatMemberName(targetSeat.member.nickname, targetSeat.member.role);
     const body = mode === "eat"
       ? `${actorName}님이 ${dish.name}을 먹었습니다.`
@@ -2395,7 +2455,7 @@ export function HasikRoom({
       kind: dish.kind
     });
     postActionMessage(body);
-  }, [dishAction, nickname, postActionMessage, seatMembers, selectedRole]);
+  }, [currentRole, dishAction, nickname, postActionMessage, seatMembers]);
 
   const finishDishAction = useCallback((dishId: string) => {
     if (!dishAction || dishAction.dishId !== dishId) {
@@ -2830,7 +2890,7 @@ export function HasikRoom({
 
                   {seatMembers.map((member, index) => {
                     const seatMessage = member
-                      ? latestMessageByMember.get(getMemberKey(member.nickname, member.role))
+                      ? latestMessageByMember.get(getMemberKey(member.nickname))
                       : null;
                     const visibleSeatMessage =
                       seatMessage && now - seatMessage.at <= bubbleLifetimeMs ? seatMessage : null;
@@ -2875,7 +2935,7 @@ export function HasikRoom({
                     <div className="seat-bubble-layer" aria-label="좌석 말풍선">
                       {seatMembers.map((member, index) => {
                         const seatMessage = member
-                          ? latestMessageByMember.get(getMemberKey(member.nickname, member.role))
+                          ? latestMessageByMember.get(getMemberKey(member.nickname))
                           : null;
                         const visibleSeatMessage =
                           seatMessage && now - seatMessage.at <= bubbleLifetimeMs ? seatMessage : null;
