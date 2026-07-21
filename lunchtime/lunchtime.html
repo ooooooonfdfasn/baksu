@@ -1881,6 +1881,7 @@
       let sentenceSortMode = "top";
       let sentencePage = 1;
       let menuSortMode = "desc";
+      let submitMenuAfterComposition = false;
       let toastTimer = null;
       const messageTimers = new Map();
       let keepChatOpenUntil = 0;
@@ -2658,6 +2659,29 @@
       openMenuButton.addEventListener("click", () => {
         setContentView("menu");
         showRandomMenu();
+      });
+
+      menuInput.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") {
+          return;
+        }
+
+        if (event.isComposing || event.keyCode === 229) {
+          submitMenuAfterComposition = true;
+          return;
+        }
+
+        event.preventDefault();
+        menuSubmitForm.requestSubmit();
+      });
+
+      menuInput.addEventListener("compositionend", () => {
+        if (!submitMenuAfterComposition) {
+          return;
+        }
+
+        submitMenuAfterComposition = false;
+        window.setTimeout(() => menuSubmitForm.requestSubmit(), 0);
       });
 
       menuSubmitForm.addEventListener("submit", (event) => {
