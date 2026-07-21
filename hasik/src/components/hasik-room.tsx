@@ -17,6 +17,7 @@ import {
   Settings2,
   UserRound
 } from "lucide-react";
+import { HasikAdBanner } from "@/components/hasik-ad-banner";
 import { getHasikRoomName, getSupabaseBrowserClient } from "@/lib/supabase";
 import {
   defaultWalletBalance,
@@ -3055,6 +3056,8 @@ export function HasikRoom({
   return (
     <main className="room-page min-h-screen bg-[#17120f] text-[#fff8ec]">
       <div className="app-shell">
+        <HasikAdBanner label="회식방 광고" />
+
         <section className="hero-room" aria-label="회식방">
           <div className="topbar">
             <div>

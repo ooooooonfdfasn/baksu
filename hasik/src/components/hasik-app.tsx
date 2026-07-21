@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { LockKeyhole } from "lucide-react";
+import { HasikAdBanner } from "@/components/hasik-ad-banner";
 import { HasikRoom } from "@/components/hasik-room";
 import type { RoomVenue, TableShape } from "@/components/hasik-room";
 import { getSavedWalletState } from "@/lib/wallet";
@@ -523,6 +524,8 @@ export function HasikApp() {
   return (
     <main className="lobby-page">
       <section className="lobby-shell" aria-label="회식 메인 메뉴">
+        <HasikAdBanner label="회식 방 목록 광고" />
+
         <header className="lobby-header">
           <div>
             <h1>회식</h1>

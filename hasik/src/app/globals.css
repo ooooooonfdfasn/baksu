@@ -74,9 +74,53 @@ button {
 
 .room-page .app-shell {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
   height: 100dvh;
   min-height: 0;
   overflow: hidden;
+}
+
+.hasik-ad-banner {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+  width: 100%;
+  height: 54px;
+  min-height: 54px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.lobby-shell > .hasik-ad-banner {
+  margin-bottom: 10px;
+}
+
+.hasik-ad-unit,
+.hasik-ad-placeholder {
+  grid-area: 1 / 1;
+  width: min(320px, 100%);
+  height: 50px;
+}
+
+.hasik-ad-unit {
+  position: relative;
+  z-index: 1;
+}
+
+.hasik-ad-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed rgba(255, 198, 45, 0.46);
+  background: rgba(255, 248, 223, 0.04);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  pointer-events: none;
 }
 
 .room-page .hero-room {
@@ -2769,7 +2813,7 @@ input:focus {
 
 .lobby-page {
   min-height: 100vh;
-  padding: 22px;
+  padding: 0 22px 22px;
   background: var(--bg);
   color: var(--text);
 }
@@ -3101,7 +3145,7 @@ input:focus {
   }
 
   .room-page .app-shell {
-    padding: 8px;
+    padding: 0 8px 8px;
   }
 
   .hero-room {
@@ -3481,7 +3525,7 @@ input:focus {
   }
 
   .lobby-page {
-    padding: 10px;
+    padding: 0 10px 10px;
   }
 
   .lobby-header {
@@ -4101,11 +4145,11 @@ input:disabled {
   }
 
   .room-page .app-shell {
-    padding: 8px;
+    padding: 0 8px 8px;
   }
 
   .lobby-page {
-    padding: 10px;
+    padding: 0 10px 10px;
   }
 
   .hero-room {
